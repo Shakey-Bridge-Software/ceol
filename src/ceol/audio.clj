@@ -3,6 +3,7 @@
             [babashka.process :as proc]
             [ceol.data :as data]
             [charm.core :as charm]
+            [cheshire.core]
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
@@ -20,19 +21,24 @@
         (str/replace #"major$" "")
         (str/replace #"minor$" "m")
         (str/replace #"mixolydian$" "mix")
-        (str/replace #"dorian$" "dor"))))
+        (str/replace #"dorian$" "dor")
+        (str/replace #"lydian$" "lyd")
+        (str/replace #"phrygian$" "phr")
+        (str/replace #"locrian$" "loc"))))
 
 (defn- search-session [tune-name]
   (let [url (str "https://thesession.org/tunes/search?q="
                  (java.net.URLEncoder/encode tune-name "UTF-8")
                  "&format=json")
-        resp (http/get url {:headers {"Accept" "application/json"}})]
+        resp (http/get url {:headers {"Accept" "application/json"}
+                            :timeout 10000})]
     (when (= 200 (:status resp))
       (parse-json (:body resp)))))
 
 (defn- get-session-tune [session-id]
   (let [url (str "https://thesession.org/tunes/" session-id "?format=json&orderby=popular")
-        resp (http/get url {:headers {"Accept" "application/json"}})]
+        resp (http/get url {:headers {"Accept" "application/json"}
+                            :timeout 10000})]
     (when (= 200 (:status resp))
       (parse-json (:body resp)))))
 
@@ -51,7 +57,7 @@
 (defn- pick-setting
   "Pick the best ABC setting, preferring matching key."
   [settings tune-key]
-  (let [key-match (first (filter #(str/includes? (or (:key %) "") tune-key) settings))]
+  (let [key-match (first (filter #(str/starts-with? (or (:key %) "") tune-key) settings))]
     (or key-match (first settings))))
 
 (defn- tempo-for-type
@@ -118,11 +124,12 @@
 (defn- ensure-repeats
   "Ensure a part has |: and :| repeat markers."
   [part]
-  (let [;; Strip leading || or |: or both
+  (let [p (str/trim part)
+        ;; Strip leading || or |:
         p (cond
-            (str/starts-with? part "||") (str/trim (subs part 2))
-            (str/starts-with? part "|:") (str/trim (subs part 2))
-            :else part)
+            (str/starts-with? p "||") (str/trim (subs p 2))
+            (str/starts-with? p "|:") (str/trim (subs p 2))
+            :else p)
         ;; Strip trailing || after :|
         p (if (str/ends-with? p "||")
             (str/trim (subs p 0 (- (count p) 2)))
