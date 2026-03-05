@@ -5,31 +5,46 @@
             [ceol.data :as data]
             [ceol.audio :as audio]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [babashka.process :as proc]))
-
-(defn init-state []
-  (data/ensure-dirs!)
-  (let [hydrated (data/hydrate-tunes tunes/catalog)]
-    {:cursor       0
-     :mode         :browse
-     :filter       :all
-     :width        80
-     :height       24
-     :flash        nil
-     :tunes        hydrated
-     :playing      nil
-     :play-proc    nil
-     :loading      nil
-     :spinner      nil
-     :loop         false
-     :tempo-offset 0
-     :section      nil}))
 
 (defn flash [state msg]
   (assoc state :flash msg))
 
 (defn clear-flash [state]
   (assoc state :flash nil))
+
+(defn- check-dep [cmd]
+  (try
+    (let [result @(proc/process {:cmd ["which" cmd] :out :string :err :string})]
+      (zero? (:exit result)))
+    (catch Exception _ false)))
+
+(defn init-state []
+  (data/ensure-dirs!)
+  (let [hydrated (data/hydrate-tunes tunes/catalog)
+        state {:cursor       0
+               :mode         :browse
+               :filter       :all
+               :width        80
+               :height       24
+               :flash        nil
+               :tunes        hydrated
+               :playing      nil
+               :play-proc    nil
+               :loading      nil
+               :spinner      nil
+               :loop         false
+               :tempo-offset 0
+               :section      nil}
+        missing (filterv (complement check-dep) ["abc2midi" "fluidsynth"])
+        state (if (seq missing)
+                (flash state (str "missing: " (str/join ", " missing)))
+                state)
+        state (if (nil? (data/soundfont-path))
+                (flash state "no soundfont found — playback won't work")
+                state)]
+    state))
 
 ;; --- Tune helpers ---
 
@@ -155,7 +170,7 @@
           [state'' (charm/batch spinner-cmd (audio/fetch-abc-cmd tune))])))
     [state nil]))
 
-(defn stop-playback [state]
+(defn stop-playback! [state]
   (audio/stop-playback! (:play-proc state))
   [(assoc state :playing nil :play-proc nil :loading nil) nil])
 
@@ -181,16 +196,6 @@
             [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])))
       [state nil])))
 
-;; --- Exit ---
-
-(defn exit! [state]
-  (audio/stop-playback! (:play-proc state))
-  (print "\033[?1049l")
-  (print "\033[?25h")
-  (flush)
-  @(proc/process {:cmd ["stty" "sane"] :inherit true})
-  (System/exit 0))
-
 ;; --- Main update ---
 
 (defn update-state [state msg]
@@ -199,7 +204,9 @@
     (or (charm/quit? msg)
         (and (= :browse (:mode state))
              (charm/key-match? msg "q")))
-    (exit! state)
+    (do
+      (audio/stop-playback! (:play-proc state))
+      [state charm/quit-cmd])
 
     ;; Window size
     (= :window-size (:type msg))
@@ -271,7 +278,9 @@
 
     (= :playback-finished (:type msg))
     (if (= (:proc msg) (:play-proc state))
-      ;; Current playback finished
+      ;; Current playback finished — two-layer looping:
+      ;; 1) 50x baked-in ABC body repeats for gapless looping within a run
+      ;; 2) This restart-on-finish as fallback when the 50x body ends
       (if (:loop state)
         (let [tune-id (:playing state)
               tune (when tune-id (tunes/tune-by-id (:tunes state) tune-id))]
@@ -317,7 +326,7 @@
         (play-or-stop state)
 
         (charm/key-match? msg "s")
-        (stop-playback state)
+        (stop-playback! state)
 
         (charm/key-match? msg "p")
         (prepare-tune state)
