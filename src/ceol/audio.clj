@@ -106,22 +106,51 @@
   (or (re-matches #"^[A-Z]:.*" line)
       (str/starts-with? line "%%")))
 
+(defn- split-body-at
+  "Split body into [a-str b-str] at separator, returning nil if not found."
+  [body sep]
+  (when-let [idx (str/index-of body sep)]
+    (let [a (str/trim (subs body 0 idx))
+          b (str/trim (subs body (+ idx (count sep))))]
+      (when (and (seq a) (seq b))
+        [a b]))))
+
+(defn- ensure-repeats
+  "Ensure a part has |: and :| repeat markers."
+  [part]
+  (let [;; Strip leading || or |: or both
+        p (cond
+            (str/starts-with? part "||") (str/trim (subs part 2))
+            (str/starts-with? part "|:") (str/trim (subs part 2))
+            :else part)
+        ;; Strip trailing || after :|
+        p (if (str/ends-with? p "||")
+            (str/trim (subs p 0 (- (count p) 2)))
+            p)]
+    (str "|:" p (if (str/ends-with? p ":|") "" ":|"))))
+
 (defn split-abc-parts
-  "Split ABC into parts A and B by finding the :|...|: boundary.
+  "Split ABC into parts A and B. Tries || boundary first (tunes with
+   1st/2nd endings), then falls back to first :| split.
    Returns {:a \"full-abc-for-A\" :b \"full-abc-for-B\"} or nil."
   [abc-str]
   (let [lines (str/split-lines abc-str)
         header-lines (vec (take-while header-line? lines))
         header (str/join "\n" header-lines)
         body (str/join "\n" (drop (count header-lines) lines))
-        parts (str/split body #":\|\s*\|:")]
-    (when (>= (count parts) 2)
-      (let [a (str/trim (first parts))
-            b (str/trim (second parts))
-            a (str (if (str/starts-with? a "|:") a (str "|:" a)) ":|")
-            b (str "|:" (if (str/ends-with? b ":|") b (str b ":|")))]
-        {:a (str header "\n" a "\n")
-         :b (str header "\n" b "\n")}))))
+        ;; Try splitting on || (part boundary with 1st/2nd endings)
+        [a b] (or (split-body-at body "|| |:")
+                  (split-body-at body "||\n|:")
+                  (split-body-at body "||\n")
+                   ;; Fallback: split on first :|
+                  (when-let [idx (str/index-of body ":|")]
+                    (let [a (str/trim (subs body 0 idx))
+                          rest-body (str/trim (subs body (+ idx 2)))]
+                      (when (and (seq rest-body) (str/index-of rest-body ":|"))
+                        [a rest-body]))))]
+    (when (and a b)
+      {:a (str header "\n" (ensure-repeats a) "\n")
+       :b (str header "\n" (ensure-repeats b) "\n")})))
 
 ;; --- Commands (async via charm/cmd) ---
 
