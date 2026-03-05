@@ -161,10 +161,21 @@
           :tune-id (:id tune)
           :error (.getMessage e)})))))
 
+(defn- repeat-abc-body
+  "Duplicate the body of an ABC string n times for seamless looping."
+  [abc-str n]
+  (if (<= n 1)
+    abc-str
+    (let [lines (str/split-lines abc-str)
+          header-lines (vec (take-while header-line? lines))
+          header (str/join "\n" header-lines)
+          body (str/join "\n" (drop (count header-lines) lines))]
+      (str header "\n" (str/join "\n" (repeat n body)) "\n"))))
+
 (defn convert-midi-cmd
   "Command to convert ABC string to MIDI via abc2midi.
    Applies section extraction and tempo adjustment before converting."
-  [tune abc-str tempo-offset section]
+  [tune abc-str tempo-offset section & {:keys [loop-count] :or {loop-count 1}}]
   (charm/cmd
    (fn []
      (try
@@ -174,9 +185,12 @@
                            (or (get (split-abc-parts abc-str) section) abc-str)
                            abc-str)
              ;; Apply tempo offset
-             final-abc (adjust-abc-tempo section-abc (or tempo-offset 0))
+             tempo-abc (adjust-abc-tempo section-abc (or tempo-offset 0))
+             ;; Bake in repeats for looping
+             final-abc (repeat-abc-body tempo-abc loop-count)
              abc-path (data/abc-file-path tune-id)
-             midi-path (data/midi-file-path-for tune-id tempo-offset section)]
+             loop? (> loop-count 1)
+             midi-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
          (data/ensure-dirs!)
          (spit abc-path final-abc)
          (let [result @(proc/process {:cmd ["abc2midi" abc-path "-o" midi-path]

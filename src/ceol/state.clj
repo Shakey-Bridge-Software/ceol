@@ -82,7 +82,8 @@
     (let [tune-id (:id tune)
           tempo-offset (:tempo-offset state)
           section (:section state)
-          target-path (data/midi-file-path-for tune-id tempo-offset section)]
+          loop? (:loop state)
+          target-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
       (cond
         ;; Already ready for current settings
         (and (= :ready (:midi-status tune))
@@ -97,7 +98,7 @@
         (= :ready (:abc-status tune))
         (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
               state'' (update-tune state' tune-id assoc :midi-status :converting)]
-          [state'' (charm/batch spinner-cmd (audio/convert-midi-cmd tune (:abc tune) tempo-offset section))])
+          [state'' (charm/batch spinner-cmd (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])
 
         ;; Need to fetch ABC first
         :else
@@ -112,7 +113,8 @@
   (if-let [tune (selected-tune state)]
     (let [tune-id (:id tune)
           tempo-offset (:tempo-offset state)
-          section (:section state)]
+          section (:section state)
+          loop? (:loop state)]
       (cond
         ;; Playing same tune -> stop
         (= (:playing state) tune-id)
@@ -129,7 +131,7 @@
 
         ;; MIDI ready -> check if correct variant exists
         (= :ready (:midi-status tune))
-        (let [target-path (data/midi-file-path-for tune-id tempo-offset section)]
+        (let [target-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
           (if (.exists (io/file target-path))
             [(assoc state :playing tune-id)
              (audio/play-cmd target-path)]
@@ -137,14 +139,14 @@
             (if (:abc tune)
               (let [[s sc] (start-spinner (assoc state :loading tune-id))
                     s' (update-tune s tune-id assoc :midi-status :converting)]
-                [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section))])
+                [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])
               [(flash state "no ABC available") nil])))
 
         ;; ABC ready, no MIDI -> convert then play
         (= :ready (:abc-status tune))
         (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
               state'' (update-tune state' tune-id assoc :midi-status :converting)]
-          [state'' (charm/batch spinner-cmd (audio/convert-midi-cmd tune (:abc tune) tempo-offset section))])
+          [state'' (charm/batch spinner-cmd (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])
 
         ;; Nothing -> fetch -> convert -> play
         :else
@@ -163,9 +165,10 @@
   (let [tune-id (:playing state)
         tune (when tune-id (tunes/tune-by-id (:tunes state) tune-id))
         tempo-offset (:tempo-offset state)
-        section (:section state)]
+        section (:section state)
+        loop? (:loop state)]
     (if (and tune (:abc tune))
-      (let [midi-path (data/midi-file-path-for tune-id tempo-offset section)]
+      (let [midi-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
         (audio/stop-playback! (:play-proc state))
         (if (.exists (io/file midi-path))
           ;; Already have this variant cached — play directly
@@ -175,7 +178,7 @@
           (let [state' (assoc state :playing nil :play-proc nil :loading tune-id)
                 [s sc] (start-spinner state')
                 s' (update-tune s tune-id assoc :midi-status :converting)]
-            [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section))])))
+            [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])))
       [state nil])))
 
 ;; --- Exit ---
@@ -223,7 +226,7 @@
           ;; Auto-chain: convert to MIDI
           updated-tune (tunes/tune-by-id (:tunes state') tune-id)]
       [(update-tune state' tune-id assoc :midi-status :converting)
-       (audio/convert-midi-cmd updated-tune abc tempo-offset section)])
+       (audio/convert-midi-cmd updated-tune abc tempo-offset section :loop-count (if (:loop state) 50 1))])
 
     (= :abc-failed (:type msg))
     (let [tune-id (:tune-id msg)]
@@ -328,10 +331,12 @@
 
         ;; Loop toggle
         (charm/key-match? msg "l")
-        (let [new-loop (not (:loop state))]
-          [(flash (assoc state :loop new-loop)
-                  (if new-loop "loop on" "loop off"))
-           nil])
+        (let [new-loop (not (:loop state))
+              state' (flash (assoc state :loop new-loop)
+                            (if new-loop "loop on" "loop off"))]
+          (if (:playing state)
+            (reconvert-current state')
+            [state' nil]))
 
         ;; Tempo +5
         (charm/key-match? msg "=")

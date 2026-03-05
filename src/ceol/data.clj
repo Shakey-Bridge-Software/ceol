@@ -58,10 +58,11 @@
   (str midi-dir "/" tune-id ".mid"))
 
 (defn midi-file-path-for
-  "MIDI path for a specific tempo-offset/section combo.
-   e.g. 1.mid, 1_a.mid, 1_t10.mid, 1_a_t-5.mid"
-  [tune-id tempo-offset section]
+  "MIDI path for a specific tempo-offset/section/loop combo.
+   e.g. 1.mid, 1_a.mid, 1_t10.mid, 1_a_t-5_loop.mid"
+  [tune-id tempo-offset section & {:keys [loop?]}]
   (let [section-str (when section (str "_" (name section)))
         tempo-str (when (and tempo-offset (not (zero? tempo-offset)))
-                    (str "_t" tempo-offset))]
-    (str midi-dir "/" tune-id (or section-str "") (or tempo-str "") ".mid")))
+                    (str "_t" tempo-offset))
+        loop-str (when loop? "_loop")]
+    (str midi-dir "/" tune-id (or section-str "") (or tempo-str "") (or loop-str "") ".mid")))
