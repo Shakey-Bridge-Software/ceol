@@ -4,7 +4,8 @@
             [ceol.tunes :as tunes]
             [ceol.data :as data]
             [ceol.audio :as audio]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [babashka.process :as proc]))
 
 (defn init-state []
   (data/ensure-dirs!)
@@ -184,6 +185,7 @@
   (print "\033[?1049l")
   (print "\033[?25h")
   (flush)
+  @(proc/process {:cmd ["stty" "sane"] :inherit true})
   (System/exit 0))
 
 ;; --- Main update ---
