@@ -102,7 +102,6 @@
       :else                      "[   ]")))
 
 (defn next-filter [current]
-  (let [order [:all :polka :jig :reel :hornpipe :slip-jig :other]]
-    (let [idx (.indexOf order current)
-          next-idx (mod (inc idx) (count order))]
-      (nth order next-idx))))
+  (let [idx (.indexOf tune-types current)
+        next-idx (mod (inc idx) (count tune-types))]
+    (nth tune-types next-idx)))
