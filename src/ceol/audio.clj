@@ -31,7 +31,7 @@
       (parse-json (:body resp)))))
 
 (defn- get-session-tune [session-id]
-  (let [url (str "https://thesession.org/tunes/" session-id "?format=json")
+  (let [url (str "https://thesession.org/tunes/" session-id "?format=json&orderby=popular")
         resp (http/get url {:headers {"Accept" "application/json"}})]
     (when (= 200 (:status resp))
       (parse-json (:body resp)))))
