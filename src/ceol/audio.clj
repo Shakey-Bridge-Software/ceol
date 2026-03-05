@@ -59,16 +59,16 @@
    Tempos are slightly relaxed for learning."
   [tune-type time-sig]
   (case tune-type
-    :polka    "Q:1/4=110"
-    :jig      "Q:3/8=110"
-    :reel     "Q:1/4=100"
-    :hornpipe "Q:1/4=76"
-    :slip-jig "Q:3/8=110"
+    :polka    "Q:1/4=70"
+    :jig      "Q:3/8=70"
+    :reel     "Q:1/4=60"
+    :hornpipe "Q:1/4=40"
+    :slip-jig "Q:3/8=70"
     ;; fallback based on time sig
     (case time-sig
-      "6/8" "Q:3/8=100"
-      "9/8" "Q:3/8=100"
-      "Q:1/4=100")))
+      "6/8" "Q:3/8=60"
+      "9/8" "Q:3/8=60"
+      "Q:1/4=60")))
 
 (defn- build-abc-string
   "Construct a full ABC file from tune metadata and ABC notation body."
