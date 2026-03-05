@@ -79,14 +79,17 @@
                       "Aeolian" "m"
                       "")
         k-field (str (:key tune) mode-abbrev)
-        tempo (tempo-for-type (:type tune) (:time-sig tune))]
+        tempo (tempo-for-type (:type tune) (:time-sig tune))
+        ;; Strip thesession.org line break markers (|! between bars)
+        ;; abc2midi misinterprets them as decoration markers
+        clean-body (str/replace abc-body "! " "\n")]
     (str "X:1\n"
          "T:" (:name tune) "\n"
          "M:" (:time-sig tune) "\n"
          tempo "\n"
          "K:" (or abc-key k-field) "\n"
-         "%%MIDI program 25\n"
-         abc-body "\n")))
+         "%%MIDI program 105\n"
+         clean-body "\n")))
 
 ;; --- Tempo + section helpers ---
 
