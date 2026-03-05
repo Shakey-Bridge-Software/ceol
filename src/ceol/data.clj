@@ -16,12 +16,15 @@
 (defn load-cache []
   (let [f (io/file cache-file)]
     (if (.exists f)
-      (edn/read-string (slurp f))
+      (try (edn/read-string (slurp f))
+           (catch Exception _ {}))
       {})))
 
 (defn save-cache! [cache]
   (ensure-dirs!)
-  (spit cache-file (pr-str cache)))
+  (let [tmp (str cache-file ".tmp")]
+    (spit tmp (pr-str cache))
+    (.renameTo (io/file tmp) (io/file cache-file))))
 
 (defn hydrate-tunes [tunes]
   (let [cache (load-cache)]
@@ -37,11 +40,14 @@
               tune))
           tunes)))
 
+(def ^:private cache-lock (Object.))
+
 (defn update-cache! [tune-id data]
-  (let [cache (load-cache)
-        existing (get cache tune-id {})
-        updated (merge existing data)]
-    (save-cache! (assoc cache tune-id updated))))
+  (locking cache-lock
+    (let [cache (load-cache)
+          existing (get cache tune-id {})
+          updated (merge existing data)]
+      (save-cache! (assoc cache tune-id updated)))))
 
 (defn soundfont-path []
   (let [custom (str ceol-dir "/soundfont.sf2")
