@@ -3,6 +3,7 @@
             [charm.components.spinner :as spinner]
             [ceol.tunes :as tunes]
             [ceol.state :as state]
+            [ceol.staff :as staff]
             [clojure.string :as str]))
 
 ;; -- Design System --
@@ -70,7 +71,7 @@
 (defn render-footer [state]
   (let [bindings (charm/help-from-pairs
                   "j/k" "nav" "\u21B5" "play" "l" "loop"
-                  "=/-" "tempo" "1/2" "part" "?" "help")
+                  "=/-" "tempo" "1/2" "part" "m" "staff" "?" "help")
         h (charm/help bindings
                       :width (content-width state)
                       :separator " \u00B7 "
@@ -223,6 +224,9 @@
                 (key-line "1" "toggle section A")
                 (key-line "2" "toggle section B")
                 ""
+                (section "display")
+                (key-line "m" "toggle staff notation")
+                ""
                 (section "info")
                 (key-line "?" "toggle help")
                 (key-line "q" "quit")
@@ -240,6 +244,22 @@
           color (if warning? color-danger color-accent)]
       (charm/styled (str "  " f) :fg color))))
 
+;; -- Staff panel --
+
+(defn render-staff-panel [state]
+  (when (and (:show-staff state) (:notation state))
+    (let [w (content-width state)
+          tune (if (:playing state)
+                 (tunes/tune-by-id (:tunes state) (:playing state))
+                 (state/selected-tune state))
+          tune-name (when tune
+                      (charm/styled (str "  " (:name tune)) :fg color-gold :bold true))
+          staff-str (staff/render-staff-compact (:notation state) w (:current-note-idx state))]
+      (str/join "\n" (filterv some? [tune-name
+                                     ""
+                                     staff-str
+                                     ""])))))
+
 ;; -- Main render --
 
 (defn ensure-min-height [text min-h]
@@ -256,6 +276,7 @@
     (let [w (content-width state)
           header (render-header state)
           top-div (divider w)
+          staff-panel (render-staff-panel state)
           tune-list (ensure-min-height (render-tune-list state) 5)
           status-bar (render-status-bar state)
           flash-msg (render-flash state)
@@ -267,6 +288,7 @@
                                     top-div
                                     (str/join "\n" (filterv some?
                                                             [""
+                                                             staff-panel
                                                              tune-list
                                                              status-bar
                                                              flash-msg

@@ -4,6 +4,7 @@
             [ceol.tunes :as tunes]
             [ceol.data :as data]
             [ceol.audio :as audio]
+            [ceol.notation :as notation]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [babashka.process :as proc]))
@@ -23,20 +24,25 @@
 (defn init-state []
   (data/ensure-dirs!)
   (let [hydrated (data/hydrate-tunes tunes/catalog)
-        state {:cursor       0
-               :mode         :browse
-               :filter       :all
-               :width        80
-               :height       24
-               :flash        nil
-               :tunes        hydrated
-               :playing      nil
-               :play-proc    nil
-               :loading      nil
-               :spinner      nil
-               :loop         false
-               :tempo-offset 0
-               :section      nil}
+        state {:cursor           0
+               :mode             :browse
+               :filter           :all
+               :width            80
+               :height           24
+               :flash            nil
+               :tunes            hydrated
+               :playing          nil
+               :play-proc        nil
+               :loading          nil
+               :spinner          nil
+               :loop             false
+               :tempo-offset     0
+               :section          nil
+               :show-staff       false
+               :notation         nil
+               :notation-tune-id nil
+               :play-start-ms    nil
+               :current-note-idx nil}
         missing (filterv (complement check-dep) ["abc2midi" "fluidsynth"])
         state (if (seq missing)
                 (flash state (str "missing: " (str/join ", " missing)))
@@ -135,7 +141,9 @@
         (= (:playing state) tune-id)
         (do
           (audio/stop-playback! (:play-proc state))
-          [(assoc state :playing nil :play-proc nil) nil])
+          [(assoc state :playing nil :play-proc nil
+                  :notation-tune-id nil
+                  :play-start-ms nil :current-note-idx nil) nil])
 
         ;; Playing different tune -> stop old, start new
         (:playing state)
@@ -172,7 +180,9 @@
 
 (defn stop-playback! [state]
   (audio/stop-playback! (:play-proc state))
-  [(assoc state :playing nil :play-proc nil :loading nil) nil])
+  [(assoc state :playing nil :play-proc nil :loading nil
+          :notation-tune-id nil
+          :play-start-ms nil :current-note-idx nil) nil])
 
 (defn reconvert-current
   "Stop playback, reconvert with current tempo/section, auto-play."
@@ -187,14 +197,36 @@
         (audio/stop-playback! (:play-proc state))
         (if (.exists (io/file midi-path))
           ;; Already have this variant cached — play directly
-          [(assoc state :play-proc nil :playing tune-id)
+          [(assoc state :play-proc nil :playing tune-id
+                  :play-start-ms nil :current-note-idx nil)
            (audio/play-cmd midi-path)]
           ;; Need to convert — clear :playing, set :loading for auto-play
-          (let [state' (assoc state :playing nil :play-proc nil :loading tune-id)
+          (let [state' (assoc state :playing nil :play-proc nil :loading tune-id
+                              :play-start-ms nil :current-note-idx nil)
                 [s sc] (start-spinner state')
                 s' (update-tune s tune-id assoc :midi-status :converting)]
             [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])))
       [state nil])))
+
+;; --- Staff helpers ---
+
+(defn- update-staff-for-selected
+  "When staff is visible and not playing, update notation for the selected tune.
+   Skips re-parsing when the selected tune hasn't changed."
+  [state]
+  (if (and (:show-staff state) (not (:playing state)))
+    (let [tune (selected-tune state)
+          tune-id (:id tune)]
+      (if (= tune-id (:notation-tune-id state))
+        state
+        (let [parsed (when (and tune (:abc tune))
+                       (try (notation/parse-abc (:abc tune)) (catch Exception _ nil)))]
+          (if parsed
+            (assoc state :notation (:timeline parsed) :current-note-idx nil
+                   :notation-tune-id tune-id)
+            (assoc state :notation nil :current-note-idx nil
+                   :notation-tune-id nil)))))
+    state))
 
 ;; --- Main update ---
 
@@ -272,9 +304,28 @@
 
     (= :playback-started (:type msg))
     (let [proc (:proc msg)
-          tune-id (:playing state)]
-      [(assoc state :play-proc proc)
-       (when tune-id (audio/watch-playback-cmd proc tune-id))])
+          tune-id (:playing state)
+          tune (when tune-id (tunes/tune-by-id (:tunes state) tune-id))
+          ;; Parse notation for staff display if we have ABC
+          parsed (when (and (:show-staff state) tune (:abc tune))
+                   (try (notation/parse-abc (:abc tune)) (catch Exception _ nil)))
+          state' (cond-> (assoc state :play-proc proc)
+                   parsed (assoc :notation (:timeline parsed)
+                                 :play-start-ms (System/currentTimeMillis)
+                                 :current-note-idx 0))
+          ;; Start ticker if staff is showing
+          tick-cmd (when (and (:show-staff state) parsed)
+                     (audio/playback-tick-cmd))]
+      [state' (charm/batch (when tune-id (audio/watch-playback-cmd proc tune-id))
+                           tick-cmd)])
+
+    (= :playback-tick (:type msg))
+    (if (and (:playing state) (:show-staff state) (:notation state) (:play-start-ms state))
+      (let [elapsed (- (System/currentTimeMillis) (:play-start-ms state))
+            idx (notation/find-current-note (:notation state) elapsed)]
+        [(assoc state :current-note-idx idx) (audio/playback-tick-cmd)])
+      ;; Not playing or staff hidden — stop ticking
+      [state nil])
 
     (= :playback-finished (:type msg))
     (if (= (:proc msg) (:play-proc state))
@@ -285,10 +336,14 @@
         (let [tune-id (:playing state)
               tune (when tune-id (tunes/tune-by-id (:tunes state) tune-id))]
           (if (and tune (:midi-path tune))
-            [(assoc state :play-proc nil)
-             (audio/play-cmd (:midi-path tune))]
-            [(assoc state :playing nil :play-proc nil) nil]))
-        [(assoc state :playing nil :play-proc nil) nil])
+            [(assoc state :play-proc nil :play-start-ms (System/currentTimeMillis))
+             (charm/batch (audio/play-cmd (:midi-path tune)) (audio/playback-tick-cmd))]
+            [(assoc state :playing nil :play-proc nil
+                    :notation nil :notation-tune-id nil
+                    :play-start-ms nil :current-note-idx nil) nil]))
+        [(assoc state :playing nil :play-proc nil
+                :notation nil :notation-tune-id nil
+                :play-start-ms nil :current-note-idx nil) nil])
       ;; Stale playback finished (old process) — ignore
       [state nil])
 
@@ -315,11 +370,11 @@
       (cond
         (or (charm/key-match? msg "j")
             (charm/key-match? msg :down))
-        [(cursor-down state) nil]
+        [(update-staff-for-selected (cursor-down state)) nil]
 
         (or (charm/key-match? msg "k")
             (charm/key-match? msg :up))
-        [(cursor-up state) nil]
+        [(update-staff-for-selected (cursor-up state)) nil]
 
         (or (charm/key-match? msg "enter")
             (charm/key-match? msg " "))
@@ -393,6 +448,32 @@
           (if (:playing state)
             (reconvert-current state')
             [state' nil]))
+
+        ;; Staff notation toggle
+        (charm/key-match? msg "m")
+        (let [new-show (not (:show-staff state))
+              tune (if (:playing state)
+                     (tunes/tune-by-id (:tunes state) (:playing state))
+                     (selected-tune state))
+              parsed (when (and new-show tune (:abc tune))
+                       (try (notation/parse-abc (:abc tune)) (catch Exception _ nil)))
+              state' (cond-> (assoc state :show-staff new-show)
+                       ;; Toggling ON while playing — start tracking
+                       (and new-show parsed (:playing state))
+                       (assoc :notation (:timeline parsed)
+                              :play-start-ms (System/currentTimeMillis)
+                              :current-note-idx 0)
+                       ;; Toggling ON while not playing — static display
+                       (and new-show parsed (not (:playing state)))
+                       (assoc :notation (:timeline parsed)
+                              :current-note-idx nil)
+                       ;; Toggling OFF
+                       (not new-show)
+                       (assoc :notation nil :notation-tune-id nil
+                              :current-note-idx nil :play-start-ms nil))
+              cmd (when (and new-show parsed (:playing state))
+                    (audio/playback-tick-cmd))]
+          [(flash state' (if new-show "staff on" "staff off")) cmd])
 
         (charm/key-match? msg "?")
         [(assoc state :mode :help) nil]
