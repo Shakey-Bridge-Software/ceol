@@ -153,7 +153,7 @@
                   (when-let [idx (str/index-of body ":|")]
                     (let [a (str/trim (subs body 0 idx))
                           rest-body (str/trim (subs body (+ idx 2)))]
-                      (when (and (seq rest-body) (str/index-of rest-body ":|"))
+                      (when (seq rest-body)
                         [a rest-body]))))]
     (when (and a b)
       {:a (str header "\n" (ensure-repeats a) "\n")
@@ -281,3 +281,12 @@
     (try
       (.destroyForcibly proc)
       (catch Exception _ nil))))
+
+(defn playback-tick-cmd
+  "Command that sleeps 150ms then sends a :playback-tick message.
+   Self-restarting: the state handler spawns a new one if still playing."
+  []
+  (charm/cmd
+   (fn []
+     (Thread/sleep 150)
+     {:type :playback-tick})))
