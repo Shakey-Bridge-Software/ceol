@@ -11,9 +11,53 @@
 (defonce el (js/document.getElementById "app"))
 
 (defn build-full-abc
-  "Build a complete ABC string from a tune and its raw ABC body."
+  "Build a complete ABC string from a tune and its raw ABC body.
+   Skips %%MIDI directive (not needed for abc.js web rendering)."
   [tune abc-body]
-  (abc/build-abc-string tune abc-body nil))
+  (let [mode-abbrev (case (:mode-name tune)
+                      "Ionian" ""
+                      "Dorian" "dor"
+                      "Aeolian" "m"
+                      "")
+        k-field (str (:key tune) mode-abbrev)
+        tempo (abc/tempo-for-type (:type tune) (:time-sig tune))]
+    (str "X:1\n"
+         "T:" (:name tune) "\n"
+         "M:" (:time-sig tune) "\n"
+         "L:1/8\n"
+         tempo "\n"
+         "K:" k-field "\n"
+         abc-body "\n")))
+
+(defn add-line-breaks
+  "Insert newlines after every n-th bar in ABC body for multi-line rendering.
+   Counts single | barlines (not :| or |: which are repeat markers)."
+  [abc-body bars-per-line]
+  (let [chars (seq abc-body)]
+    (loop [remaining chars
+           bar-count 0
+           result []]
+      (if (empty? remaining)
+        (apply str result)
+        (let [c (first remaining)]
+          (if (= c \|)
+            (let [next-c (second remaining)
+                  ;; Don't count :| |: || as a simple barline for line-break purposes
+                  ;; but DO count them for output
+                  simple-bar? (and (not= next-c \|)
+                                   (not= next-c \:)
+                                   ;; check if previous char was :
+                                   (not= (peek result) \:))
+                  new-count (if simple-bar? (inc bar-count) bar-count)
+                  need-break? (and simple-bar?
+                                   (pos? bars-per-line)
+                                   (zero? (mod new-count bars-per-line)))]
+              (recur (rest remaining)
+                     new-count
+                     (if need-break?
+                       (conj result c \newline)
+                       (conj result c))))
+            (recur (rest remaining) bar-count (conj result c))))))))
 
 (defn inject-chords-if-needed
   "If the ABC body doesn't already have chord annotations, suggest and inject them."
@@ -122,7 +166,7 @@
         (js/requestAnimationFrame
          (fn []
            (when-let [el (js/document.getElementById "sheet-music")]
-             (let [full-abc (build-full-abc tune abc-body)]
+             (let [full-abc (build-full-abc tune (add-line-breaks abc-body 4))]
                (abc-bridge/render-abc! el full-abc)))))))))
 
 (defonce prev-render-key (atom nil))

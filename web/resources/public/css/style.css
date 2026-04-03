@@ -210,7 +210,7 @@ body {
 }
 
 /* abcjs overrides */
-#sheet-music { max-width: 900px; margin: 0 auto; }
+#sheet-music { max-width: 990px; margin: 0 auto; }
 
 /* Edit toggle button */
 .edit-toggle {
@@ -233,8 +233,9 @@ body {
 .editor-split {
   display: flex;
   flex-direction: column;
-  min-height: 200px;
-  flex: 1;
+  height: 180px;
+  min-height: 120px;
+  flex-shrink: 0;
 }
 .split-divider {
   display: flex;
