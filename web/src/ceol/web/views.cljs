@@ -90,18 +90,23 @@
          :spellcheck "false"
          :on {:input [[:editor/update tune-id :event/target.value]]}}]])))
 
-(defn playback-bar []
-  [:div.playback-bar
-   [:div.left-controls
-    [:button.play-btn {:on {:click [[:playback/play]]}}
-     "\u25B6 Play"]
-    [:button.control-btn "Loop"]]
-   [:div.center-controls
-    [:button.tempo-btn {:on {:click [[:tempo/down]]}} "\u2212"]
-    [:span.tempo-label "120 BPM"]
-    [:button.tempo-btn {:on {:click [[:tempo/up]]}} "+"]]
-   [:div.right-controls
-    [:button.guitar-btn "Guitar"]]])
+(defn playback-bar [state]
+  (let [tune (state/selected-tune state)
+        tempo-str (when tune (abc/tempo-for-type (:type tune) (:time-sig tune)))
+        bpm (when tempo-str (second (re-find #"=(\d+)" tempo-str)))]
+    [:div.playback-bar
+     [:div.left-controls
+      [:button.play-btn {:on {:click [[:playback/play]]}}
+       "\u25B6 Play"]
+      [:button.control-btn {:class (when (:loop? state) "active")
+                            :on {:click [[:loop/toggle]]}}
+       "Loop"]]
+     [:div.center-controls
+      [:button.tempo-btn {:on {:click [[:tempo/down]]}} "\u2212"]
+      [:span.tempo-label (str (or bpm "120") " BPM")]
+      [:button.tempo-btn {:on {:click [[:tempo/up]]}} "+"]]
+     [:div.right-controls
+      [:button.guitar-btn "Guitar"]]]))
 
 (defn main-area [state]
   (let [editor-open? (:editor-open? state)]
@@ -117,7 +122,7 @@
          [:div.split-line]]
         (abc-editor state)])
      [:div.divider]
-     (playback-bar)]))
+     (playback-bar state)]))
 
 (defn app [state]
   [:div.app-layout

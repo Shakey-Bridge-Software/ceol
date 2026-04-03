@@ -145,7 +145,22 @@
         (schedule-save!)))
 
     :tune/add-to-set nil
-    :playback/play nil
+
+    :playback/play
+    (if (abc-bridge/playing?)
+      (abc-bridge/stop!)
+      (abc-bridge/play!
+       {:on-end (fn []
+                  (let [s @state/app-state]
+                    (when (:loop? s)
+                      (handle-action! :playback/play nil))))}))
+
+    :playback/stop
+    (abc-bridge/stop!)
+
+    :loop/toggle
+    (swap! state/app-state update :loop? not)
+
     :tempo/up nil
     :tempo/down nil
 
