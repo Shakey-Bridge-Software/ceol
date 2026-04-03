@@ -73,14 +73,43 @@
 ;; --- Extract chords from ABC body ---
 
 (defn extract-bar-chords
-  "Extract chord names from ABC body. Returns a vector of chord names per bar."
+  "Extract chord names from ABC body. Returns a vector of chord names per bar.
+   Walks the string looking for bar boundaries and chord annotations."
   [abc-body]
-  (let [bars (str/split abc-body #"\|+:?:?\|?")
-        bars (remove str/blank? bars)]
-    (mapv (fn [bar]
-            (let [match (re-find #"\"([A-G][#b]?m?)\"" bar)]
-              (when match (second match))))
-          bars)))
+  (let [;; Find all chord annotations with their positions
+        chords-at (loop [i 0 result []]
+                    (if-let [idx (str/index-of abc-body "\"" i)]
+                      (let [end (str/index-of abc-body "\"" (inc idx))]
+                        (if end
+                          (let [chord (subs abc-body (inc idx) end)]
+                            (recur (inc end) (conj result {:pos idx :chord chord})))
+                          result))
+                      result))
+        ;; Find all bar positions
+        bar-positions (loop [i 0 result [0]] ;; start of string is bar 0
+                        (if (>= i (count abc-body))
+                          result
+                          (if (= (nth abc-body i) \|)
+                            ;; Skip consecutive |:| characters
+                            (let [j (loop [k (inc i)]
+                                      (if (and (< k (count abc-body))
+                                               (contains? #{\| \:} (nth abc-body k)))
+                                        (recur (inc k))
+                                        k))]
+                              (recur j (conj result j)))
+                            (recur (inc i) result))))
+        ;; For each bar region, find the first chord annotation in it
+        bar-count (dec (count bar-positions))]
+    (mapv (fn [bar-idx]
+            (let [start (nth bar-positions bar-idx)
+                  end (if (< (inc bar-idx) (count bar-positions))
+                        (nth bar-positions (inc bar-idx))
+                        (count abc-body))
+                  chord (first (filter (fn [{:keys [pos]}]
+                                         (and (>= pos start) (< pos end)))
+                                       chords-at))]
+              (:chord chord)))
+          (range bar-count))))
 
 ;; --- Strumming patterns ---
 

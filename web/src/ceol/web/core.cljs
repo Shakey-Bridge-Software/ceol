@@ -168,8 +168,25 @@
         ;; Always start guitar alongside melody (muted if guitar off)
         (when (and tune abc-body (string? abc-body))
           (guitar/set-muted! (not (:guitar? s)))
-          (let [bar-chords (guitar/extract-bar-chords abc-body)]
-            (guitar/play! bar-chords (:type tune) (:time-sig tune))))))
+          (let [section (:section s)
+                parts (split-abc-body abc-body)
+                tonic (:key tune)
+                ;; Build chord sequence matching what abc.js plays (with repeats)
+                bar-chords (if section
+                             (let [part-body (if parts (get parts section abc-body) abc-body)
+                                   chords (guitar/extract-bar-chords part-body)]
+                               (into chords chords))
+                             (if parts
+                               (let [a-chords (guitar/extract-bar-chords (:a parts))
+                                     b-chords (guitar/extract-bar-chords (:b parts))]
+                                 (vec (concat a-chords a-chords b-chords b-chords)))
+                               (let [chords (guitar/extract-bar-chords abc-body)]
+                                 (into chords chords))))
+                ;; Fill nils: first bar defaults to tonic, rest to previous chord
+                filled (reduce (fn [acc c]
+                                 (conj acc (or c (peek acc) tonic)))
+                               [] bar-chords)]
+            (guitar/play! filled (:type tune) (:time-sig tune))))))
 
     :playback/stop
     (do (abc-bridge/stop!)
