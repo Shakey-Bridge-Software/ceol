@@ -212,6 +212,86 @@ body {
 /* abcjs overrides */
 #sheet-music { max-width: 900px; margin: 0 auto; }
 
+/* Edit toggle button */
+.edit-toggle {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: none;
+  background: var(--dark);
+  color: var(--fg-inverse);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 8px;
+}
+.edit-toggle.active {
+  background: var(--accent);
+}
+
+/* Editor split */
+.editor-split {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  flex: 1;
+}
+.split-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 32px;
+}
+.split-line { flex: 1; height: 1px; background: var(--border); }
+.split-grip { color: #ccc; font-size: 14px; cursor: row-resize; user-select: none; }
+
+/* Editor panel */
+.editor-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1E1E1E;
+  padding: 16px 32px;
+  gap: 8px;
+  min-height: 0;
+}
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.editor-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  letter-spacing: 1px;
+}
+.editor-hints {
+  display: flex;
+  gap: 12px;
+}
+.editor-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-dim);
+}
+.editor-hint.accent { color: var(--accent); }
+.editor-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: #D4D4D4;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 8px 0;
+  min-height: 0;
+}
+.editor-textarea::placeholder { color: #444; }
+
 /* Playback bar */
 .playback-bar {
   display: flex;

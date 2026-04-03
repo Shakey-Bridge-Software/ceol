@@ -44,7 +44,7 @@
      [:div.tune-list
       (map (fn [t] (tune-row t selected-id)) tunes)]]))
 
-(defn tune-header [tune]
+(defn tune-header [tune editor-open?]
   (when tune
     (let [tempo-str (abc/tempo-for-type (:type tune) (:time-sig tune))
           bpm (second (re-find #"=(\d+)" tempo-str))]
@@ -57,18 +57,38 @@
        [:div.section-controls
         [:button.section-btn.active "A"]
         [:button.section-btn "B"]
-        [:button.section-btn "All"]]])))
+        [:button.section-btn "All"]
+        [:button.edit-toggle {:class (when editor-open? "active")
+                              :on {:click [[:editor/toggle]]}}
+         "Edit"]]])))
 
 (defn sheet-music [state]
   (let [tune (state/selected-tune state)
-        abc-str (when tune (state/abc-for-tune state (:id tune)))]
+        abc-str (when tune (state/edited-abc-for-tune state (:id tune)))]
     [:div.sheet-area
      (if (and tune abc-str)
-       [:div#sheet-music {:replicant/on-render [[:abc/render abc-str tune]]}]
+       [:div#sheet-music]
        [:div.sheet-empty
         (if tune
           "Loading notation..."
           "Select a tune to view sheet music")])]))
+
+(defn abc-editor [state]
+  (let [tune (state/selected-tune state)
+        tune-id (:id tune)
+        abc-str (when tune (state/edited-abc-for-tune state tune-id))]
+    (when (and tune abc-str)
+      [:div.editor-panel
+       [:div.editor-header
+        [:span.editor-label "ABC NOTATION"]
+        [:div.editor-hints
+         [:span.editor-hint "Chords: \"G\" \"Am\""]
+         [:span.editor-hint "Notes: A-G a-g"]
+         [:span.editor-hint.accent "Live preview"]]]
+       [:textarea.editor-textarea
+        {:value abc-str
+         :spellcheck "false"
+         :on {:input [[:editor/update tune-id :event/target.value]]}}]])))
 
 (defn playback-bar []
   [:div.playback-bar
@@ -84,12 +104,20 @@
     [:button.guitar-btn "Guitar"]]])
 
 (defn main-area [state]
-  [:div.main-area
-   (tune-header (state/selected-tune state))
-   [:div.divider]
-   (sheet-music state)
-   [:div.divider]
-   (playback-bar)])
+  (let [editor-open? (:editor-open? state)]
+    [:div.main-area
+     (tune-header (state/selected-tune state) editor-open?)
+     [:div.divider]
+     (sheet-music state)
+     (when editor-open?
+       [:div.editor-split
+        [:div.split-divider
+         [:div.split-line]
+         [:div.split-grip "\u2261"]
+         [:div.split-line]]
+        (abc-editor state)])
+     [:div.divider]
+     (playback-bar)]))
 
 (defn app [state]
   [:div.app-layout

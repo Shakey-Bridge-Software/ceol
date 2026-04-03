@@ -5,9 +5,11 @@
   (atom {:tunes (mapv #(select-keys % [:id :name :type :time-sig :key :mode-name :session-id])
                       tunes/catalog)
          :abc-data {}
+         :abc-edits {}
          :selected-tune-id nil
          :filter :all
-         :tab :tunes}))
+         :tab :tunes
+         :editor-open? false}))
 
 (defn tune-by-id [state id]
   (first (filter #(= id (:id %)) (:tunes state))))
@@ -24,3 +26,9 @@
 
 (defn abc-for-tune [state tune-id]
   (get (:abc-data state) tune-id))
+
+(defn edited-abc-for-tune
+  "Get the edited ABC for a tune, falling back to the original + chord injection."
+  [state tune-id]
+  (or (get (:abc-edits state) tune-id)
+      (get (:abc-data state) tune-id)))
