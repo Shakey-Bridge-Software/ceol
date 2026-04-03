@@ -44,10 +44,12 @@
      [:div.tune-list
       (map (fn [t] (tune-row t selected-id)) tunes)]]))
 
-(defn tune-header [tune editor-open?]
+(defn tune-header [tune state]
   (when tune
     (let [tempo-str (abc/tempo-for-type (:type tune) (:time-sig tune))
-          bpm (second (re-find #"=(\d+)" tempo-str))]
+          bpm (second (re-find #"=(\d+)" tempo-str))
+          section (:section state)
+          editor-open? (:editor-open? state)]
       [:div.tune-header
        [:div.title-block
         [:div.tune-title (:name tune)]
@@ -55,9 +57,12 @@
          (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune)
               " · " (:time-sig tune) " · " bpm " BPM")]]
        [:div.section-controls
-        [:button.section-btn.active "A"]
-        [:button.section-btn "B"]
-        [:button.section-btn "All"]
+        [:button.section-btn {:class (when (= :a section) "active")
+                              :on {:click [[:section/set :a]]}} "A"]
+        [:button.section-btn {:class (when (= :b section) "active")
+                              :on {:click [[:section/set :b]]}} "B"]
+        [:button.section-btn {:class (when (nil? section) "active")
+                              :on {:click [[:section/set nil]]}} "All"]
         [:button.edit-toggle {:class (when editor-open? "active")
                               :on {:click [[:editor/toggle]]}}
          "Edit"]]])))
@@ -90,17 +95,26 @@
          :spellcheck "false"
          :on {:input [[:editor/update tune-id :event/target.value]]}}]])))
 
+(defn playback-status [state]
+  (when (:playing? state)
+    (let [section (:playing-section state)
+          part (case section :a "A part" :b "B part" "All parts")
+          loop? (:loop? state)]
+      [:span.playback-status (str part " playing" (when loop? " on loop"))])))
+
 (defn playback-bar [state]
   (let [tune (state/selected-tune state)
         tempo-str (when tune (abc/tempo-for-type (:type tune) (:time-sig tune)))
         bpm (when tempo-str (second (re-find #"=(\d+)" tempo-str)))]
     [:div.playback-bar
      [:div.left-controls
-      [:button.play-btn {:on {:click [[:playback/play]]}}
-       "\u25B6 Play"]
+      [:button.play-btn {:class (when (:playing? state) "playing")
+                         :on {:click [[:playback/play]]}}
+       (if (:playing? state) "\u25A0 Stop" "\u25B6 Play")]
       [:button.control-btn {:class (when (:loop? state) "active")
                             :on {:click [[:loop/toggle]]}}
-       "Loop"]]
+       (if (:loop? state) "\u21BB Loop" "Loop")]
+      (playback-status state)]
      [:div.center-controls
       [:button.tempo-btn {:on {:click [[:tempo/down]]}} "\u2212"]
       [:span.tempo-label (str (or bpm "120") " BPM")]
@@ -111,7 +125,7 @@
 (defn main-area [state]
   (let [editor-open? (:editor-open? state)]
     [:div.main-area
-     (tune-header (state/selected-tune state) editor-open?)
+     (tune-header (state/selected-tune state) state)
      [:div.divider]
      (sheet-music state)
      (when editor-open?

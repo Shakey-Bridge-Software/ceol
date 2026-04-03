@@ -148,15 +148,24 @@
 
     :playback/play
     (if (abc-bridge/playing?)
-      (abc-bridge/stop!)
-      (abc-bridge/play!
-       {:on-end (fn []
-                  (let [s @state/app-state]
-                    (when (:loop? s)
-                      (handle-action! :playback/play nil))))}))
+      (do (abc-bridge/stop!)
+          (swap! state/app-state assoc :playing? false))
+      (do (swap! state/app-state assoc :playing? true
+                 :playing-section (:section @state/app-state))
+          (abc-bridge/play!
+           {:on-end (fn []
+                      (swap! state/app-state assoc :playing? false :playing-section nil)
+                      (let [s @state/app-state]
+                        (when (:loop? s)
+                          (handle-action! :playback/play nil))))})))
 
     :playback/stop
-    (abc-bridge/stop!)
+    (do (abc-bridge/stop!)
+        (swap! state/app-state assoc :playing? false :playing-section nil))
+
+    :section/set
+    (let [[section] args]
+      (swap! state/app-state assoc :section section))
 
     :loop/toggle
     (swap! state/app-state update :loop? not)
@@ -171,18 +180,48 @@
     (doseq [[action & args] actions]
       (handle-action! action args))))
 
+(defn split-abc-body
+  "Split an ABC body (no headers) into A and B parts.
+   Returns {:a \"...\" :b \"...\"} or nil if can't split.
+   Each part gets proper barlines so it can stand alone."
+  [body]
+  ;; Most tunes use :|||: as boundary between parts
+  ;; e.g. |:A part...|G2G2:|||:B part...|G2G2:||
+  ;; Split so A = |:A part...|G2G2:| and B = |:B part...|G2G2:|
+  (let [idx (.indexOf body ":|||:")]
+    (if (pos? idx)
+      (let [a (.trim (.substring body 0 (+ idx 2)))  ;; include the :|
+            b (.trim (.substring body (+ idx 3)))]    ;; include the |:
+        (when (and (seq a) (seq b))
+          {:a a :b b}))
+      ;; Fallback: split at first :| that's followed by more content
+      (let [idx (.indexOf body ":|")]
+        (when (pos? idx)
+          (let [after-idx (+ idx 2)
+                rest-body (.trim (.substring body after-idx))]
+            (when (seq rest-body)
+              {:a (.trim (.substring body 0 after-idx))
+               :b rest-body})))))))
+
 (defn render-sheet-music!
   "Imperatively render ABC into the #sheet-music div if present."
   [s]
   (when-let [tune (state/selected-tune s)]
     (when-let [abc-body (state/edited-abc-for-tune s (:id tune))]
       (when (string? abc-body)
-        ;; Defer so the DOM has updated from Replicant render
-        (js/requestAnimationFrame
-         (fn []
-           (when-let [el (js/document.getElementById "sheet-music")]
-             (let [full-abc (build-full-abc tune (add-line-breaks abc-body 4))]
-               (abc-bridge/render-abc! el full-abc)))))))))
+        (let [section (:section s)
+              body (if section
+                     (let [parts (split-abc-body abc-body)]
+                       (if parts
+                         (get parts section abc-body)
+                         abc-body))
+                     abc-body)
+              final-abc (build-full-abc tune (add-line-breaks body 4))]
+          ;; Defer so the DOM has updated from Replicant render
+          (js/requestAnimationFrame
+           (fn []
+             (when-let [el (js/document.getElementById "sheet-music")]
+               (abc-bridge/render-abc! el final-abc)))))))))
 
 (defonce prev-render-key (atom nil))
 
@@ -192,7 +231,7 @@
              ;; Only re-render sheet music when tune or ABC changed
              (let [tune-id (:selected-tune-id s)
                    abc (state/edited-abc-for-tune s tune-id)
-                   new-key [tune-id abc]]
+                   new-key [tune-id abc (:section s)]]
                (when (not= new-key @prev-render-key)
                  (reset! prev-render-key new-key)
                  ;; Evict stale non-string edits (e.g. from earlier bug)

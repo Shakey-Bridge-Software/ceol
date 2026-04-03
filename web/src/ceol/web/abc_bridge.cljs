@@ -1,7 +1,7 @@
 (ns ceol.web.abc-bridge
   (:require ["abcjs" :as ABCJS]))
 
-(defonce synth-state (atom {:synth nil :controller nil :visual nil}))
+(defonce synth-state (atom {:synth nil :visual nil :generation 0}))
 
 (defn render-abc!
   "Render ABC string into a DOM element as SVG.
@@ -22,39 +22,44 @@
          (swap! synth-state assoc :visual (first visual)))))))
 
 (defn stop!
-  "Stop any current playback."
+  "Stop any current playback. Returns the generation that was stopped."
   []
-  (when-let [controller (:controller @synth-state)]
-    (try (.pause controller) (catch :default _)))
-  (when-let [synth (:synth @synth-state)]
-    (try (.stop synth) (catch :default _)))
-  (swap! synth-state assoc :synth nil :controller nil))
-
-(defn play!
-  "Start playback of the currently rendered ABC.
-   Calls on-end when playback finishes."
-  [& [{:keys [on-end]}]]
-  (stop!)
-  (when-let [visual (:visual @synth-state)]
-    (let [synth (ABCJS/synth.CreateSynth.)]
-      (-> (.init synth (clj->js {:visualObj visual}))
-          (.then (fn []
-                   (.prime synth)))
-          (.then (fn []
-                   (.start synth)
-                   (swap! synth-state assoc :synth synth)
-                   (when on-end
-                     ;; Watch for playback end
-                     (let [check-fn (fn check []
-                                      (if (.-isRunning synth)
-                                        (js/setTimeout check 200)
-                                        (on-end)))]
-                       (js/setTimeout check-fn 200)))))
-          (.catch (fn [e]
-                    (js/console.error "Playback failed:" e)))))))
+  (let [gen (:generation (swap! synth-state update :generation inc))]
+    (when-let [synth (:synth @synth-state)]
+      (try (.stop synth) (catch :default _)))
+    (swap! synth-state assoc :synth nil)
+    gen))
 
 (defn playing?
   "Is the synth currently playing?"
   []
-  (when-let [synth (:synth @synth-state)]
-    (.-isRunning synth)))
+  (boolean (:synth @synth-state)))
+
+(defn play!
+  "Start playback of the currently rendered ABC.
+   Calls on-end when playback finishes naturally (not when stopped)."
+  [& [{:keys [on-end]}]]
+  (stop!)
+  (when-let [visual (:visual @synth-state)]
+    (let [gen (:generation @synth-state)
+          synth (ABCJS/synth.CreateSynth.)
+          ctx (js/AudioContext.)]
+      (-> (.init synth (clj->js {:visualObj visual
+                                 :audioContext ctx}))
+          (.then (fn [] (.prime synth)))
+          (.then (fn []
+                   (.start synth)
+                   (swap! synth-state assoc :synth synth)
+                   ;; Use AudioContext state + duration to detect end
+                   (when on-end
+                     (when-let [duration (.-duration synth)]
+                       (let [check-ms (* (+ duration 0.5) 1000)]
+                         (js/setTimeout
+                          (fn []
+                            ;; Only fire if same generation (not stopped by user)
+                            (when (= gen (:generation @synth-state))
+                              (swap! synth-state assoc :synth nil)
+                              (on-end)))
+                          check-ms))))))
+          (.catch (fn [e]
+                    (js/console.error "Playback failed:" e)))))))

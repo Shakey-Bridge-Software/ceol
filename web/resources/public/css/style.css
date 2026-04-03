@@ -317,6 +317,20 @@ body {
   font-weight: 500;
   cursor: pointer;
 }
+.play-btn.playing {
+  background: var(--dark);
+}
+.playback-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-left: 4px;
+}
+.control-btn.active {
+  background: var(--accent);
+  color: var(--fg-inverse);
+  border-color: var(--accent);
+}
 .control-btn, .tempo-btn {
   padding: 6px 14px;
   border-radius: 4px;
