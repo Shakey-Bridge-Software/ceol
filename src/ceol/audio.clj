@@ -1,6 +1,7 @@
 (ns ceol.audio
   (:require [babashka.http-client :as http]
             [babashka.process :as proc]
+            [ceol.abc :as abc]
             [ceol.data :as data]
             [charm.core :as charm]
             [cheshire.core]
@@ -60,104 +61,11 @@
   (let [key-match (first (filter #(str/starts-with? (or (:key %) "") tune-key) settings))]
     (or key-match (first settings))))
 
-(defn- tempo-for-type
-  "Return ABC Q: field appropriate for tune type.
-   Tempos are slightly relaxed for learning."
-  [tune-type time-sig]
-  (case tune-type
-    :polka    "Q:1/4=70"
-    :jig      "Q:3/8=70"
-    :reel     "Q:1/4=60"
-    :hornpipe "Q:1/4=40"
-    :slip-jig "Q:3/8=70"
-    ;; fallback based on time sig
-    (case time-sig
-      "6/8" "Q:3/8=60"
-      "9/8" "Q:3/8=60"
-      "Q:1/4=60")))
-
-(defn- build-abc-string
-  "Construct a full ABC file from tune metadata and ABC notation body."
-  [tune abc-body abc-key]
-  (let [mode-abbrev (case (:mode-name tune)
-                      "Ionian"  ""
-                      "Dorian"  "dor"
-                      "Aeolian" "m"
-                      "")
-        k-field (str (:key tune) mode-abbrev)
-        tempo (tempo-for-type (:type tune) (:time-sig tune))
-        ;; Strip thesession.org line break markers (|! between bars)
-        ;; abc2midi misinterprets them as decoration markers
-        clean-body (str/replace abc-body "! " "\n")]
-    (str "X:1\n"
-         "T:" (:name tune) "\n"
-         "M:" (:time-sig tune) "\n"
-         tempo "\n"
-         "K:" (or abc-key k-field) "\n"
-         "%%MIDI program 105\n"
-         clean-body "\n")))
-
-;; --- Tempo + section helpers ---
-
-(defn adjust-abc-tempo
-  "Adjust the BPM in an ABC string's Q: field by offset. Clamps to min 40."
-  [abc-str offset]
-  (if (or (nil? offset) (zero? offset))
-    abc-str
-    (str/replace abc-str #"(Q:\d+/\d+=)(\d+)"
-                 (fn [[_ prefix bpm-str]]
-                   (str prefix (max 40 (+ (parse-long bpm-str) offset)))))))
-
-(defn- header-line? [line]
-  (or (re-matches #"^[A-Z]:.*" line)
-      (str/starts-with? line "%%")))
-
-(defn- split-body-at
-  "Split body into [a-str b-str] at separator, returning nil if not found."
-  [body sep]
-  (when-let [idx (str/index-of body sep)]
-    (let [a (str/trim (subs body 0 idx))
-          b (str/trim (subs body (+ idx (count sep))))]
-      (when (and (seq a) (seq b))
-        [a b]))))
-
-(defn- ensure-repeats
-  "Ensure a part has |: and :| repeat markers."
-  [part]
-  (let [p (str/trim part)
-        ;; Strip leading || or |:
-        p (cond
-            (str/starts-with? p "||") (str/trim (subs p 2))
-            (str/starts-with? p "|:") (str/trim (subs p 2))
-            :else p)
-        ;; Strip trailing || after :|
-        p (if (str/ends-with? p "||")
-            (str/trim (subs p 0 (- (count p) 2)))
-            p)]
-    (str "|:" p (if (str/ends-with? p ":|") "" ":|"))))
-
-(defn split-abc-parts
-  "Split ABC into parts A and B. Tries || boundary first (tunes with
-   1st/2nd endings), then falls back to first :| split.
-   Returns {:a \"full-abc-for-A\" :b \"full-abc-for-B\"} or nil."
-  [abc-str]
-  (let [lines (str/split-lines abc-str)
-        header-lines (vec (take-while header-line? lines))
-        header (str/join "\n" header-lines)
-        body (str/join "\n" (drop (count header-lines) lines))
-        ;; Try splitting on || (part boundary with 1st/2nd endings)
-        [a b] (or (split-body-at body "|| |:")
-                  (split-body-at body "||\n|:")
-                  (split-body-at body "||\n")
-                   ;; Fallback: split on first :|
-                  (when-let [idx (str/index-of body ":|")]
-                    (let [a (str/trim (subs body 0 idx))
-                          rest-body (str/trim (subs body (+ idx 2)))]
-                      (when (seq rest-body)
-                        [a rest-body]))))]
-    (when (and a b)
-      {:a (str header "\n" (ensure-repeats a) "\n")
-       :b (str header "\n" (ensure-repeats b) "\n")})))
+;; Delegate to ceol.abc for pure functions shared with web
+(def build-abc-string abc/build-abc-string)
+(def adjust-abc-tempo abc/adjust-abc-tempo)
+(def split-abc-parts abc/split-abc-parts)
+(defn- tempo-for-type [t ts] (abc/tempo-for-type t ts))
 
 ;; --- Commands (async via charm/cmd) ---
 
@@ -203,7 +111,7 @@
   (if (<= n 1)
     abc-str
     (let [lines (str/split-lines abc-str)
-          header-lines (vec (take-while header-line? lines))
+          header-lines (vec (take-while abc/header-line? lines))
           header (str/join "\n" header-lines)
           body (str/join "\n" (drop (count header-lines) lines))]
       (str header "\n" (str/join "\n" (repeat n body)) "\n"))))
@@ -281,6 +189,93 @@
     (try
       (.destroyForcibly proc)
       (catch Exception _ nil))))
+
+;; --- Count-in click ---
+
+(defn countin-body
+  "ABC body for 1 bar of woodblock clicks matching the time signature."
+  [time-sig]
+  (case time-sig
+    "6/8" "C C C C C C |"
+    "9/8" "C C C C C C C C C |"
+    "4/4" "C2 C2 C2 C2 |"
+    "2/4" "C2 C2 |"
+    ;; fallback: 4 quarter notes
+    "C2 C2 C2 C2 |"))
+
+(defn countin-abc-string
+  "Full ABC string for a 1-bar count-in click using MIDI program 115 (woodblock)."
+  [time-sig tempo-q-str]
+  (str "X:1\n"
+       "T:Count-in\n"
+       "M:" time-sig "\n"
+       tempo-q-str "\n"
+       "L:1/8\n"
+       "K:C\n"
+       "%%MIDI program 115\n"
+       (countin-body time-sig) "\n"))
+
+(defn effective-tempo-str
+  "Return Q: string for a tune after applying tempo offset."
+  [tune tempo-offset]
+  (let [base-q (tempo-for-type (:type tune) (:time-sig tune))
+        offset (or tempo-offset 0)]
+    (if (zero? offset)
+      base-q
+      (str/replace base-q #"(Q:\d+/\d+=)(\d+)"
+                   (fn [[_ prefix bpm-str]]
+                     (str prefix (max 40 (+ (parse-long bpm-str) offset))))))))
+
+(defn- extract-bpm
+  "Extract integer BPM from a Q: string like \"Q:3/8=70\"."
+  [q-str]
+  (when-let [[_ bpm] (re-find #"=(\d+)" q-str)]
+    (parse-long bpm)))
+
+(defn- countin-midi-path
+  "Cache path for count-in MIDI: ~/.ceol/midi/countin_{num}_{den}_{bpm}.mid"
+  [time-sig tempo-q-str]
+  (let [[num den] (str/split time-sig #"/")
+        bpm (extract-bpm tempo-q-str)]
+    (str data/midi-dir "/countin_" num "_" den "_" bpm ".mid")))
+
+(defn countin-convert-and-play-cmd
+  "Command to generate count-in MIDI (if not cached) and play it via fluidsynth.
+   Returns :countin-started with the process, or :countin-failed."
+  [time-sig tempo-q-str]
+  (charm/cmd
+   (fn []
+     (try
+       (let [midi-path (countin-midi-path time-sig tempo-q-str)]
+         (when-not (.exists (io/file midi-path))
+           (data/ensure-dirs!)
+           (let [abc (countin-abc-string time-sig tempo-q-str)
+                 abc-path (str data/abc-dir "/countin.abc")]
+             (spit abc-path abc)
+             (let [result @(proc/process {:cmd ["abc2midi" abc-path "-o" midi-path]
+                                          :out :string :err :string})]
+               (when-not (zero? (:exit result))
+                 (throw (Exception. (str "abc2midi failed: " (:err result))))))))
+         (let [sf (data/soundfont-path)]
+           (if sf
+             (let [p (proc/process {:cmd ["fluidsynth" "-niq" sf midi-path]
+                                    :out :string :err :string})]
+               {:type :countin-started
+                :proc (:proc p)})
+             {:type :countin-failed
+              :error "No soundfont found"})))
+       (catch Exception e
+         {:type :countin-failed
+          :error (.getMessage e)})))))
+
+(defn watch-countin-cmd
+  "Command to wait for count-in fluidsynth process to finish."
+  [proc]
+  (charm/cmd
+   (fn []
+     (.waitFor proc)
+     {:type :countin-finished
+      :proc proc})))
 
 (defn playback-tick-cmd
   "Command that sleeps 150ms then sends a :playback-tick message.

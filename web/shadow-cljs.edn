@@ -1,0 +1,11 @@
+{:source-paths ["src" "../src"]
+
+ :dependencies [[no.cjohansen/replicant "2025.12.1"]]
+
+ :builds
+ {:app {:target :browser
+        :output-dir "resources/public/js"
+        :asset-path "/js"
+        :modules {:main {:init-fn ceol.web.core/init!}}
+        :devtools {:http-root "resources/public"
+                   :http-port 8280}}}}

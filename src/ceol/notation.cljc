@@ -17,7 +17,7 @@
   (contains? note-map c))
 
 (defn- digit? [c]
-  (and c (Character/isDigit ^char c)))
+  (and c (<= (int \0) (int c) (int \9))))
 
 (defn- parse-duration
   "Parse duration modifier from chars starting at idx.
@@ -75,7 +75,7 @@
         (let [c (nth chars i)]
           (cond
             ;; Skip whitespace
-            (Character/isWhitespace ^char c)
+            (or (= c \space) (= c \tab) (= c \newline) (= c \return))
             (recur (inc i) tokens accidental next-mult)
 
             ;; Accidentals — store for next note
