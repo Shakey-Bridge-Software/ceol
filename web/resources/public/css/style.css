@@ -353,6 +353,9 @@ body {
   font-weight: 500;
   cursor: pointer;
 }
+.guitar-btn.active {
+  background: var(--accent);
+}
 
 /* Scrollbar styling for tune list */
 .tune-list::-webkit-scrollbar { width: 4px; }

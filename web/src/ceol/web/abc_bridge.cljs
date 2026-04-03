@@ -1,7 +1,15 @@
 (ns ceol.web.abc-bridge
   (:require ["abcjs" :as ABCJS]))
 
-(defonce synth-state (atom {:synth nil :visual nil :generation 0}))
+(defonce synth-state (atom {:synth nil :visual nil :generation 0 :audio-ctx nil :duration nil}))
+
+(defn get-audio-context
+  "Get or create a shared AudioContext."
+  []
+  (or (:audio-ctx @synth-state)
+      (let [ctx (js/AudioContext.)]
+        (swap! synth-state assoc :audio-ctx ctx)
+        ctx)))
 
 (defn render-abc!
   "Render ABC string into a DOM element as SVG.
@@ -27,13 +35,18 @@
   (let [gen (:generation (swap! synth-state update :generation inc))]
     (when-let [synth (:synth @synth-state)]
       (try (.stop synth) (catch :default _)))
-    (swap! synth-state assoc :synth nil)
+    (swap! synth-state assoc :synth nil :duration nil)
     gen))
 
 (defn playing?
   "Is the synth currently playing?"
   []
   (boolean (:synth @synth-state)))
+
+(defn get-duration
+  "Get the duration of the current synth in seconds, or nil."
+  []
+  (:duration @synth-state))
 
 (defn play!
   "Start playback of the currently rendered ABC.
@@ -43,23 +56,23 @@
   (when-let [visual (:visual @synth-state)]
     (let [gen (:generation @synth-state)
           synth (ABCJS/synth.CreateSynth.)
-          ctx (js/AudioContext.)]
+          ctx (get-audio-context)]
       (-> (.init synth (clj->js {:visualObj visual
-                                 :audioContext ctx}))
+                                 :audioContext ctx
+                                 :options {:program 105
+                                           :chordsOff true}}))
           (.then (fn [] (.prime synth)))
           (.then (fn []
                    (.start synth)
-                   (swap! synth-state assoc :synth synth)
-                   ;; Use AudioContext state + duration to detect end
-                   (when on-end
-                     (when-let [duration (.-duration synth)]
-                       (let [check-ms (* (+ duration 0.5) 1000)]
+                   (let [dur (.-duration synth)]
+                     (swap! synth-state assoc :synth synth :duration dur)
+                     (when on-end
+                       (when dur
                          (js/setTimeout
                           (fn []
-                            ;; Only fire if same generation (not stopped by user)
                             (when (= gen (:generation @synth-state))
-                              (swap! synth-state assoc :synth nil)
+                              (swap! synth-state assoc :synth nil :duration nil)
                               (on-end)))
-                          check-ms))))))
+                          (* (+ dur 0.5) 1000)))))))
           (.catch (fn [e]
                     (js/console.error "Playback failed:" e)))))))

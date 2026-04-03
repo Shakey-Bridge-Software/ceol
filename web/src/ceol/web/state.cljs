@@ -9,7 +9,8 @@
          :selected-tune-id nil
          :filter :all
          :tab :tunes
-         :editor-open? false}))
+         :editor-open? false
+         :guitar? false}))
 
 (defn tune-by-id [state id]
   (first (filter #(= id (:id %)) (:tunes state))))

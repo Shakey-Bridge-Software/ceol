@@ -4,6 +4,7 @@
             [ceol.web.views :as views]
             [ceol.web.abc-bridge :as abc-bridge]
             [ceol.web.chords :as chords]
+            [ceol.web.guitar :as guitar]
             [ceol.abc :as abc]
             [cljs.reader :as reader]
             [clojure.walk :as walk]))
@@ -149,19 +150,36 @@
     :playback/play
     (if (abc-bridge/playing?)
       (do (abc-bridge/stop!)
+          (guitar/stop!)
           (swap! state/app-state assoc :playing? false))
-      (do (swap! state/app-state assoc :playing? true
-                 :playing-section (:section @state/app-state))
-          (abc-bridge/play!
-           {:on-end (fn []
-                      (swap! state/app-state assoc :playing? false :playing-section nil)
-                      (let [s @state/app-state]
-                        (when (:loop? s)
-                          (handle-action! :playback/play nil))))})))
+      (let [s @state/app-state
+            tune (state/selected-tune s)
+            abc-body (state/edited-abc-for-tune s (:id tune))]
+        (swap! state/app-state assoc :playing? true
+               :playing-section (:section s))
+        ;; Start melody
+        (abc-bridge/play!
+         {:on-end (fn []
+                    (guitar/stop!)
+                    (swap! state/app-state assoc :playing? false :playing-section nil)
+                    (let [s @state/app-state]
+                      (when (:loop? s)
+                        (handle-action! :playback/play nil))))})
+        ;; Always start guitar alongside melody (muted if guitar off)
+        (when (and tune abc-body (string? abc-body))
+          (guitar/set-muted! (not (:guitar? s)))
+          (let [bar-chords (guitar/extract-bar-chords abc-body)]
+            (guitar/play! bar-chords (:type tune) (:time-sig tune))))))
 
     :playback/stop
     (do (abc-bridge/stop!)
+        (guitar/stop!)
         (swap! state/app-state assoc :playing? false :playing-section nil))
+
+    :guitar/toggle
+    (let [new-val (not (:guitar? @state/app-state))]
+      (swap! state/app-state assoc :guitar? new-val)
+      (guitar/set-muted! (not new-val)))
 
     :section/set
     (let [[section] args]

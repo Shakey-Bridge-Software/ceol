@@ -120,7 +120,9 @@
       [:span.tempo-label (str (or bpm "120") " BPM")]
       [:button.tempo-btn {:on {:click [[:tempo/up]]}} "+"]]
      [:div.right-controls
-      [:button.guitar-btn "Guitar"]]]))
+      [:button.guitar-btn {:class (when (:guitar? state) "active")
+                           :on {:click [[:guitar/toggle]]}}
+       (if (:guitar? state) "\uD83C\uDFB8 Guitar" "Guitar")]]]))
 
 (defn main-area [state]
   (let [editor-open? (:editor-open? state)]
