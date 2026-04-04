@@ -49,12 +49,18 @@
           ;; Store sampler ref outside the callback
           sampler-ref (atom nil)
           p (js/Promise.
-             (fn [resolve _reject]
-               (let [sampler (Tone/Sampler.
+             (fn [resolve reject]
+               (let [timeout (js/setTimeout
+                              (fn []
+                                (js/console.warn "Guitar samples failed to load (timeout)")
+                                (reject (js/Error. "Sample load timeout")))
+                              15000)
+                     sampler (Tone/Sampler.
                               (clj->js {:urls urls
                                         :baseUrl sample-base-url
                                         :release 0.8
                                         :onload (fn []
+                                                  (js/clearTimeout timeout)
                                                   (let [s @sampler-ref]
                                                     (swap! guitar-state assoc :synth s :gain gain)
                                                     (resolve s)))}))]
@@ -98,13 +104,12 @@
                                         k))]
                               (recur j (conj result j)))
                             (recur (inc i) result))))
-        ;; For each bar region, find the first chord annotation in it
-        bar-count (dec (count bar-positions))]
+        ;; Add end-of-string as final boundary so last bar is included
+        all-positions (conj bar-positions (count abc-body))
+        bar-count (dec (count all-positions))]
     (mapv (fn [bar-idx]
-            (let [start (nth bar-positions bar-idx)
-                  end (if (< (inc bar-idx) (count bar-positions))
-                        (nth bar-positions (inc bar-idx))
-                        (count abc-body))
+            (let [start (nth all-positions bar-idx)
+                  end (nth all-positions (inc bar-idx))
                   chord (first (filter (fn [{:keys [pos]}]
                                          (and (>= pos start) (< pos end)))
                                        chords-at))]
@@ -182,4 +187,6 @@
   (-> (init-synth!)
       (.then (fn [_synth]
                (let [cancel (schedule-notes! chords tune-type)]
-                 (swap! guitar-state assoc :scheduled cancel))))))
+                 (swap! guitar-state assoc :scheduled cancel))))
+      (.catch (fn [e]
+                (js/console.warn "Guitar playback failed:" e)))))

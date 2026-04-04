@@ -7,6 +7,27 @@
    :hornpipe "Hornpipe" :slip-jig "Slip Jig" :slide "Slide" :other "Other"})
 
 (def tune-type-order [:all :polka :jig :reel :hornpipe :slip-jig :slide :other])
+(def tune-types [:polka :jig :reel :hornpipe :slip-jig :slide :other])
+(def time-sigs ["2/4" "4/4" "6/8" "9/8" "12/8" "3/4"])
+
+(def key-mode-options
+  [{:label "G Major"   :key "G" :mode-name "Ionian"}
+   {:label "D Major"   :key "D" :mode-name "Ionian"}
+   {:label "A Dorian"  :key "A" :mode-name "Dorian"}
+   {:label "E Dorian"  :key "E" :mode-name "Dorian"}
+   {:label "E Minor"   :key "E" :mode-name "Aeolian"}
+   {:label "C Major"   :key "C" :mode-name "Ionian"}
+   {:label "A Minor"   :key "A" :mode-name "Aeolian"}])
+
+(defn- key-mode-label [key-name mode-name]
+  (let [match (first (filter #(and (= (:key %) key-name) (= (:mode-name %) mode-name))
+                             key-mode-options))]
+    (or (:label match) (str key-name " " mode-name))))
+
+(defn- next-in-cycle [coll current]
+  (let [idx (.indexOf coll current)
+        next-idx (mod (inc (if (neg? idx) -1 idx)) (count coll))]
+    (nth coll next-idx)))
 
 (defn filter-chip [current-filter type-key]
   [:button.filter-chip
@@ -39,8 +60,10 @@
       [:button.tab {:class (when (= :sets (:tab state)) "active")
                     :on {:click [[:tab/set :sets]]}} "Sets"]]
      (when (= :tunes (:tab state))
-       [:div.filters
-        (map (fn [t] (filter-chip current-filter t)) tune-type-order)])
+       [:div.filters-row
+        [:div.filters
+         (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
+        [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]])
      [:div.tune-list
       (map (fn [t] (tune-row t selected-id)) tunes)]]))
 
@@ -49,13 +72,44 @@
     (let [tempo-str (abc/tempo-for-type (:type tune) (:time-sig tune))
           bpm (second (re-find #"=(\d+)" tempo-str))
           section (:section state)
-          editor-open? (:editor-open? state)]
+          editor-open? (:editor-open? state)
+          editing (:editing-field state)
+          tune-id (:id tune)]
       [:div.tune-header
        [:div.title-block
-        [:div.tune-title (:name tune)]
+        ;; Editable title
+        (if (= editing :name)
+          [:input.inline-edit-title
+           {:type "text"
+            :value (:name tune)
+            :auto-focus true
+            :on {:blur [[:tune/update-field tune-id :name :event/target.value]]
+                 :keydown [[:field/keydown :event/key]]}}]
+          [:div.tune-title {:on {:click [[:field/edit :name]]}}
+           (:name tune)])
+        ;; Editable metadata
         [:div.tune-title-meta
-         (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune)
-              " · " (:time-sig tune) " · " bpm " BPM")]]
+         ;; Type — click to cycle
+         [:span.meta-field.clickable
+          {:on {:click [[:tune/update-field tune-id :type
+                         (next-in-cycle tune-types (:type tune))]]}}
+          (name (:type tune))]
+         [:span.meta-sep " · "]
+         ;; Key/mode — click to cycle
+         (let [current-label (key-mode-label (:key tune) (:mode-name tune))
+               current-opt (first (filter #(= (:label %) current-label) key-mode-options))
+               next-opt (next-in-cycle key-mode-options (or current-opt (first key-mode-options)))]
+           [:span.meta-field.clickable
+            {:on {:click [[:tune/update-key-mode tune-id (:key next-opt) (:mode-name next-opt)]]}}
+            current-label])
+         [:span.meta-sep " · "]
+         ;; Time sig — click to cycle
+         [:span.meta-field.clickable
+          {:on {:click [[:tune/update-field tune-id :time-sig
+                         (next-in-cycle time-sigs (:time-sig tune))]]}}
+          (:time-sig tune)]
+         [:span.meta-sep " · "]
+         [:span bpm " BPM"]]]
        [:div.section-controls
         [:button.section-btn {:class (when (= :a section) "active")
                               :on {:click [[:section/set :a]]}} "A"]
@@ -65,7 +119,10 @@
                               :on {:click [[:section/set nil]]}} "All"]
         [:button.edit-toggle {:class (when editor-open? "active")
                               :on {:click [[:editor/toggle]]}}
-         "Edit"]]])))
+         "Edit"]
+        (when (state/custom-tune? tune-id)
+          [:button.delete-tune {:on {:click [[:tune/delete tune-id]]}}
+           "Delete"])]])))
 
 (defn sheet-music [state]
   (let [tune (state/selected-tune state)
@@ -75,14 +132,14 @@
        [:div#sheet-music]
        [:div.sheet-empty
         (if tune
-          "Loading notation..."
+          "Select tune and open editor to add ABC notation"
           "Select a tune to view sheet music")])]))
 
 (defn abc-editor [state]
   (let [tune (state/selected-tune state)
         tune-id (:id tune)
         abc-str (when tune (state/edited-abc-for-tune state tune-id))]
-    (when (and tune abc-str)
+    (when tune
       [:div.editor-panel
        [:div.editor-header
         [:span.editor-label "ABC NOTATION"]
@@ -91,7 +148,8 @@
          [:span.editor-hint "Notes: A-G a-g"]
          [:span.editor-hint.accent "Live preview"]]]
        [:textarea.editor-textarea
-        {:value abc-str
+        {:value (or abc-str "")
+         :placeholder "Type ABC notation here..."
          :spellcheck "false"
          :on {:input [[:editor/update tune-id :event/target.value]]}}]])))
 

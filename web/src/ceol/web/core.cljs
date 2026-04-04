@@ -95,6 +95,41 @@
         (swap! state/app-state assoc :abc-edits edits))
       (catch :default _ nil))))
 
+(defn save-custom-tunes!
+  "Save custom tunes to localStorage."
+  []
+  (let [custom (:custom-tunes @state/app-state)]
+    (.setItem js/localStorage "ceol-custom-tunes" (pr-str custom))))
+
+(defn load-custom-tunes!
+  "Load custom tunes from localStorage and merge into state."
+  []
+  (when-let [raw (.getItem js/localStorage "ceol-custom-tunes")]
+    (try
+      (let [custom (reader/read-string raw)]
+        (swap! state/app-state (fn [s]
+                                 (-> s
+                                     (assoc :custom-tunes custom)
+                                     (assoc :tunes (state/merge-tunes state/base-tunes custom))))))
+      (catch :default _ nil))))
+
+(defn- tune-by-id-from-base [tune-id]
+  (first (filter #(= tune-id (:id %)) state/base-tunes)))
+
+(defn update-tune-field!
+  "Update a field on a tune and persist."
+  [tune-id field value]
+  (swap! state/app-state
+         (fn [s]
+           (let [custom (update (:custom-tunes s) tune-id
+                                (fn [existing]
+                                  (merge (or existing
+                                             (tune-by-id-from-base tune-id))
+                                         {:id tune-id field value})))
+                 merged (state/merge-tunes state/base-tunes custom)]
+             (assoc s :custom-tunes custom :tunes merged))))
+  (save-custom-tunes!))
+
 (defn resolve-event-placeholders [dispatch-data actions]
   (let [js-event (:replicant/js-event dispatch-data)]
     (walk/postwalk
@@ -107,6 +142,25 @@
            x)
          x))
      actions)))
+
+(defn split-abc-body
+  "Split an ABC body (no headers) into A and B parts.
+   Returns {:a \"...\" :b \"...\"} or nil if can't split.
+   Each part gets proper barlines so it can stand alone."
+  [body]
+  (let [idx (.indexOf body ":|||:")]
+    (if (pos? idx)
+      (let [a (.trim (.substring body 0 (+ idx 2)))
+            b (.trim (.substring body (+ idx 3)))]
+        (when (and (seq a) (seq b))
+          {:a a :b b}))
+      (let [idx (.indexOf body ":|")]
+        (when (pos? idx)
+          (let [after-idx (+ idx 2)
+                rest-body (.trim (.substring body after-idx))]
+            (when (seq rest-body)
+              {:a (.trim (.substring body 0 after-idx))
+               :b rest-body})))))))
 
 (defn handle-action! [action args]
   (case action
@@ -146,6 +200,55 @@
         (schedule-save!)))
 
     :tune/add-to-set nil
+
+    :tune/add
+    (let [new-id (state/next-tune-id @state/app-state)
+          new-tune {:id new-id :name "New Tune" :type :polka :time-sig "2/4"
+                    :key "G" :mode-name "Ionian"}]
+      (swap! state/app-state
+             (fn [s]
+               (let [custom (assoc (:custom-tunes s) new-id new-tune)
+                     merged (state/merge-tunes state/base-tunes custom)]
+                 (assoc s :custom-tunes custom :tunes merged
+                        :selected-tune-id new-id :editing-field :name))))
+      (save-custom-tunes!))
+
+    :tune/update-field
+    (let [[tune-id field value] args]
+      (update-tune-field! tune-id field value)
+      (swap! state/app-state assoc :editing-field nil))
+
+    :tune/update-key-mode
+    (let [[tune-id key-name mode-name] args]
+      (update-tune-field! tune-id :key key-name)
+      (update-tune-field! tune-id :mode-name mode-name)
+      (swap! state/app-state assoc :editing-field nil))
+
+    :tune/delete
+    (let [[tune-id] args]
+      (when (state/custom-tune? tune-id)
+        (swap! state/app-state
+               (fn [s]
+                 (let [custom (dissoc (:custom-tunes s) tune-id)
+                       merged (state/merge-tunes state/base-tunes custom)]
+                   (assoc s :custom-tunes custom :tunes merged
+                          :selected-tune-id nil))))
+        (save-custom-tunes!)))
+
+    :field/edit
+    (let [[field] args]
+      (swap! state/app-state assoc :editing-field field))
+
+    :field/cancel
+    (swap! state/app-state assoc :editing-field nil)
+
+    :field/keydown
+    (let [[key] args]
+      (case key
+        "Enter" (when-let [el (js/document.querySelector ".inline-edit-title")]
+                  (.blur el))
+        "Escape" (swap! state/app-state assoc :editing-field nil)
+        nil))
 
     :playback/play
     (if (abc-bridge/playing?)
@@ -215,29 +318,6 @@
     (doseq [[action & args] actions]
       (handle-action! action args))))
 
-(defn split-abc-body
-  "Split an ABC body (no headers) into A and B parts.
-   Returns {:a \"...\" :b \"...\"} or nil if can't split.
-   Each part gets proper barlines so it can stand alone."
-  [body]
-  ;; Most tunes use :|||: as boundary between parts
-  ;; e.g. |:A part...|G2G2:|||:B part...|G2G2:||
-  ;; Split so A = |:A part...|G2G2:| and B = |:B part...|G2G2:|
-  (let [idx (.indexOf body ":|||:")]
-    (if (pos? idx)
-      (let [a (.trim (.substring body 0 (+ idx 2)))  ;; include the :|
-            b (.trim (.substring body (+ idx 3)))]    ;; include the |:
-        (when (and (seq a) (seq b))
-          {:a a :b b}))
-      ;; Fallback: split at first :| that's followed by more content
-      (let [idx (.indexOf body ":|")]
-        (when (pos? idx)
-          (let [after-idx (+ idx 2)
-                rest-body (.trim (.substring body after-idx))]
-            (when (seq rest-body)
-              {:a (.trim (.substring body 0 after-idx))
-               :b rest-body})))))))
-
 (defn render-sheet-music!
   "Imperatively render ABC into the #sheet-music div if present."
   [s]
@@ -260,6 +340,7 @@
 
 (defonce prev-render-key (atom nil))
 
+(remove-watch state/app-state ::render)
 (add-watch state/app-state ::render
            (fn [_ _ old-s s]
              (r/render el (views/app s))
@@ -281,10 +362,13 @@
       (.then #(.text %))
       (.then (fn [text]
                (let [data (reader/read-string text)]
-                 (swap! state/app-state assoc :abc-data data))))))
+                 (swap! state/app-state assoc :abc-data data))))
+      (.catch (fn [e]
+                (js/console.error "Failed to load ABC data:" e)))))
 
 (defn init! []
   (r/set-dispatch! execute!)
+  (load-custom-tunes!)
   (load-abc-data!)
   (load-saved-edits!)
   (r/render el (views/app @state/app-state)))

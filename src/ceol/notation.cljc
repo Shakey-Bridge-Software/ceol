@@ -173,16 +173,16 @@
   [abc-str]
   (when-let [q (extract-header-field abc-str "Q")]
     (when-let [[_ num den bpm] (re-find #"(\d+)/(\d+)=(\d+)" q)]
-      {:bpm (parse-long bpm)
-       :beat-num (parse-long num)
-       :beat-den (parse-long den)})))
+      {:bpm (#?(:clj parse-long :cljs js/parseInt) bpm)
+       :beat-num (#?(:clj parse-long :cljs js/parseInt) num)
+       :beat-den (#?(:clj parse-long :cljs js/parseInt) den)})))
 
 (defn parse-time-sig
   "Parse M: field. Returns {:num 6 :den 8} or nil."
   [abc-str]
   (when-let [m (extract-header-field abc-str "M")]
     (when-let [[_ num den] (re-find #"(\d+)/(\d+)" m)]
-      {:num (parse-long num) :den (parse-long den)})))
+      {:num (#?(:clj parse-long :cljs js/parseInt) num) :den (#?(:clj parse-long :cljs js/parseInt) den)})))
 
 (defn parse-key
   "Parse K: field. Returns key string like 'G' or 'Ador'."
