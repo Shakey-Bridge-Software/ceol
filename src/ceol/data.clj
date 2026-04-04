@@ -1,20 +1,31 @@
 (ns ceol.data
   (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.string :as str]))
 
 (def ceol-dir (str (System/getProperty "user.home") "/.ceol"))
 (def cache-file (str ceol-dir "/cache.edn"))
+
+(def local-abc-file (str ceol-dir "/local-abc.edn"))
 (def abc-dir (str ceol-dir "/abc"))
 (def midi-dir (str ceol-dir "/midi"))
+(def setlists-dir (str ceol-dir "/setlists"))
 
 (defn ensure-dirs! []
-  (doseq [d [ceol-dir abc-dir midi-dir]]
+  (doseq [d [ceol-dir abc-dir midi-dir setlists-dir]]
     (let [f (io/file d)]
       (when-not (.exists f)
         (.mkdirs f)))))
 
 (defn load-cache []
   (let [f (io/file cache-file)]
+    (if (.exists f)
+      (try (edn/read-string (slurp f))
+           (catch Exception _ {}))
+      {})))
+
+(defn load-local-abc []
+  (let [f (io/file local-abc-file)]
     (if (.exists f)
       (try (edn/read-string (slurp f))
            (catch Exception _ {}))
@@ -62,6 +73,19 @@
 
 (defn midi-file-path [tune-id]
   (str midi-dir "/" tune-id ".mid"))
+
+(defn load-setlists []
+  (let [dir (io/file setlists-dir)]
+    (if (.exists dir)
+      (->> (.listFiles dir)
+           (filter #(str/ends-with? (.getName %) ".edn"))
+           (reduce (fn [acc f]
+                     (let [slug (str/replace (.getName f) #"\.edn$" "")]
+                       (try
+                         (assoc acc slug (edn/read-string (slurp f)))
+                         (catch Exception _ acc))))
+                   {}))
+      {})))
 
 (defn midi-file-path-for
   "MIDI path for a specific tempo-offset/section/loop combo.

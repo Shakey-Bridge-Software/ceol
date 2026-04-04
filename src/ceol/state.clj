@@ -24,6 +24,7 @@
 (defn init-state []
   (data/ensure-dirs!)
   (let [hydrated (data/hydrate-tunes tunes/catalog)
+        setlists (data/load-setlists)
         state {:cursor           0
                :mode             :browse
                :filter           :all
@@ -42,7 +43,14 @@
                :notation         nil
                :notation-tune-id nil
                :play-start-ms    nil
-               :current-note-idx nil}
+               :current-note-idx nil
+               :count-in         false
+               :counting-in      false
+               :countin-proc     nil
+               :pending-midi-path nil
+               :setlists         setlists
+               :active-setlist   nil
+               :set-queue        nil}
         missing (filterv (complement check-dep) ["abc2midi" "fluidsynth"])
         state (if (seq missing)
                 (flash state (str "missing: " (str/join ", " missing)))
@@ -55,10 +63,46 @@
 ;; --- Tune helpers ---
 
 (defn visible-tunes [state]
-  (tunes/tunes-by-type (:tunes state) (:filter state)))
+  (if-let [slug (:active-setlist state)]
+    (let [setlist (get (:setlists state) slug)]
+      (tunes/resolve-setlist setlist (:tunes state)))
+    (tunes/tunes-by-type (:tunes state) (:filter state))))
 
 (defn selected-tune [state]
   (get (visible-tunes state) (:cursor state)))
+
+(defn- delete-midi-variants!
+  "Delete all MIDI files for a tune (base + section/tempo variants)."
+  [tune-id]
+  (let [dir (io/file data/midi-dir)
+        prefix (str tune-id)]
+    (when (.exists dir)
+      (doseq [f (.listFiles dir)]
+        (let [n (.getName f)]
+          (when (and (str/ends-with? n ".mid")
+                     (or (= n (str prefix ".mid"))
+                         (str/starts-with? n (str prefix "_"))))
+            (.delete f)))))))
+
+(defn apply-local-abc
+  "If tune has a local ABC entry, build the full ABC string and mark ready.
+   Resets MIDI status when ABC has changed so stale MIDI is reconverted.
+   Also deletes stale MIDI files from disk to prevent cache.edn hydration issues."
+  [state tune]
+  (let [local-abc (data/load-local-abc)
+        body (get local-abc (:id tune))]
+    (if body
+      (let [abc (audio/build-abc-string tune body nil)
+            changed? (not= abc (:abc tune))
+            _ (when changed? (delete-midi-variants! (:id tune)))
+            updates (cond-> {:abc abc :abc-status :ready :local-abc? true}
+                      changed? (merge {:midi-status :none :midi-path nil}))
+            tune' (merge tune updates)
+            state' (update state :tunes
+                           (fn [tunes]
+                             (mapv #(if (= (:id tune) (:id %)) tune' %) tunes)))]
+        [state' tune'])
+      [state tune])))
 
 (defn clamp-cursor [state]
   (let [items (visible-tunes state)
@@ -96,11 +140,27 @@
 
 ;; --- Audio pipeline ---
 
+(defn- clear-countin-state [state]
+  (assoc state :counting-in false :countin-proc nil :pending-midi-path nil))
+
+(defn- start-playback
+  "Play a tune MIDI, optionally preceded by a count-in click.
+   If count-in is enabled, plays the count-in first and defers the tune."
+  [state tune-id midi-path]
+  (if (:count-in state)
+    (let [tune (tunes/tune-by-id (:tunes state) tune-id)
+          tempo-q (audio/effective-tempo-str tune (:tempo-offset state))]
+      [(assoc state :playing tune-id :counting-in true :pending-midi-path midi-path)
+       (audio/countin-convert-and-play-cmd (:time-sig tune) tempo-q)])
+    [(assoc state :playing tune-id)
+     (audio/play-cmd midi-path)]))
+
 (defn prepare-tune
   "Start the fetch-convert pipeline for a tune."
   [state]
   (if-let [tune (selected-tune state)]
-    (let [tune-id (:id tune)
+    (let [[state tune] (apply-local-abc state tune)
+          tune-id (:id tune)
           tempo-offset (:tempo-offset state)
           section (:section state)
           loop? (:loop state)
@@ -132,7 +192,8 @@
   "Play selected tune, or stop if already playing."
   [state]
   (if-let [tune (selected-tune state)]
-    (let [tune-id (:id tune)
+    (let [[state tune] (apply-local-abc state tune)
+          tune-id (:id tune)
           tempo-offset (:tempo-offset state)
           section (:section state)
           loop? (:loop state)]
@@ -141,23 +202,29 @@
         (= (:playing state) tune-id)
         (do
           (audio/stop-playback! (:play-proc state))
-          [(assoc state :playing nil :play-proc nil
-                  :notation-tune-id nil
-                  :play-start-ms nil :current-note-idx nil) nil])
+          (audio/stop-playback! (:countin-proc state))
+          [(-> state
+               (assoc :playing nil :play-proc nil
+                      :notation-tune-id nil
+                      :play-start-ms nil :current-note-idx nil
+                      :set-queue nil)
+               (clear-countin-state)) nil])
 
         ;; Playing different tune -> stop old, start new
         (:playing state)
         (do
           (audio/stop-playback! (:play-proc state))
-          (let [state' (assoc state :playing nil :play-proc nil)]
+          (audio/stop-playback! (:countin-proc state))
+          (let [state' (-> state
+                           (assoc :playing nil :play-proc nil :set-queue nil)
+                           (clear-countin-state))]
             (play-or-stop state')))
 
         ;; MIDI ready -> check if correct variant exists
         (= :ready (:midi-status tune))
         (let [target-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
           (if (.exists (io/file target-path))
-            [(assoc state :playing tune-id)
-             (audio/play-cmd target-path)]
+            (start-playback state tune-id target-path)
             ;; Need to convert for this tempo/section variant
             (if (:abc tune)
               (let [[s sc] (start-spinner (assoc state :loading tune-id))
@@ -180,9 +247,13 @@
 
 (defn stop-playback! [state]
   (audio/stop-playback! (:play-proc state))
-  [(assoc state :playing nil :play-proc nil :loading nil
-          :notation-tune-id nil
-          :play-start-ms nil :current-note-idx nil) nil])
+  (audio/stop-playback! (:countin-proc state))
+  [(-> state
+       (assoc :playing nil :play-proc nil :loading nil
+              :notation-tune-id nil
+              :play-start-ms nil :current-note-idx nil
+              :set-queue nil)
+       (clear-countin-state)) nil])
 
 (defn reconvert-current
   "Stop playback, reconvert with current tempo/section, auto-play."
@@ -195,18 +266,78 @@
     (if (and tune (:abc tune))
       (let [midi-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
         (audio/stop-playback! (:play-proc state))
-        (if (.exists (io/file midi-path))
-          ;; Already have this variant cached — play directly
-          [(assoc state :play-proc nil :playing tune-id
-                  :play-start-ms nil :current-note-idx nil)
-           (audio/play-cmd midi-path)]
-          ;; Need to convert — clear :playing, set :loading for auto-play
-          (let [state' (assoc state :playing nil :play-proc nil :loading tune-id
-                              :play-start-ms nil :current-note-idx nil)
-                [s sc] (start-spinner state')
-                s' (update-tune s tune-id assoc :midi-status :converting)]
-            [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])))
+        (audio/stop-playback! (:countin-proc state))
+        (let [state (clear-countin-state state)]
+          (if (.exists (io/file midi-path))
+            ;; Already have this variant cached — play directly (no count-in on reconvert)
+            [(assoc state :play-proc nil :playing tune-id
+                    :play-start-ms nil :current-note-idx nil)
+             (audio/play-cmd midi-path)]
+            ;; Need to convert — clear :playing, set :loading for auto-play
+            (let [state' (assoc state :playing nil :play-proc nil :loading tune-id
+                                :play-start-ms nil :current-note-idx nil)
+                  [s sc] (start-spinner state')
+                  s' (update-tune s tune-id assoc :midi-status :converting)]
+              [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))]))))
       [state nil])))
+
+;; --- Set queue helpers ---
+
+(defn play-tune-by-id
+  "Look up a tune by id and start the play pipeline (like play-or-stop but for a specific tune)."
+  [state tune-id]
+  (let [tune (tunes/tune-by-id (:tunes state) tune-id)
+        [state tune] (apply-local-abc state tune)
+        tempo-offset (:tempo-offset state)
+        section (:section state)
+        loop? (:loop state)]
+    (cond
+      (nil? tune)
+      [(flash state "tune not found") nil]
+
+      (= :ready (:midi-status tune))
+      (let [target-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
+        (if (.exists (io/file target-path))
+          (start-playback state tune-id target-path)
+          (if (:abc tune)
+            (let [[s sc] (start-spinner (assoc state :loading tune-id))
+                  s' (update-tune s tune-id assoc :midi-status :converting)]
+              [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if loop? 50 1)))])
+            [(flash state "no ABC available") nil])))
+
+      (= :ready (:abc-status tune))
+      (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
+            state'' (update-tune state' tune-id assoc :midi-status :converting)]
+        [state'' (charm/batch spinner-cmd (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if loop? 50 1)))])
+
+      :else
+      (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
+            state'' (update-tune state' tune-id assoc :abc-status :fetching)]
+        [state'' (charm/batch spinner-cmd (audio/fetch-abc-cmd tune))]))))
+
+(defn- advance-set-queue
+  "Advance to the next tune in set-queue. Returns [state cmd] or nil if no queue/past end."
+  [state]
+  (when-let [sq (:set-queue state)]
+    (let [next-idx (inc (:index sq))
+          tune-ids (:tune-ids sq)]
+      (cond
+        (< next-idx (count tune-ids))
+        (let [next-id (nth tune-ids next-idx)
+              state' (assoc state :set-queue (assoc sq :index next-idx)
+                            :playing next-id)]
+          (play-tune-by-id state' next-id))
+
+        (:loop state)
+        (let [first-id (first tune-ids)
+              state' (assoc state :set-queue (assoc sq :index 0)
+                            :playing first-id)]
+          (play-tune-by-id state' first-id))
+
+        :else
+        [(assoc state :set-queue nil :playing nil :play-proc nil
+                :notation nil :notation-tune-id nil
+                :play-start-ms nil :current-note-idx nil) nil]))))
 
 ;; --- Staff helpers ---
 
@@ -238,6 +369,7 @@
              (charm/key-match? msg "q")))
     (do
       (audio/stop-playback! (:play-proc state))
+      (audio/stop-playback! (:countin-proc state))
       [state charm/quit-cmd])
 
     ;; Window size
@@ -289,8 +421,7 @@
                      (stop-spinner))]
       ;; If we were triggered by play-or-stop, auto-play now
       (if (and wants-play? (not (:playing state')))
-        [(assoc state' :playing tune-id)
-         (audio/play-cmd midi-path)]
+        (start-playback state' tune-id midi-path)
         [(flash state' "prepared") nil]))
 
     (= :midi-failed (:type msg))
@@ -301,6 +432,32 @@
            (stop-spinner)
            (flash (str "MIDI convert failed: " (:error msg))))
        nil])
+
+    ;; --- Count-in messages ---
+
+    (= :countin-started (:type msg))
+    (let [proc (:proc msg)]
+      [(assoc state :countin-proc proc)
+       (audio/watch-countin-cmd proc)])
+
+    (= :countin-finished (:type msg))
+    (if (= (:proc msg) (:countin-proc state))
+      ;; Count-in done — play the pending tune
+      (let [midi-path (:pending-midi-path state)
+            state' (clear-countin-state state)]
+        (if midi-path
+          [state' (audio/play-cmd midi-path)]
+          [state' nil]))
+      ;; Stale count-in finished — ignore
+      [state nil])
+
+    (= :countin-failed (:type msg))
+    ;; Fallback: play tune directly without count-in
+    (let [midi-path (:pending-midi-path state)
+          state' (clear-countin-state state)]
+      (if midi-path
+        [state' (audio/play-cmd midi-path)]
+        [(flash state' (str "count-in failed: " (:error msg))) nil]))
 
     (= :playback-started (:type msg))
     (let [proc (:proc msg)
@@ -329,21 +486,25 @@
 
     (= :playback-finished (:type msg))
     (if (= (:proc msg) (:play-proc state))
-      ;; Current playback finished — two-layer looping:
-      ;; 1) 50x baked-in ABC body repeats for gapless looping within a run
-      ;; 2) This restart-on-finish as fallback when the 50x body ends
-      (if (:loop state)
-        (let [tune-id (:playing state)
-              tune (when tune-id (tunes/tune-by-id (:tunes state) tune-id))]
-          (if (and tune (:midi-path tune))
-            [(assoc state :play-proc nil :play-start-ms (System/currentTimeMillis))
-             (charm/batch (audio/play-cmd (:midi-path tune)) (audio/playback-tick-cmd))]
-            [(assoc state :playing nil :play-proc nil
-                    :notation nil :notation-tune-id nil
-                    :play-start-ms nil :current-note-idx nil) nil]))
-        [(assoc state :playing nil :play-proc nil
-                :notation nil :notation-tune-id nil
-                :play-start-ms nil :current-note-idx nil) nil])
+      ;; Current playback finished
+      (if-let [sq-result (and (:set-queue state) (advance-set-queue (assoc state :play-proc nil)))]
+        ;; Set queue active — advance to next tune
+        sq-result
+        ;; No set queue — two-layer looping:
+        ;; 1) 50x baked-in ABC body repeats for gapless looping within a run
+        ;; 2) This restart-on-finish as fallback when the 50x body ends
+        (if (:loop state)
+          (let [tune-id (:playing state)
+                tune (when tune-id (tunes/tune-by-id (:tunes state) tune-id))]
+            (if (and tune (:midi-path tune))
+              [(assoc state :play-proc nil :play-start-ms (System/currentTimeMillis))
+               (charm/batch (audio/play-cmd (:midi-path tune)) (audio/playback-tick-cmd))]
+              [(assoc state :playing nil :play-proc nil
+                      :notation nil :notation-tune-id nil
+                      :play-start-ms nil :current-note-idx nil) nil]))
+          [(assoc state :playing nil :play-proc nil
+                  :notation nil :notation-tune-id nil
+                  :play-start-ms nil :current-note-idx nil :set-queue nil) nil]))
       ;; Stale playback finished (old process) — ignore
       [state nil])
 
@@ -387,11 +548,13 @@
         (prepare-tune state)
 
         (charm/key-match? msg "f")
-        [(-> state
-             (update :filter tunes/next-filter)
-             (assoc :cursor 0)
-             (clamp-cursor))
-         nil]
+        (if (:active-setlist state)
+          [(flash state "filter disabled in setlist mode") nil]
+          [(-> state
+               (update :filter tunes/next-filter)
+               (assoc :cursor 0)
+               (clamp-cursor))
+           nil])
 
         ;; Loop toggle
         (charm/key-match? msg "l")
@@ -474,6 +637,69 @@
               cmd (when (and new-show parsed (:playing state))
                     (audio/playback-tick-cmd))]
           [(flash state' (if new-show "staff on" "staff off")) cmd])
+
+        ;; Count-in toggle
+        (charm/key-match? msg "c")
+        (let [new-ci (not (:count-in state))]
+          [(flash (assoc state :count-in new-ci)
+                  (if new-ci "count-in on" "count-in off")) nil])
+
+        ;; Cycle setlist
+        (charm/key-match? msg "S")
+        (let [slugs (vec (sort (keys (:setlists state))))
+              current (:active-setlist state)
+              next-slug (cond
+                          (empty? slugs) nil
+                          (nil? current) (first slugs)
+                          :else (let [idx (.indexOf slugs current)
+                                      next-idx (inc idx)]
+                                  (when (< next-idx (count slugs))
+                                    (nth slugs next-idx))))
+              label (if next-slug
+                      (:name (get (:setlists state) next-slug) next-slug)
+                      "all tunes")]
+          [(-> state
+               (assoc :active-setlist next-slug :cursor 0 :filter :all)
+               (flash label))
+           nil])
+
+        ;; Play full set from cursor
+        (charm/key-match? msg "g")
+        (if-let [slug (:active-setlist state)]
+          (let [tune (selected-tune state)
+                setlist (get (:setlists state) slug)]
+            (if-let [s (tunes/set-for-tune setlist (:id tune))]
+              (let [tune-ids (:tune-ids s)
+                    pos (or (:set-position tune)
+                            (.indexOf (vec tune-ids) (:id tune)))
+                    ;; Stop current playback if any
+                    _ (when (:play-proc state) (audio/stop-playback! (:play-proc state)))
+                    _ (when (:countin-proc state) (audio/stop-playback! (:countin-proc state)))
+                    state' (-> state
+                               (assoc :set-queue {:tune-ids tune-ids :index pos :set-name (:name s)}
+                                      :playing nil :play-proc nil)
+                               (clear-countin-state))
+                    first-id (nth tune-ids pos)]
+                (play-tune-by-id state' first-id))
+              [(flash state "not in a set") nil]))
+          [(flash state "no setlist active") nil])
+
+        ;; Skip to next tune in set queue
+        (charm/key-match? msg "n")
+        (if (:set-queue state)
+          (do
+            (audio/stop-playback! (:play-proc state))
+            (audio/stop-playback! (:countin-proc state))
+            (let [state' (-> state
+                             (assoc :play-proc nil)
+                             (clear-countin-state))]
+              (or (advance-set-queue state')
+                  [(-> state'
+                       (assoc :set-queue nil :playing nil
+                              :notation nil :notation-tune-id nil
+                              :play-start-ms nil :current-note-idx nil))
+                   nil])))
+          [state nil])
 
         (charm/key-match? msg "?")
         [(assoc state :mode :help) nil]

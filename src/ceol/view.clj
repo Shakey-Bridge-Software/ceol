@@ -25,6 +25,7 @@
    :reel     (charm/rgb 220 180 100)   ; amber
    :hornpipe (charm/rgb 160 210 120)   ; lime
    :slip-jig (charm/rgb 220 140 160)   ; rose
+   :slide    (charm/rgb 180 220 200)   ; mint
    :other    (charm/rgb 160 160 170)}) ; grey
 
 ;; Safe border — heavy box-drawing chars bypass JLine VT100 ACS conversion
@@ -52,14 +53,21 @@
 
 (defn render-header [state]
   (let [w (content-width state)
-        filter-type (:filter state)
         title (charm/styled " ceol" :fg color-accent :bold true)
         shamrock (charm/styled "\u2618" :fg color-accent)
         left-str (str shamrock title)
 
-        filter-str (charm/styled (tunes/type-label filter-type) :fg color-dim)
+        setlist-str (when-let [slug (:active-setlist state)]
+                      (let [sl (get (:setlists state) slug)]
+                        (charm/styled (str "  " (:name sl slug)) :fg color-gold)))
+        left-str (if setlist-str (str left-str setlist-str) left-str)
+
+        filter-str (when-not (:active-setlist state)
+                     (charm/styled (tunes/type-label (:filter state)) :fg color-dim))
         count-str (charm/styled (str (count (state/visible-tunes state)) " tunes") :fg color-muted)
-        right-str (str filter-str "  " count-str)
+        right-str (if filter-str
+                    (str filter-str "  " count-str)
+                    count-str)
 
         left-w (count (strip-ansi left-str))
         right-w (count (strip-ansi right-str))
@@ -70,8 +78,8 @@
 
 (defn render-footer [state]
   (let [bindings (charm/help-from-pairs
-                  "j/k" "nav" "\u21B5" "play" "l" "loop"
-                  "=/-" "tempo" "1/2" "part" "m" "staff" "?" "help")
+                  "j/k" "nav" "\u21B5" "play" "S" "setlist" "g" "set"
+                  "l" "loop" "=/-" "tempo" "?" "help")
         h (charm/help bindings
                       :width (content-width state)
                       :separator " \u00B7 "
@@ -85,6 +93,12 @@
 (defn render-status-bar [state]
   (let [w (content-width state)]
     (cond
+      (and (:playing state) (:counting-in state))
+      (let [tune (tunes/tune-by-id (:tunes state) (:playing state))
+            msg (str "  " (charm/styled "\u266A" :fg color-gold)
+                     " " (charm/styled (str "Count-in: " (:name tune)) :fg color-gold))]
+        msg)
+
       (:playing state)
       (let [tune (tunes/tune-by-id (:tunes state) (:playing state))
             spinner-str (if (:spinner state)
@@ -97,11 +111,16 @@
             tempo-str (when (and tempo-offset (not (zero? tempo-offset)))
                         (str "  " (when (pos? tempo-offset) "+") tempo-offset " BPM"))
             loop-str (when (:loop state) "  \u21BB")
+            sq (:set-queue state)
+            set-str (when sq
+                      (str "  [" (:set-name sq) "  "
+                           (inc (:index sq)) "/" (count (:tune-ids sq)) "]"))
             msg (str "  " (charm/styled spinner-str :fg color-gold)
                      " " (charm/styled (str "Playing: " (:name tune)
                                             (or section-str "")
                                             (or tempo-str "")
-                                            (or loop-str ""))
+                                            (or loop-str "")
+                                            (or set-str ""))
                                        :fg color-gold))]
         msg)
 
@@ -166,6 +185,18 @@
       (charm/styled line :bg color-select-bg)
       line)))
 
+;; -- Set header --
+
+(defn render-set-header [set-name w]
+  (let [label (str " " set-name " ")
+        dashes (max 0 (- w (count label) 2))
+        left-d (quot dashes 2)
+        right-d (- dashes left-d)]
+    (charm/styled (str (apply str (repeat left-d "\u2500"))
+                       label
+                       (apply str (repeat right-d "\u2500")))
+                  :fg color-muted)))
+
 ;; -- Tune list --
 
 (defn render-tune-list [state]
@@ -173,7 +204,7 @@
         visible (state/visible-tunes state)
         cursor (:cursor state)
         playing (:playing state)
-        ;; Scroll window
+        in-setlist? (:active-setlist state)
         max-visible (max 3 (- (:height state 24) 10))
         total (count visible)
         scroll-start (cond
@@ -187,11 +218,15 @@
       (charm/styled "  no tunes match filter" :fg color-muted :italic true)
       (->> windowed
            (map-indexed (fn [idx tune]
-                          (let [actual-idx (+ scroll-start idx)]
-                            (render-tune-row tune
-                                             (= actual-idx cursor)
-                                             w
-                                             (= (:id tune) playing)))))
+                          (let [actual-idx (+ scroll-start idx)
+                                header (when (and in-setlist? (:set-name tune) (zero? (:set-position tune)))
+                                         (render-set-header (:set-name tune) w))
+                                row (render-tune-row tune
+                                                     (= actual-idx cursor)
+                                                     w
+                                                     (= (:id tune) playing))]
+                            (if header [header row] [row]))))
+           (apply concat)
            (str/join "\n")))))
 
 ;; -- Help overlay --
@@ -214,6 +249,7 @@
                 (key-line "s" "stop playback")
                 (key-line "p" "prepare (fetch + convert)")
                 (key-line "l" "toggle loop")
+                (key-line "c" "toggle count-in click")
                 ""
                 (section "tempo")
                 (key-line "=" "tempo +5 BPM")
@@ -223,6 +259,11 @@
                 (section "sections")
                 (key-line "1" "toggle section A")
                 (key-line "2" "toggle section B")
+                ""
+                (section "setlists")
+                (key-line "S" "cycle setlist")
+                (key-line "g" "play full set from cursor")
+                (key-line "n" "next tune in set")
                 ""
                 (section "display")
                 (key-line "m" "toggle staff notation")
