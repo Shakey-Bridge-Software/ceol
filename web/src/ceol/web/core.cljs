@@ -95,6 +95,20 @@
         (swap! state/app-state assoc :abc-edits edits))
       (catch :default _ nil))))
 
+(defn save-sets!
+  "Save sets to localStorage."
+  []
+  (.setItem js/localStorage "ceol-sets" (pr-str (:sets @state/app-state))))
+
+(defn load-sets!
+  "Load sets from localStorage."
+  []
+  (when-let [raw (.getItem js/localStorage "ceol-sets")]
+    (try
+      (let [sets (reader/read-string raw)]
+        (swap! state/app-state assoc :sets sets))
+      (catch :default _ nil))))
+
 (defn save-custom-tunes!
   "Save custom tunes to localStorage."
   []
@@ -199,7 +213,23 @@
         (swap! state/app-state assoc-in [:abc-edits tune-id] new-val)
         (schedule-save!)))
 
-    :tune/add-to-set nil
+    :tune/add-to-set
+    (let [[tune-id] args
+          s @state/app-state
+          sets (:sets s)]
+      (cond
+        (empty? sets)
+        (js/console.warn "No sets — create one first")
+
+        (= 1 (count sets))
+        (let [set-id (key (first sets))]
+          (handle-action! :set/add-tune [set-id tune-id]))
+
+        (:active-set-id s)
+        (handle-action! :set/add-tune [(:active-set-id s) tune-id])
+
+        :else
+        (js/console.warn "Multiple sets — select one first")))
 
     :tune/add
     (let [new-id (state/next-tune-id @state/app-state)
@@ -257,17 +287,40 @@
           (swap! state/app-state assoc :playing? false))
       (let [s @state/app-state
             tune (state/selected-tune s)
-            abc-body (state/edited-abc-for-tune s (:id tune))]
+            abc-body (state/edited-abc-for-tune s (:id tune))
+            in-set? (:active-set-id s)]
         (swap! state/app-state assoc :playing? true
-               :playing-section (:section s))
+               :playing-section (when-not in-set? (:section s))
+               :set-playing? (boolean in-set?)
+               :set-tune-index (or (:set-tune-index s) 0))
         ;; Start melody
         (abc-bridge/play!
          {:on-end (fn []
                     (guitar/stop!)
-                    (swap! state/app-state assoc :playing? false :playing-section nil)
                     (let [s @state/app-state]
-                      (when (:loop? s)
-                        (handle-action! :playback/play nil))))})
+                      (if (:set-playing? s)
+                        ;; Set mode: advance to next tune
+                        (let [result (state/advance-set (:sets s) (:active-set-id s)
+                                                        (:set-tune-index s) (:loop? s))]
+                          (case (:action result)
+                            :play
+                            (do (swap! state/app-state assoc
+                                       :set-tune-index (:index result)
+                                       :selected-tune-id (:tune-id result))
+                                ;; Small delay then play next tune
+                                (js/setTimeout #(handle-action! :playback/play nil) 500))
+                            :loop
+                            (do (swap! state/app-state assoc
+                                       :set-tune-index 0
+                                       :selected-tune-id (:tune-id result))
+                                (js/setTimeout #(handle-action! :playback/play nil) 500))
+                            ;; :stop
+                            (swap! state/app-state assoc :playing? false :playing-section nil
+                                   :set-playing? false :set-tune-index 0)))
+                        ;; Single tune mode
+                        (do (swap! state/app-state assoc :playing? false :playing-section nil)
+                            (when (:loop? s)
+                              (handle-action! :playback/play nil))))))})
         ;; Always start guitar alongside melody (muted if guitar off)
         (when (and tune abc-body (string? abc-body))
           (guitar/set-muted! (not (:guitar? s)))
@@ -294,7 +347,8 @@
     :playback/stop
     (do (abc-bridge/stop!)
         (guitar/stop!)
-        (swap! state/app-state assoc :playing? false :playing-section nil))
+        (swap! state/app-state assoc :playing? false :playing-section nil
+               :set-playing? false :set-tune-index 0))
 
     :guitar/toggle
     (let [new-val (not (:guitar? @state/app-state))]
@@ -310,6 +364,115 @@
 
     :tempo/up nil
     :tempo/down nil
+
+    ;; --- Set actions ---
+
+    :set/start-create
+    (swap! state/app-state assoc :creating-set? true :creating-set-name nil
+           :creating-set-tunes [] :typeahead-query "" :typeahead-index 0)
+
+    :set/name-keydown
+    (let [[key value] args]
+      (case key
+        "Enter" (when (and (string? value) (seq (.trim value)))
+                  (swap! state/app-state assoc :creating-set-name (.trim value)))
+        "Escape" (swap! state/app-state assoc :creating-set? false)
+        nil))
+
+    :set/typeahead
+    (let [[query] args]
+      (swap! state/app-state assoc :typeahead-query (or query "") :typeahead-index 0))
+
+    :set/tune-keydown
+    (let [[key] args
+          s @state/app-state
+          query (:typeahead-query s)
+          results (state/search-tunes s query 5)
+          idx (:typeahead-index s)]
+      (case key
+        "Enter"
+        (if (seq (.trim (or query "")))
+          ;; Pick highlighted result
+          (when-let [tune (get results idx)]
+            (let [tune-id (:id tune)
+                  existing (:creating-set-tunes s)]
+              (when-not (some #{tune-id} existing)
+                (swap! state/app-state update :creating-set-tunes conj tune-id))
+              (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0)))
+          ;; Empty enter = done
+          (let [name (:creating-set-name s)
+                tune-ids (:creating-set-tunes s)]
+            (when (and name (seq tune-ids))
+              (let [set-id (state/next-set-id s)
+                    new-set {:id set-id :name name :tune-ids tune-ids}]
+                (swap! state/app-state
+                       (fn [s]
+                         (assoc s :sets (assoc (:sets s) set-id new-set)
+                                :creating-set? false
+                                :active-set-id set-id
+                                :selected-tune-id (first tune-ids))))
+                (save-sets!)))))
+
+        "Escape"
+        (swap! state/app-state assoc :creating-set? false)
+
+        "ArrowDown"
+        (swap! state/app-state update :typeahead-index
+               #(min (dec (count results)) (inc %)))
+
+        "ArrowUp"
+        (swap! state/app-state update :typeahead-index
+               #(max 0 (dec %)))
+        nil))
+
+    :set/pick-tune
+    (let [[tune-id] args
+          s @state/app-state
+          existing (:creating-set-tunes s)]
+      (when-not (some #{tune-id} existing)
+        (swap! state/app-state update :creating-set-tunes conj tune-id))
+      (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
+
+    :set/uncreate-tune
+    (let [[tune-id] args]
+      (swap! state/app-state update :creating-set-tunes
+             (fn [ids] (vec (remove #{tune-id} ids)))))
+
+    :set/toggle
+    (let [[set-id] args
+          s @state/app-state]
+      (if (= set-id (:active-set-id s))
+        (swap! state/app-state assoc :active-set-id nil)
+        (let [s-data (get (:sets s) set-id)
+              first-tune-id (first (:tune-ids s-data))]
+          (swap! state/app-state assoc :active-set-id set-id
+                 :selected-tune-id first-tune-id))))
+
+    :set/select-tune
+    (let [[_set-id tune-id] args]
+      (swap! state/app-state assoc :selected-tune-id tune-id))
+
+    :set/add-tune
+    (let [[set-id tune-id] args]
+      (swap! state/app-state update-in [:sets set-id :tune-ids]
+             (fn [ids]
+               (if (some #{tune-id} ids) ids (conj (or ids []) tune-id))))
+      (save-sets!))
+
+    :set/remove-tune
+    (let [[set-id tune-id] args]
+      (swap! state/app-state update-in [:sets set-id :tune-ids]
+             (fn [ids] (vec (remove #{tune-id} ids))))
+      (save-sets!))
+
+    :set/delete
+    (let [[set-id] args]
+      (swap! state/app-state (fn [s]
+                               (-> s
+                                   (update :sets dissoc set-id)
+                                   (cond-> (= set-id (:active-set-id s))
+                                     (assoc :active-set-id nil)))))
+      (save-sets!))
 
     (js/console.warn "Unknown action:" action args)))
 
@@ -369,6 +532,7 @@
 (defn init! []
   (r/set-dispatch! execute!)
   (load-custom-tunes!)
+  (load-sets!)
   (load-abc-data!)
   (load-saved-edits!)
   (r/render el (views/app @state/app-state)))

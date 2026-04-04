@@ -46,6 +46,90 @@
        (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]
      [:button.tune-add {:on {:click [[:tune/add-to-set (:id tune)]]}} "+"]]))
 
+;; --- Sets tab components ---
+
+(defn set-tune-row [tune idx set-id]
+  [:div.set-tune-row
+   [:span.set-tune-num (str (inc idx))]
+   [:span.set-tune-name {:on {:click [[:set/select-tune set-id (:id tune)]]}}
+    (:name tune)]
+   [:button.set-tune-remove {:on {:click [[:set/remove-tune set-id (:id tune)]]}} "\u00D7"]])
+
+(defn set-card [set-data state]
+  (let [active? (= (:id set-data) (:active-set-id state))
+        tunes (state/set-tunes state set-data)]
+    [:div.set-card {:class (when active? "active")}
+     [:div.set-card-header {:on {:click [[:set/toggle (:id set-data)]]}}
+      [:div.set-info
+       [:div.set-name (:name set-data)]
+       [:div.set-meta (str (count (:tune-ids set-data)) " tunes")]]
+      [:span.set-expand (if active? "\u25B4" "\u25BE")]]
+     (when active?
+       [:div.set-tunes
+        (map-indexed (fn [i t] (when t (set-tune-row t i (:id set-data)))) tunes)
+        [:button.delete-set {:on {:click [[:set/delete (:id set-data)]]}} "Delete set"]])]))
+
+(defn typeahead-results [state]
+  (let [query (:typeahead-query state)
+        results (state/search-tunes state query 5)
+        idx (:typeahead-index state)]
+    (when (seq results)
+      [:div.typeahead-dropdown
+       (map-indexed
+        (fn [i tune]
+          [:div.typeahead-item {:class (when (= i idx) "highlighted")
+                                :on {:click [[:set/pick-tune (:id tune)]]}}
+           [:span.typeahead-name (:name tune)]
+           [:span.typeahead-type (name (:type tune))]])
+        results)])))
+
+(defn set-creation-form [state]
+  (let [name-confirmed? (:creating-set-name state)
+        added-tunes (:creating-set-tunes state)]
+    [:div.set-creation
+     (if-not name-confirmed?
+       ;; Step 1: name
+       [:div.set-name-input
+        [:input.set-input
+         {:type "text"
+          :placeholder "Set name..."
+          :auto-focus true
+          :on {:keydown [[:set/name-keydown :event/key :event/target.value]]}}]]
+       ;; Step 2: add tunes
+       [:div.set-tune-picker
+        [:div.set-creation-header (:creating-set-name state)]
+        (when (seq added-tunes)
+          [:div.set-creation-tunes
+           (map-indexed
+            (fn [i tune-id]
+              (let [tune (state/tune-by-id state tune-id)]
+                [:div.set-creation-tune-row
+                 [:span.set-tune-num (str (inc i))]
+                 [:span (:name tune)]
+                 [:button.set-tune-remove
+                  {:on {:click [[:set/uncreate-tune tune-id]]}} "\u00D7"]]))
+            added-tunes)])
+        [:input.set-input
+         {:type "text"
+          :placeholder "Search tunes..."
+          :value (:typeahead-query state)
+          :auto-focus true
+          :on {:input [[:set/typeahead :event/target.value]]
+               :keydown [[:set/tune-keydown :event/key]]}}]
+        (typeahead-results state)
+        [:div.set-creation-hints "Enter to add \u00B7 Enter on empty = done \u00B7 Esc to cancel"]])]))
+
+(defn sets-tab [state]
+  [:div.sets-content
+   (if (:creating-set? state)
+     (set-creation-form state)
+     [:button.add-set-btn {:on {:click [[:set/start-create]]}} "+ New Set"])
+   [:div.set-list
+    (let [sets (vals (:sets state))]
+      (if (seq sets)
+        (map (fn [s] (set-card s state)) (sort-by :name sets))
+        [:div.sets-empty "No sets yet"]))]])
+
 (defn sidebar [state]
   (let [current-filter (:filter state)
         selected-id (:selected-tune-id state)
@@ -59,13 +143,15 @@
                     :on {:click [[:tab/set :tunes]]}} "Tunes"]
       [:button.tab {:class (when (= :sets (:tab state)) "active")
                     :on {:click [[:tab/set :sets]]}} "Sets"]]
-     (when (= :tunes (:tab state))
-       [:div.filters-row
-        [:div.filters
-         (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
-        [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]])
-     [:div.tune-list
-      (map (fn [t] (tune-row t selected-id)) tunes)]]))
+     (if (= :sets (:tab state))
+       (sets-tab state)
+       [:div.tunes-content
+        [:div.filters-row
+         [:div.filters
+          (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
+         [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]]
+        [:div.tune-list
+         (map (fn [t] (tune-row t selected-id)) tunes)]])]))
 
 (defn tune-header [tune state]
   (when tune
@@ -111,12 +197,14 @@
          [:span.meta-sep " · "]
          [:span bpm " BPM"]]]
        [:div.section-controls
-        [:button.section-btn {:class (when (= :a section) "active")
-                              :on {:click [[:section/set :a]]}} "A"]
-        [:button.section-btn {:class (when (= :b section) "active")
-                              :on {:click [[:section/set :b]]}} "B"]
-        [:button.section-btn {:class (when (nil? section) "active")
-                              :on {:click [[:section/set nil]]}} "All"]
+        (when-not (:set-playing? state)
+          [:div.section-btns
+           [:button.section-btn {:class (when (= :a section) "active")
+                                 :on {:click [[:section/set :a]]}} "A"]
+           [:button.section-btn {:class (when (= :b section) "active")
+                                 :on {:click [[:section/set :b]]}} "B"]
+           [:button.section-btn {:class (when (nil? section) "active")
+                                 :on {:click [[:section/set nil]]}} "All"]])
         [:button.edit-toggle {:class (when editor-open? "active")
                               :on {:click [[:editor/toggle]]}}
          "Edit"]
@@ -155,10 +243,18 @@
 
 (defn playback-status [state]
   (when (:playing? state)
-    (let [section (:playing-section state)
-          part (case section :a "A part" :b "B part" "All parts")
-          loop? (:loop? state)]
-      [:span.playback-status (str part " playing" (when loop? " on loop"))])))
+    (if (:set-playing? state)
+      (let [s (state/active-set state)
+            idx (:set-tune-index state)
+            total (count (:tune-ids s))
+            loop? (:loop? state)]
+        [:span.playback-status
+         (str "Set: " (:name s) " \u2014 " (inc idx) "/" total
+              (when loop? " on loop"))])
+      (let [section (:playing-section state)
+            part (case section :a "A part" :b "B part" "All parts")
+            loop? (:loop? state)]
+        [:span.playback-status (str part " playing" (when loop? " on loop"))]))))
 
 (defn playback-bar [state]
   (let [tune (state/selected-tune state)
@@ -166,9 +262,13 @@
         bpm (when tempo-str (second (re-find #"=(\d+)" tempo-str)))]
     [:div.playback-bar
      [:div.left-controls
-      [:button.play-btn {:class (when (:playing? state) "playing")
-                         :on {:click [[:playback/play]]}}
-       (if (:playing? state) "\u25A0 Stop" "\u25B6 Play")]
+      (let [has-set? (:active-set-id state)]
+        [:button.play-btn {:class (when (:playing? state) "playing")
+                           :on {:click [[:playback/play]]}}
+         (cond
+           (:playing? state) "\u25A0 Stop"
+           has-set? "\u25B6 Play Set"
+           :else "\u25B6 Play")])
       [:button.control-btn {:class (when (:loop? state) "active")
                             :on {:click [[:loop/toggle]]}}
        (if (:loop? state) "\u21BB Loop" "Loop")]
