@@ -1,4 +1,4 @@
-{:source-paths ["src" "../src"]
+{:source-paths ["src" "../src" "test"]
 
  :dependencies [[no.cjohansen/replicant "2025.12.1"]]
 
@@ -8,4 +8,8 @@
         :asset-path "/js"
         :modules {:main {:init-fn ceol.web.core/init!}}
         :devtools {:http-root "resources/public"
-                   :http-port 8280}}}}
+                   :http-port 8280}}
+
+  :test {:target :node-test
+         :output-to "target/test.js"
+         :autorun true}}}
