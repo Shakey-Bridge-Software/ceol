@@ -44,7 +44,8 @@
          :creating-set-name nil
          :creating-set-tunes []
          :typeahead-query ""
-         :typeahead-index 0}))
+         :typeahead-index 0
+         :adding-to-set nil}))
 
 ;; --- Tune queries ---
 

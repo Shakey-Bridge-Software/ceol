@@ -43,8 +43,7 @@
      [:div.tune-info
       [:div.tune-name (:name tune)]
       [:div.tune-meta
-       (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]
-     [:button.tune-add {:on {:click [[:tune/add-to-set (:id tune)]]}} "+"]]))
+       (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]]))
 
 ;; --- Sets tab components ---
 
@@ -65,9 +64,23 @@
        [:div.set-meta (str (count (:tune-ids set-data)) " tunes")]]
       [:span.set-expand (if active? "\u25B4" "\u25BE")]]
      (when active?
-       [:div.set-tunes
-        (map-indexed (fn [i t] (when t (set-tune-row t i (:id set-data)))) tunes)
-        [:button.delete-set {:on {:click [[:set/delete (:id set-data)]]}} "Delete set"]])]))
+       (let [set-id (:id set-data)
+             adding? (= (:adding-to-set state) set-id)]
+         [:div.set-tunes
+          (map-indexed (fn [i t] (when t (set-tune-row t i set-id))) tunes)
+          (if adding?
+            [:div.set-add-inline
+             [:input.set-input
+              {:type "text"
+               :placeholder "Search tunes..."
+               :value (:typeahead-query state)
+               :auto-focus true
+               :on {:input [[:set/typeahead :event/target.value]]
+                    :keydown [[:set/add-tune-keydown set-id :event/key]]}}]
+             (typeahead-results state)]
+            [:div.set-actions
+             [:button.set-add-btn {:on {:click [[:set/start-adding set-id]]}} "+"]
+             [:button.delete-set {:on {:click [[:set/delete set-id]]}} "Delete"]])]))]))
 
 (defn typeahead-results [state]
   (let [query (:typeahead-query state)
@@ -262,12 +275,13 @@
         bpm (when tempo-str (second (re-find #"=(\d+)" tempo-str)))]
     [:div.playback-bar
      [:div.left-controls
-      (let [has-set? (:active-set-id state)]
+      (let [set-context? (and (:active-set-id state) (= :sets (:tab state)))]
         [:button.play-btn {:class (when (:playing? state) "playing")
                            :on {:click [[:playback/play]]}}
          (cond
+           (:set-playing? state) "\u25A0 Stop Set"
            (:playing? state) "\u25A0 Stop"
-           has-set? "\u25B6 Play Set"
+           set-context? "\u25B6 Play Set"
            :else "\u25B6 Play")])
       [:button.control-btn {:class (when (:loop? state) "active")
                             :on {:click [[:loop/toggle]]}}

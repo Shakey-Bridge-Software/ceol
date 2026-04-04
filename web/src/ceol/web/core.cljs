@@ -200,7 +200,8 @@
             (catch :default e
               (js/console.warn "Chord injection failed for tune" tune-id e)
               (swap! state/app-state assoc-in [:abc-edits tune-id] raw-abc)))))
-      (swap! state/app-state assoc :selected-tune-id tune-id))
+      (swap! state/app-state assoc :selected-tune-id tune-id
+             :set-playing? false :set-tune-index 0))
 
     :abc/render nil
 
@@ -288,11 +289,11 @@
       (let [s @state/app-state
             tune (state/selected-tune s)
             abc-body (state/edited-abc-for-tune s (:id tune))
-            in-set? (:active-set-id s)]
+            in-set? (and (:active-set-id s) (= :sets (:tab s)))]
         (swap! state/app-state assoc :playing? true
                :playing-section (when-not in-set? (:section s))
                :set-playing? (boolean in-set?)
-               :set-tune-index (or (:set-tune-index s) 0))
+               :set-tune-index (if in-set? (or (:set-tune-index s) 0) 0))
         ;; Start melody
         (abc-bridge/play!
          {:on-end (fn []
@@ -464,6 +465,40 @@
       (swap! state/app-state update-in [:sets set-id :tune-ids]
              (fn [ids] (vec (remove #{tune-id} ids))))
       (save-sets!))
+
+    :set/start-adding
+    (let [[set-id] args]
+      (swap! state/app-state assoc :adding-to-set set-id :typeahead-query "" :typeahead-index 0))
+
+    :set/add-tune-keydown
+    (let [[set-id key] args
+          s @state/app-state
+          query (:typeahead-query s)
+          results (state/search-tunes s query 5)
+          idx (:typeahead-index s)]
+      (case key
+        "Enter"
+        (if (seq (.trim (or query "")))
+          (when-let [tune (get results idx)]
+            (swap! state/app-state update-in [:sets set-id :tune-ids]
+                   (fn [ids]
+                     (let [tid (:id tune)]
+                       (if (some #{tid} ids) ids (conj (or ids []) tid)))))
+            (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0)
+            (save-sets!))
+          ;; Empty enter = done adding
+          (swap! state/app-state assoc :adding-to-set nil))
+
+        "Escape"
+        (swap! state/app-state assoc :adding-to-set nil)
+
+        "ArrowDown"
+        (swap! state/app-state update :typeahead-index #(min (dec (count results)) (inc %)))
+
+        "ArrowUp"
+        (swap! state/app-state update :typeahead-index #(max 0 (dec %)))
+
+        nil))
 
     :set/delete
     (let [[set-id] args]
