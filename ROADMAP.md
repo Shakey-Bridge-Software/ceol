@@ -49,7 +49,7 @@ Choose the melody sound.
 - [ ] Persist preference to localStorage
 
 ### Count-in click (web)
-Already in TUI, bring to web.
+Already in TUI, bring to web. Shares beat-timing infrastructure with metronome (see below).
 - [ ] Woodblock or click sound before tune starts
 - [ ] Respects time signature and tempo
 - [ ] Toggle on/off (keyboard shortcut: `c`)
@@ -68,13 +68,14 @@ Clean layout for printing and bringing to sessions.
 - [ ] Ctrl+P / print button
 
 ### Tune incipit index
-Compact visual reference showing first 1-2 bars per tune.
+Compact visual reference showing first 1-2 bars per tune. **Implementation note:** 54+ tunes means 54+ abc.js render calls — render lazily (IntersectionObserver, render only when scrolled into view) to avoid blocking the UI.
 - [ ] Grid or list view with small abc.js renders
+- [ ] Lazy rendering on scroll into viewport
 - [ ] Sortable by name and type
 - [ ] Quick navigation — click incipit to select tune
 
 ### Metronome
-Standalone click, independent of playback.
+Standalone click, independent of playback. **Implementation note:** shares beat-timing infrastructure with count-in — extract a common `beat-engine` module (BPM, time-sig, beat scheduling, accent patterns) used by both.
 - [ ] Configurable BPM
 - [ ] Time signature aware (accent on beat 1)
 - [ ] Visual beat indicator
