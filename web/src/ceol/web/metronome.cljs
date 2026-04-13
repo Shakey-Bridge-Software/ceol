@@ -4,10 +4,7 @@
 
 (defonce metro-state (atom {:synth nil :cancel nil}))
 
-(defn- ensure-synth!
-  "Ensure Tone.js is started and synth is created. Synchronous — Tone.start()
-   is async but the synth works once created (audio just needs user gesture first)."
-  []
+(defn- ensure-synth! []
   (when-not (:synth @metro-state)
     (.start Tone)
     (let [synth (-> (Tone/PolySynth.
@@ -28,35 +25,60 @@
                            js/undefined
                            (if accent? 0.7 0.3))))
 
-;; --- Scheduling ---
+;; --- Self-correcting clock ---
+;; Uses setTimeout but corrects drift by comparing against performance.now()
 
-(defn- schedule-beats!
-  "Schedule beats one at a time. Returns a cancel fn."
-  [{:keys [ms-per-beat beats-per-bar]} {:keys [on-beat on-done bars]}]
-  (let [total-beats (when bars (* bars beats-per-bar))
-        cancelled? (atom false)
-        current-timeout (atom nil)]
-    (letfn [(schedule-next [beat]
+(defn- start-precise-clock!
+  "Start a self-correcting click clock. Each tick calculates the exact
+   delay for the next tick based on elapsed time vs expected time.
+   Returns a cancel fn."
+  [{:keys [ms-per-beat beats-per-bar]} {:keys [on-beat]}]
+  (let [cancelled? (atom false)
+        timeout-id (atom nil)
+        start-time (js/performance.now)]
+    (letfn [(tick [beat]
               (when-not @cancelled?
-                (if (and total-beats (>= beat total-beats))
-                  ;; Wait one more beat so on-done fires on the next downbeat
-                  (when on-done
-                    (let [t (js/setTimeout on-done ms-per-beat)]
-                      (reset! current-timeout t)))
-                  (let [accent? (zero? (mod beat beats-per-bar))
-                        t (js/setTimeout
-                           (fn []
-                             (when-not @cancelled?
-                               (click! accent?)
-                               (when on-beat
-                                 (on-beat {:beat beat :accent? accent?}))
-                               (schedule-next (inc beat))))
-                           (if (zero? beat) 0 ms-per-beat))]
-                    (reset! current-timeout t)))))]
-      (schedule-next 0)
+                (let [accent? (zero? (mod beat beats-per-bar))]
+                  (click! accent?)
+                  (when on-beat
+                    (on-beat {:beat beat :accent? accent?}))
+                  ;; Calculate next tick time based on start, not current time
+                  (let [next-beat (inc beat)
+                        expected-time (+ start-time (* next-beat ms-per-beat))
+                        now (js/performance.now)
+                        delay (max 1 (- expected-time now))]
+                    (reset! timeout-id (js/setTimeout #(tick next-beat) delay))))))]
+      ;; Fire first beat immediately
+      (tick 0)
+      ;; Return cancel fn
       (fn []
         (reset! cancelled? true)
-        (when-let [t @current-timeout]
+        (when-let [t @timeout-id]
+          (js/clearTimeout t))))))
+
+(defn- schedule-count-in!
+  "Schedule one bar of count-in clicks using the same self-correcting approach.
+   Calls on-done one beat after the last click (on the downbeat)."
+  [{:keys [ms-per-beat beats-per-bar]} on-done]
+  (let [cancelled? (atom false)
+        timeout-id (atom nil)
+        start-time (js/performance.now)]
+    (letfn [(tick [beat]
+              (when-not @cancelled?
+                (if (>= beat beats-per-bar)
+                  ;; Count-in done — on-done fires on the next downbeat
+                  (when on-done (on-done))
+                  (let [accent? (zero? beat)]
+                    (click! accent?)
+                    (let [next-beat (inc beat)
+                          expected-time (+ start-time (* next-beat ms-per-beat))
+                          now (js/performance.now)
+                          delay (max 1 (- expected-time now))]
+                      (reset! timeout-id (js/setTimeout #(tick next-beat) delay)))))))]
+      (tick 0)
+      (fn []
+        (reset! cancelled? true)
+        (when-let [t @timeout-id]
           (js/clearTimeout t))))))
 
 ;; --- Public API ---
@@ -70,11 +92,11 @@
   (boolean (:cancel @metro-state)))
 
 (defn start-clicking!
-  "Start the metronome clicking."
+  "Start the continuous metronome (self-correcting clock)."
   [beat-params & [opts]]
   (stop!)
   (ensure-synth!)
-  (let [cancel (schedule-beats! beat-params (merge opts {:bars nil}))]
+  (let [cancel (start-precise-clock! beat-params (or opts {}))]
     (swap! metro-state assoc :cancel cancel)
     cancel))
 
@@ -82,4 +104,6 @@
   "Play one bar of count-in clicks, then call on-done."
   [beat-params on-done]
   (ensure-synth!)
-  (schedule-beats! beat-params {:bars 1 :on-done on-done}))
+  (let [cancel (schedule-count-in! beat-params on-done)]
+    (swap! metro-state assoc :cancel cancel)
+    cancel))

@@ -30,7 +30,7 @@
          (swap! synth-state assoc :visual (first visual)))))))
 
 (defn stop!
-  "Stop any current playback. Returns the generation that was stopped."
+  "Stop any current playback."
   []
   (let [gen (:generation (swap! synth-state update :generation inc))]
     (when-let [synth (:synth @synth-state)]
@@ -43,15 +43,10 @@
   []
   (boolean (:synth @synth-state)))
 
-(defn get-duration
-  "Get the duration of the current synth in seconds, or nil."
+(defn prepare!
+  "Init + prime the synth. Returns a promise that resolves when ready to start.
+   Does NOT start playback — call start! for that."
   []
-  (:duration @synth-state))
-
-(defn play!
-  "Start playback of the currently rendered ABC.
-   Calls on-end when playback finishes naturally (not when stopped)."
-  [& [{:keys [on-end]}]]
   (stop!)
   (when-let [visual (:visual @synth-state)]
     (let [gen (:generation @synth-state)
@@ -63,16 +58,35 @@
                                            :chordsOff true}}))
           (.then (fn [] (.prime synth)))
           (.then (fn []
-                   (.start synth)
                    (let [dur (.-duration synth)]
-                     (swap! synth-state assoc :synth synth :duration dur)
-                     (when on-end
-                       (when dur
-                         (js/setTimeout
-                          (fn []
-                            (when (= gen (:generation @synth-state))
-                              (swap! synth-state assoc :synth nil :duration nil)
-                              (on-end)))
-                          (* (+ dur 0.5) 1000)))))))
+                     ;; Only store if generation still matches (not stopped in the meantime)
+                     (when (= gen (:generation @synth-state))
+                       (swap! synth-state assoc :synth synth :duration dur))
+                     {:synth synth :duration dur :generation gen})))
           (.catch (fn [e]
-                    (js/console.error "Playback failed:" e)))))))
+                    (js/console.error "Prepare failed:" e)))))))
+
+(defn start!
+  "Start a pre-primed synth. Near-zero latency.
+   on-end is called when playback finishes naturally."
+  [& [{:keys [on-end]}]]
+  (when-let [synth (:synth @synth-state)]
+    (.start synth)
+    (let [dur (:duration @synth-state)
+          gen (:generation @synth-state)]
+      (when (and on-end dur)
+        (js/setTimeout
+         (fn []
+           (when (= gen (:generation @synth-state))
+             (swap! synth-state assoc :synth nil :duration nil)
+             (on-end)))
+         (* (+ dur 0.5) 1000))))))
+
+(defn play!
+  "Convenience: prepare then start. Used when no count-in is needed."
+  [& [{:keys [on-end]}]]
+  (when-let [p (prepare!)]
+    (-> p
+        (.then (fn [_] (start! {:on-end on-end})))
+        (.catch (fn [e]
+                  (js/console.error "Playback failed:" e))))))
