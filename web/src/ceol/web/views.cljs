@@ -299,9 +299,6 @@
       [:button.control-btn {:class (when (:metronome? state) "active")
                             :on {:click [[:metronome/toggle]]}}
        "Metro"]
-      [:button.control-btn {:class (when (:count-in? state) "active")
-                            :on {:click [[:count-in/toggle]]}}
-       "Count-in"]
       [:button.guitar-btn {:class (when (:guitar? state) "active")
                            :on {:click [[:guitar/toggle]]}}
        (if (:guitar? state) "\uD83C\uDFB8 Guitar" "Guitar")]]]))

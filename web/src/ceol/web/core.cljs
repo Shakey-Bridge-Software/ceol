@@ -343,15 +343,16 @@
                                            (conj acc (or c (peek acc) tonic)))
                                          [] bar-chords)]
                       (guitar/play! filled (:type tune) (:time-sig tune)))))]
-          ;; Count-in if enabled and not auto-advancing in a set
-          (if (and (:count-in? s) (not set-advancing?))
-            (metro/count-in! beat-params start-melody-and-guitar!)
-            (start-melody-and-guitar!))
-          ;; Start metronome if enabled
-          (when (:metronome? s)
-            (metro/start-clicking! beat-params
-                                   {:on-beat (fn [{:keys [beat accent?]}]
-                                               (swap! state/app-state assoc :current-beat beat))})))))
+          (if (and (:metronome? s) (not set-advancing?))
+            ;; Metronome on: count-in, then start melody + guitar + continuous metronome
+            (metro/count-in! beat-params
+                             (fn []
+                               (start-melody-and-guitar!)
+                               (metro/start-clicking! beat-params
+                                                      {:on-beat (fn [{:keys [beat]}]
+                                                                  (swap! state/app-state assoc :current-beat beat))})))
+            ;; Metronome off (or set auto-advancing): play immediately
+            (start-melody-and-guitar!)))))
 
     :playback/stop
     (do (abc-bridge/stop!)
@@ -375,18 +376,9 @@
     :metronome/toggle
     (let [new-val (not (:metronome? @state/app-state))]
       (swap! state/app-state assoc :metronome? new-val :current-beat nil)
-      (if new-val
-        ;; Start metronome if something is playing or a tune is selected
-        (let [s @state/app-state
-              tune (state/selected-tune s)
-              params (beat/beats-for-tune tune (:tempo-offset s))]
-          (metro/start-clicking! params
-                                 {:on-beat (fn [{:keys [beat]}]
-                                             (swap! state/app-state assoc :current-beat beat))}))
+      ;; If turning off while playing, stop the clicks
+      (when (and (not new-val) (metro/running?))
         (metro/stop!)))
-
-    :count-in/toggle
-    (swap! state/app-state update :count-in? not)
 
     :tempo/up
     (swap! state/app-state update :tempo-offset #(min 40 (+ (or % 0) 5)))
@@ -609,7 +601,6 @@
         "g"       (handle-action! :guitar/toggle nil)
         "e"       (handle-action! :editor/toggle nil)
         "m"       (handle-action! :metronome/toggle nil)
-        "c"       (handle-action! :count-in/toggle nil)
         "="       (handle-action! :tempo/up nil)
         "-"       (handle-action! :tempo/down nil)
         "0"       (handle-action! :tempo/reset nil)
