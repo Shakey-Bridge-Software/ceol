@@ -54,6 +54,20 @@
     (:name tune)]
    [:button.set-tune-remove {:on {:click [[:set/remove-tune set-id (:id tune)]]}} "\u00D7"]])
 
+(defn typeahead-results [state]
+  (let [query (:typeahead-query state)
+        results (state/search-tunes state query 5)
+        idx (:typeahead-index state)]
+    (when (seq results)
+      [:div.typeahead-dropdown
+       (map-indexed
+        (fn [i tune]
+          [:div.typeahead-item {:class (when (= i idx) "highlighted")
+                                :on {:click [[:set/pick-tune (:id tune)]]}}
+           [:span.typeahead-name (:name tune)]
+           [:span.typeahead-type (name (:type tune))]])
+        results)])))
+
 (defn set-card [set-data state]
   (let [active? (= (:id set-data) (:active-set-id state))
         tunes (state/set-tunes state set-data)]
@@ -81,20 +95,6 @@
             [:div.set-actions
              [:button.set-add-btn {:on {:click [[:set/start-adding set-id]]}} "+"]
              [:button.delete-set {:on {:click [[:set/delete set-id]]}} "Delete"]])]))]))
-
-(defn typeahead-results [state]
-  (let [query (:typeahead-query state)
-        results (state/search-tunes state query 5)
-        idx (:typeahead-index state)]
-    (when (seq results)
-      [:div.typeahead-dropdown
-       (map-indexed
-        (fn [i tune]
-          [:div.typeahead-item {:class (when (= i idx) "highlighted")
-                                :on {:click [[:set/pick-tune (:id tune)]]}}
-           [:span.typeahead-name (:name tune)]
-           [:span.typeahead-type (name (:type tune))]])
-        results)])))
 
 (defn set-creation-form [state]
   (let [name-confirmed? (:creating-set-name state)
@@ -272,7 +272,9 @@
 (defn playback-bar [state]
   (let [tune (state/selected-tune state)
         tempo-str (when tune (abc/tempo-for-type (:type tune) (:time-sig tune)))
-        bpm (when tempo-str (second (re-find #"=(\d+)" tempo-str)))]
+        base-bpm (when tempo-str (js/parseInt (second (re-find #"=(\d+)" tempo-str)) 10))
+        offset (or (:tempo-offset state) 0)
+        bpm (when base-bpm (max 40 (+ base-bpm offset)))]
     [:div.playback-bar
      [:div.left-controls
       (let [set-context? (and (:active-set-id state) (= :sets (:tab state)))]
@@ -289,7 +291,9 @@
       (playback-status state)]
      [:div.center-controls
       [:button.tempo-btn {:on {:click [[:tempo/down]]}} "\u2212"]
-      [:span.tempo-label (str (or bpm "120") " BPM")]
+      [:span.tempo-label {:class (when (not= 0 offset) "tempo-modified")
+                          :on {:dblclick [[:tempo/reset]]}}
+       (str (or bpm "120") " BPM")]
       [:button.tempo-btn {:on {:click [[:tempo/up]]}} "+"]]
      [:div.right-controls
       [:button.guitar-btn {:class (when (:guitar? state) "active")
