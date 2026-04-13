@@ -3,10 +3,12 @@
             [ceol.web.abc-test]
             [ceol.web.chords-test]
             [ceol.web.state-test]
-            [ceol.web.sets-test]))
+            [ceol.web.sets-test]
+            [ceol.web.beat-engine-test]))
 
 (defn main []
   (run-tests 'ceol.web.abc-test
              'ceol.web.chords-test
              'ceol.web.state-test
-             'ceol.web.sets-test))
+             'ceol.web.sets-test
+             'ceol.web.beat-engine-test))

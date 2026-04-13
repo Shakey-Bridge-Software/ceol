@@ -34,6 +34,7 @@
          :playing-section nil
          :section nil
          :loop? false
+         :tempo-offset 0
          ;; Sets
          :sets {}
          :active-set-id nil
@@ -45,7 +46,10 @@
          :creating-set-tunes []
          :typeahead-query ""
          :typeahead-index 0
-         :adding-to-set nil}))
+         :adding-to-set nil
+         :metronome? false
+         :count-in? false
+         :current-beat nil}))
 
 ;; --- Tune queries ---
 

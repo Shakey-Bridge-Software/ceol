@@ -5,6 +5,8 @@
             [ceol.web.abc-bridge :as abc-bridge]
             [ceol.web.chords :as chords]
             [ceol.web.guitar :as guitar]
+            [ceol.web.metronome :as metro]
+            [ceol.web.beat-engine :as beat]
             [ceol.abc :as abc]
             [cljs.reader :as reader]
             [clojure.walk :as walk]))
@@ -285,71 +287,78 @@
     (if (abc-bridge/playing?)
       (do (abc-bridge/stop!)
           (guitar/stop!)
-          (swap! state/app-state assoc :playing? false))
+          (metro/stop!)
+          (swap! state/app-state assoc :playing? false :current-beat nil))
       (let [s @state/app-state
             tune (state/selected-tune s)
             abc-body (state/edited-abc-for-tune s (:id tune))
-            in-set? (and (:active-set-id s) (= :sets (:tab s)))]
+            in-set? (and (:active-set-id s) (= :sets (:tab s)))
+            set-advancing? (:set-advancing? s)
+            beat-params (beat/beats-for-tune tune (:tempo-offset s))]
         (swap! state/app-state assoc :playing? true
                :playing-section (when-not in-set? (:section s))
                :set-playing? (boolean in-set?)
-               :set-tune-index (if in-set? (or (:set-tune-index s) 0) 0))
-        ;; Start melody
-        (abc-bridge/play!
-         {:on-end (fn []
-                    (guitar/stop!)
-                    (let [s @state/app-state]
-                      (if (:set-playing? s)
-                        ;; Set mode: advance to next tune
-                        (let [result (state/advance-set (:sets s) (:active-set-id s)
-                                                        (:set-tune-index s) (:loop? s))]
-                          (case (:action result)
-                            :play
-                            (do (swap! state/app-state assoc
-                                       :set-tune-index (:index result)
-                                       :selected-tune-id (:tune-id result))
-                                ;; Small delay then play next tune
-                                (js/setTimeout #(handle-action! :playback/play nil) 500))
-                            :loop
-                            (do (swap! state/app-state assoc
-                                       :set-tune-index 0
-                                       :selected-tune-id (:tune-id result))
-                                (js/setTimeout #(handle-action! :playback/play nil) 500))
-                            ;; :stop
-                            (swap! state/app-state assoc :playing? false :playing-section nil
-                                   :set-playing? false :set-tune-index 0)))
-                        ;; Single tune mode
-                        (do (swap! state/app-state assoc :playing? false :playing-section nil)
-                            (when (:loop? s)
-                              (handle-action! :playback/play nil))))))})
-        ;; Always start guitar alongside melody (muted if guitar off)
-        (when (and tune abc-body (string? abc-body))
-          (guitar/set-muted! (not (:guitar? s)))
-          (let [section (:section s)
-                parts (split-abc-body abc-body)
-                tonic (:key tune)
-                ;; Build chord sequence matching what abc.js plays (with repeats)
-                bar-chords (if section
-                             (let [part-body (if parts (get parts section abc-body) abc-body)
-                                   chords (guitar/extract-bar-chords part-body)]
-                               (into chords chords))
-                             (if parts
-                               (let [a-chords (guitar/extract-bar-chords (:a parts))
-                                     b-chords (guitar/extract-bar-chords (:b parts))]
-                                 (vec (concat a-chords a-chords b-chords b-chords)))
-                               (let [chords (guitar/extract-bar-chords abc-body)]
-                                 (into chords chords))))
-                ;; Fill nils: first bar defaults to tonic, rest to previous chord
-                filled (reduce (fn [acc c]
-                                 (conj acc (or c (peek acc) tonic)))
-                               [] bar-chords)]
-            (guitar/play! filled (:type tune) (:time-sig tune))))))
+               :set-tune-index (if in-set? (or (:set-tune-index s) 0) 0)
+               :set-advancing? false)
+        (letfn [(start-melody-and-guitar! []
+                  ;; Start melody
+                  (abc-bridge/play!
+                   {:on-end (fn []
+                              (guitar/stop!)
+                              (let [s @state/app-state]
+                                (if (:set-playing? s)
+                                  (let [result (state/advance-set (:sets s) (:active-set-id s)
+                                                                  (:set-tune-index s) (:loop? s))]
+                                    (case (:action result)
+                                      (:play :loop)
+                                      (do (swap! state/app-state assoc
+                                                 :set-tune-index (:index result)
+                                                 :selected-tune-id (:tune-id result)
+                                                 :set-advancing? true)
+                                          (js/setTimeout #(handle-action! :playback/play nil) 500))
+                                      (do (metro/stop!)
+                                          (swap! state/app-state assoc :playing? false :playing-section nil
+                                                 :set-playing? false :set-tune-index 0 :current-beat nil))))
+                                  (do (swap! state/app-state assoc :playing? false :playing-section nil
+                                             :current-beat nil)
+                                      (when (:loop? s)
+                                        (handle-action! :playback/play nil))))))})
+                  ;; Start guitar
+                  (when (and tune abc-body (string? abc-body))
+                    (guitar/set-muted! (not (:guitar? s)))
+                    (let [section (:section s)
+                          parts (split-abc-body abc-body)
+                          tonic (:key tune)
+                          bar-chords (if section
+                                       (let [part-body (if parts (get parts section abc-body) abc-body)
+                                             chords (guitar/extract-bar-chords part-body)]
+                                         (into chords chords))
+                                       (if parts
+                                         (let [a-chords (guitar/extract-bar-chords (:a parts))
+                                               b-chords (guitar/extract-bar-chords (:b parts))]
+                                           (vec (concat a-chords a-chords b-chords b-chords)))
+                                         (let [chords (guitar/extract-bar-chords abc-body)]
+                                           (into chords chords))))
+                          filled (reduce (fn [acc c]
+                                           (conj acc (or c (peek acc) tonic)))
+                                         [] bar-chords)]
+                      (guitar/play! filled (:type tune) (:time-sig tune)))))]
+          ;; Count-in if enabled and not auto-advancing in a set
+          (if (and (:count-in? s) (not set-advancing?))
+            (metro/count-in! beat-params start-melody-and-guitar!)
+            (start-melody-and-guitar!))
+          ;; Start metronome if enabled
+          (when (:metronome? s)
+            (metro/start-clicking! beat-params
+                                   {:on-beat (fn [{:keys [beat accent?]}]
+                                               (swap! state/app-state assoc :current-beat beat))})))))
 
     :playback/stop
     (do (abc-bridge/stop!)
         (guitar/stop!)
+        (metro/stop!)
         (swap! state/app-state assoc :playing? false :playing-section nil
-               :set-playing? false :set-tune-index 0))
+               :set-playing? false :set-tune-index 0 :current-beat nil))
 
     :guitar/toggle
     (let [new-val (not (:guitar? @state/app-state))]
@@ -363,8 +372,30 @@
     :loop/toggle
     (swap! state/app-state update :loop? not)
 
-    :tempo/up nil
-    :tempo/down nil
+    :metronome/toggle
+    (let [new-val (not (:metronome? @state/app-state))]
+      (swap! state/app-state assoc :metronome? new-val :current-beat nil)
+      (if new-val
+        ;; Start metronome if something is playing or a tune is selected
+        (let [s @state/app-state
+              tune (state/selected-tune s)
+              params (beat/beats-for-tune tune (:tempo-offset s))]
+          (metro/start-clicking! params
+                                 {:on-beat (fn [{:keys [beat]}]
+                                             (swap! state/app-state assoc :current-beat beat))}))
+        (metro/stop!)))
+
+    :count-in/toggle
+    (swap! state/app-state update :count-in? not)
+
+    :tempo/up
+    (swap! state/app-state update :tempo-offset #(min 40 (+ (or % 0) 5)))
+
+    :tempo/down
+    (swap! state/app-state update :tempo-offset #(max -40 (- (or % 0) 5)))
+
+    :tempo/reset
+    (swap! state/app-state assoc :tempo-offset 0)
 
     ;; --- Set actions ---
 
@@ -529,7 +560,8 @@
                          (get parts section abc-body)
                          abc-body))
                      abc-body)
-              final-abc (build-full-abc tune (add-line-breaks body 4))]
+              raw-abc (build-full-abc tune (add-line-breaks body 4))
+              final-abc (abc/adjust-abc-tempo raw-abc (or (:tempo-offset s) 0))]
           ;; Defer so the DOM has updated from Replicant render
           (js/requestAnimationFrame
            (fn []
@@ -545,7 +577,7 @@
              ;; Only re-render sheet music when tune or ABC changed
              (let [tune-id (:selected-tune-id s)
                    abc (state/edited-abc-for-tune s tune-id)
-                   new-key [tune-id abc (:section s)]]
+                   new-key [tune-id abc (:section s) (:tempo-offset s)]]
                (when (not= new-key @prev-render-key)
                  (reset! prev-render-key new-key)
                  ;; Evict stale non-string edits (e.g. from earlier bug)
@@ -563,6 +595,45 @@
                  (swap! state/app-state assoc :abc-data data))))
       (.catch (fn [e]
                 (js/console.error "Failed to load ABC data:" e)))))
+
+(defn- input-focused? []
+  (let [tag (some-> js/document .-activeElement .-tagName str)]
+    (contains? #{"INPUT" "TEXTAREA" "SELECT"} tag)))
+
+(defn- handle-keydown [e]
+  (when-not (input-focused?)
+    (let [key (.-key e)]
+      (case key
+        " "       (do (.preventDefault e) (handle-action! :playback/play nil))
+        "l"       (handle-action! :loop/toggle nil)
+        "g"       (handle-action! :guitar/toggle nil)
+        "e"       (handle-action! :editor/toggle nil)
+        "m"       (handle-action! :metronome/toggle nil)
+        "c"       (handle-action! :count-in/toggle nil)
+        "="       (handle-action! :tempo/up nil)
+        "-"       (handle-action! :tempo/down nil)
+        "0"       (handle-action! :tempo/reset nil)
+        "1"       (handle-action! :section/set [:a])
+        "2"       (handle-action! :section/set [:b])
+        "3"       (handle-action! :section/set [nil])
+        "ArrowUp" (do (.preventDefault e)
+                      (let [s @state/app-state
+                            tunes (state/filtered-tunes s)
+                            idx (.indexOf (mapv :id tunes) (:selected-tune-id s))
+                            new-idx (max 0 (dec idx))]
+                        (when (seq tunes)
+                          (handle-action! :tune/select [(:id (nth tunes new-idx))]))))
+        "ArrowDown" (do (.preventDefault e)
+                        (let [s @state/app-state
+                              tunes (state/filtered-tunes s)
+                              idx (.indexOf (mapv :id tunes) (:selected-tune-id s))
+                              new-idx (min (dec (count tunes)) (inc idx))]
+                          (when (seq tunes)
+                            (handle-action! :tune/select [(:id (nth tunes new-idx))]))))
+        nil))))
+
+(defonce _keydown-listener
+  (.addEventListener js/document "keydown" handle-keydown))
 
 (defn init! []
   (r/set-dispatch! execute!)
