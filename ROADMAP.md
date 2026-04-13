@@ -1,4 +1,4 @@
-# ceol-web Roadmap
+# ceol Roadmap
 
 ## Completed
 - [x] Sheet music rendering (abc.js SVG)
@@ -15,7 +15,7 @@
 - [x] Tests: 22 tests, 118 assertions (chords, ABC, state, sets)
 - [x] Code review + fixes (parse-long portability, guitar timeout, watch dedup, fetch error handling)
 - [x] TUI: count-in, setlists, set queue playback, local ABC, orphan cleanup
-- [x] Documentation (CLAUDE.md, README.md)
+- [x] Documentation (CLAUDE.md, README.md, ROADMAP.md)
 
 ## Features — next up
 
@@ -48,30 +48,60 @@ Choose the melody sound.
 - [ ] Button or dropdown in playback bar
 - [ ] Persist preference to localStorage
 
+### Count-in click (web)
+Already in TUI, bring to web.
+- [ ] Woodblock or click sound before tune starts
+- [ ] Respects time signature and tempo
+- [ ] Toggle on/off (keyboard shortcut: `c`)
+
+### Half-speed quick button
+One-tap slow practice alongside existing tempo controls.
+- [ ] Button that toggles between current tempo and 50% speed
+- [ ] Keyboard shortcut (e.g. `h`)
+- [ ] Visual indicator when half-speed is active
+
+### Print-friendly sheet music
+Clean layout for printing and bringing to sessions.
+- [ ] Print stylesheet — hide sidebar, playback bar, editor
+- [ ] Single tune: full page, large staves, chord names, tune header
+- [ ] Full set: all tunes in order with set name header
+- [ ] Ctrl+P / print button
+
+### Tune incipit index
+Compact visual reference showing first 1-2 bars per tune.
+- [ ] Grid or list view with small abc.js renders
+- [ ] Sortable by name and type
+- [ ] Quick navigation — click incipit to select tune
+
+### Metronome
+Standalone click, independent of playback.
+- [ ] Configurable BPM
+- [ ] Time signature aware (accent on beat 1)
+- [ ] Visual beat indicator
+- [ ] Can run alongside playback or solo
+
 ## Polish
 
-- [ ] Decrease gap between set tunes (seamless auto-advance, minimal silence)
-- [ ] Editor panel resize (draggable split handle)
-- [ ] Responsive layout (mobile-friendly sidebar collapse)
+- [ ] Seamless transitions between set tunes (minimal gap on auto-advance)
+- [ ] Responsive layout (mobile/tablet — sidebar collapse, touch-friendly)
+- [ ] Hardcoded CSS colors → CSS variables (unblocks theming, print vs screen)
 - [ ] Accessibility audit (focus management, ARIA labels, screen reader)
 - [ ] Delete tune confirmation dialog
-- [ ] Hardcoded CSS colors → CSS variables
+- [ ] Editor panel drag handle (low priority)
 - [ ] Tune list scroll position preservation on filter change
 - [ ] Loading state for guitar samples (first play delay)
 
 ## Known bugs
 
-_(None currently tracked — add bugs here as discovered)_
+_(Add bugs here as discovered)_
 
 ## Future ideas
 
 - Hosting/deployment (static site, GitHub Pages or similar)
 - Share sets/tunes via URL or export
 - Chord quality improvements (more sophisticated algorithm, manual library)
-- Print/export sheet music to PDF
-- Mobile app (React Native or PWA)
+- Mobile app (PWA)
 - Sync between devices (optional backend)
-- Metronome / click track
 - Recording — record yourself playing along
 - Tune difficulty rating
 - Practice log / stats tracking
