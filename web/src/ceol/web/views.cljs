@@ -259,7 +259,8 @@
           section (:section state)
           editor-open? (:editor-open? state)
           editing (:editing-field state)
-          tune-id (:id tune)]
+          tune-id (:id tune)
+          session? (:session-mode? state)]
       [:div.tune-header
        [:div.title-block
         ;; Editable title
@@ -295,25 +296,26 @@
           (:time-sig tune)]
          [:span.meta-sep " · "]
          [:span bpm " BPM"]]]
-       [:div.section-controls
-        (when-not (:set-playing? state)
-          [:div.section-btns
-           [:button.section-btn {:class (when (= :a section) "active")
-                                 :on {:click [[:section/set :a]]}} "A"]
-           [:button.section-btn {:class (when (= :b section) "active")
-                                 :on {:click [[:section/set :b]]}} "B"]
-           [:button.section-btn {:class (when (nil? section) "active")
-                                 :on {:click [[:section/set nil]]}} "All"]])
-        [:button.edit-toggle {:class (when editor-open? "active")
-                              :on {:click [[:editor/toggle]]}}
-         "Edit"]
-        (let [is-learned? (state/learned? state tune-id)]
-          [:button.learned-toggle {:class (when is-learned? "active")
-                                   :on {:click [[:learned/toggle tune-id]]}}
-           (if is-learned? "\u2713 Learned" "Learned")])
-        (when (state/custom-tune? tune-id)
-          [:button.delete-tune {:on {:click [[:tune/delete tune-id]]}}
-           "Delete"])]])))
+       (when-not session?
+         [:div.section-controls
+          (when-not (:set-playing? state)
+            [:div.section-btns
+             [:button.section-btn {:class (when (= :a section) "active")
+                                   :on {:click [[:section/set :a]]}} "A"]
+             [:button.section-btn {:class (when (= :b section) "active")
+                                   :on {:click [[:section/set :b]]}} "B"]
+             [:button.section-btn {:class (when (nil? section) "active")
+                                   :on {:click [[:section/set nil]]}} "All"]])
+          [:button.edit-toggle {:class (when editor-open? "active")
+                                :on {:click [[:editor/toggle]]}}
+           "Edit"]
+          (let [is-learned? (state/learned? state tune-id)]
+            [:button.learned-toggle {:class (when is-learned? "active")
+                                     :on {:click [[:learned/toggle tune-id]]}}
+             (if is-learned? "\u2713 Learned" "Learned")])
+          (when (state/custom-tune? tune-id)
+            [:button.delete-tune {:on {:click [[:tune/delete tune-id]]}}
+             "Delete"])])])))
 
 (defn sheet-music [state]
   (let [tune (state/selected-tune state)
@@ -406,7 +408,8 @@
        (if (:guitar? state) "\uD83C\uDFB8 Guitar" "Guitar")]]]))
 
 (defn main-area [state]
-  (let [editor-open? (:editor-open? state)]
+  (let [editor-open? (and (:editor-open? state) (not (:session-mode? state)))
+        session? (:session-mode? state)]
     [:div.main-area
      (tune-header (state/selected-tune state) state)
      [:div.divider]
@@ -419,7 +422,8 @@
          [:div.split-line]]
         (abc-editor state)])
      [:div.divider]
-     (playback-bar state)]))
+     (when-not session?
+       (playback-bar state))]))
 
 (defn app [state]
   [:div.app-layout
