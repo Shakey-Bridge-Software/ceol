@@ -252,7 +252,8 @@
         {:value (or abc-str "")
          :placeholder "Type ABC notation here..."
          :spellcheck "false"
-         :on {:input [[:editor/update tune-id :event/target.value]]}}]])))
+         :on {:input [[:editor/update tune-id :event/target.value]]
+              :keydown [[:editor/keydown :event/key]]}}]])))
 
 (defn playback-status [state]
   (when (:playing? state)

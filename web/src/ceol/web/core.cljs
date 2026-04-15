@@ -216,6 +216,12 @@
         (swap! state/app-state assoc-in [:abc-edits tune-id] new-val)
         (schedule-save!)))
 
+    :editor/keydown
+    (let [[key] args]
+      (when (= key "Escape")
+        (when-let [el (js/document.querySelector ".editor-textarea")]
+          (.blur el))))
+
     :tune/add-to-set
     (let [[tune-id] args
           s @state/app-state
