@@ -126,7 +126,7 @@
    :slip-jig [{:time 0.0 :type :bass} {:time 0.111 :type :chord} {:time 0.222 :type :chord}
               {:time 0.333 :type :bass} {:time 0.444 :type :chord} {:time 0.555 :type :chord}
               {:time 0.667 :type :bass} {:time 0.778 :type :chord} {:time 0.889 :type :chord}]
-   :slide    [{:time 0.0 :type :bass} {:time 0.333 :type :chord} {:time 0.667 :type :chord}]})
+   :slide    [{:time 0.0 :type :bass} {:time 0.25 :type :chord} {:time 0.5 :type :bass} {:time 0.75 :type :chord}]})
 
 (defn- ms-per-bar
   "Calculate milliseconds per bar from tune type."
@@ -137,7 +137,7 @@
                               :reel     [100 4]
                               :hornpipe [100 4]
                               :slip-jig [100 3]
-                              :slide    [100 2]
+                              :slide    [100 4]
                               [100 4])]
     (* (/ 60000.0 bpm) beats-per-bar)))
 

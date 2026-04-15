@@ -8,7 +8,7 @@
    :reel     {:bpm 100 :beats-per-bar 4}
    :hornpipe {:bpm 100 :beats-per-bar 4}
    :slip-jig {:bpm 100 :beats-per-bar 3}
-   :slide    {:bpm 100 :beats-per-bar 2}})
+   :slide    {:bpm 100 :beats-per-bar 4}})
 
 (def default-params {:bpm 120 :beats-per-bar 4})
 

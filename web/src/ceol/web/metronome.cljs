@@ -56,19 +56,26 @@
         (when-let [t @timeout-id]
           (js/clearTimeout t))))))
 
+(defn- count-in-taps
+  "How many taps for the count-in. Short bars (2 beats) get 2 bars, others get 1 bar."
+  [beats-per-bar]
+  (if (< beats-per-bar 3)
+    (* beats-per-bar 2)
+    beats-per-bar))
+
 (defn- schedule-count-in!
-  "Schedule one bar of count-in clicks using the same self-correcting approach.
-   Calls on-done one beat after the last click (on the downbeat)."
+  "Schedule count-in taps at the tune's tempo. Accent on bar downbeats.
+   Calls on-done after the last click."
   [{:keys [ms-per-beat beats-per-bar]} on-done]
-  (let [cancelled? (atom false)
+  (let [total (count-in-taps beats-per-bar)
+        cancelled? (atom false)
         timeout-id (atom nil)
         start-time (js/performance.now)]
     (letfn [(tick [beat]
               (when-not @cancelled?
-                (if (>= beat beats-per-bar)
-                  ;; Count-in done — on-done fires on the next downbeat
+                (if (>= beat total)
                   (when on-done (on-done))
-                  (let [accent? (zero? beat)]
+                  (let [accent? (zero? (mod beat beats-per-bar))]
                     (click! accent?)
                     (let [next-beat (inc beat)
                           expected-time (+ start-time (* next-beat ms-per-beat))
