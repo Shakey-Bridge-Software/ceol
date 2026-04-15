@@ -208,7 +208,13 @@
     :abc/render nil
 
     :editor/toggle
-    (swap! state/app-state update :editor-open? not)
+    (let [opening? (not (:editor-open? @state/app-state))]
+      (swap! state/app-state assoc :editor-open? opening?)
+      (when opening?
+        (js/requestAnimationFrame
+         (fn []
+           (when-let [el (js/document.querySelector ".editor-textarea")]
+             (.focus el))))))
 
     :editor/update
     (let [[tune-id new-val] args]
