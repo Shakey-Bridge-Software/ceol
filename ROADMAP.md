@@ -94,7 +94,8 @@ Standalone click, independent of playback. **Implementation note:** shares beat-
 
 ## Known bugs
 
-_(Add bugs here as discovered)_
+- **Guitar drifts out of sync with melody** — guitar uses setTimeout scheduling which drifts from abc.js Web Audio clock over time. Same root cause as the metronome drift. Fix: use Web Audio scheduling or self-correcting clock for guitar too.
+- **Guitar doesn't start with melody after count-in** — when count-in is enabled, guitar/play! is called at the same time as abc-bridge/start! but guitar scheduling starts from time 0 immediately, while the melody may have slight startup latency. Fix: ensure guitar starts in the same callback as abc-bridge/start!.
 
 ## Future ideas
 
