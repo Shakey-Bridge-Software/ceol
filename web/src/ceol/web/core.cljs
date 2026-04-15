@@ -193,6 +193,39 @@
               {:a (.trim (.substring body 0 after-idx))
                :b rest-body})))))))
 
+(defonce render-promise (atom (js/Promise.resolve nil)))
+
+(defn wait-for-render!
+  "Returns a promise that resolves when the current render is complete."
+  []
+  @render-promise)
+
+(defn render-sheet-music!
+  "Imperatively render ABC into the #sheet-music div if present.
+   Creates a promise that resolves when rendering is complete."
+  [s]
+  (when-let [tune (state/selected-tune s)]
+    (when-let [abc-body (state/edited-abc-for-tune s (:id tune))]
+      (when (string? abc-body)
+        (let [section (:section s)
+              body (if section
+                     (let [parts (split-abc-body abc-body)]
+                       (if parts
+                         (get parts section abc-body)
+                         abc-body))
+                     abc-body)
+              raw-abc (build-full-abc tune (add-line-breaks body 4))
+              final-abc (abc/adjust-abc-tempo raw-abc (or (:tempo-offset s) 0))
+              p (js/Promise.
+                 (fn [resolve _]
+                   (js/requestAnimationFrame
+                    (fn []
+                      (if-let [el (js/document.getElementById "sheet-music")]
+                        (let [visual (abc-bridge/render-abc! el final-abc)]
+                          (resolve visual))
+                        (resolve nil))))))]
+          (reset! render-promise p))))))
+
 (defn handle-action! [action args]
   (case action
     :filter/set
@@ -596,8 +629,9 @@
                  :session-within-set? false
                  :selected-tune-id first-tune-id
                  :tab :session)
-          ;; Auto-play first item
-          (js/setTimeout #(handle-action! :session/play-current nil) 100))))
+          ;; Auto-play first item — wait for render
+          (-> (wait-for-render!)
+              (.then #(handle-action! :session/play-current nil))))))
 
     :session/play-current
     (let [s @state/app-state
@@ -619,10 +653,12 @@
                                   :session-set-index (:session-set-index result)
                                   :session-within-set? true
                                   :selected-tune-id (:tune-id result))
-                           ;; Wait for render then play
+                           ;; Wait for render then play (500ms gap between set tunes)
                            (js/setTimeout
-                            #(handle-action! :session/play-current nil)
-                            800))
+                            (fn []
+                              (-> (wait-for-render!)
+                                  (.then #(handle-action! :session/play-current nil))))
+                            500))
 
                        :next-item
                        (let [next-idx (:session-index result)
@@ -643,8 +679,8 @@
                             (swap! state/app-state assoc
                                    :selected-tune-id next-tune-id
                                    :session-pausing? false)
-                            ;; Wait for render cycle (Replicant + abc.js + visual stored)
-                            (js/setTimeout #(handle-action! :session/play-current nil) 300))
+                            (-> (wait-for-render!)
+                                (.then #(handle-action! :session/play-current nil))))
                           2000))
 
                        :reshuffle
@@ -667,11 +703,8 @@
                                 (swap! state/app-state assoc
                                        :selected-tune-id first-tid
                                        :session-pausing? false)
-                                (js/requestAnimationFrame
-                                 (fn []
-                                   (js/requestAnimationFrame
-                                    (fn []
-                                      (handle-action! :session/play-current nil))))))
+                                (-> (wait-for-render!)
+                                    (.then #(handle-action! :session/play-current nil))))
                               2000))))
 
                        :done
@@ -726,27 +759,6 @@
   (let [actions (resolve-event-placeholders dispatch-data actions)]
     (doseq [[action & args] actions]
       (handle-action! action args))))
-
-(defn render-sheet-music!
-  "Imperatively render ABC into the #sheet-music div if present."
-  [s]
-  (when-let [tune (state/selected-tune s)]
-    (when-let [abc-body (state/edited-abc-for-tune s (:id tune))]
-      (when (string? abc-body)
-        (let [section (:section s)
-              body (if section
-                     (let [parts (split-abc-body abc-body)]
-                       (if parts
-                         (get parts section abc-body)
-                         abc-body))
-                     abc-body)
-              raw-abc (build-full-abc tune (add-line-breaks body 4))
-              final-abc (abc/adjust-abc-tempo raw-abc (or (:tempo-offset s) 0))]
-          ;; Defer so the DOM has updated from Replicant render
-          (js/requestAnimationFrame
-           (fn []
-             (when-let [el (js/document.getElementById "sheet-music")]
-               (abc-bridge/render-abc! el final-abc)))))))))
 
 (defonce prev-render-key (atom nil))
 

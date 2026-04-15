@@ -12,22 +12,23 @@
         ctx)))
 
 (defn render-abc!
-  "Render ABC string into a DOM element as SVG.
-   Stores the visual object for synth use."
+  "Render ABC string into a DOM element as SVG. Synchronous.
+   Stores and returns the visual object for synth use.
+   Caller is responsible for ensuring DOM is laid out (e.g. via requestAnimationFrame)."
   [element abc-str & [opts]]
   (when (and element abc-str)
     (set! (.-innerHTML element) "")
-    (js/requestAnimationFrame
-     (fn []
-       (let [container (js/document.querySelector ".sheet-area")
-             available (if container (- (.-clientWidth container) 80) 800)
-             staff-w (min 950 (max 400 available))
-             visual (ABCJS/renderAbc element abc-str
-                                     (clj->js (merge {:staffwidth staff-w
-                                                      :scale 1.1
-                                                      :add_classes true}
-                                                     opts)))]
-         (swap! synth-state assoc :visual (first visual)))))))
+    (let [container (js/document.querySelector ".sheet-area")
+          available (if container (- (.-clientWidth container) 80) 800)
+          staff-w (min 950 (max 400 available))
+          visual (ABCJS/renderAbc element abc-str
+                                  (clj->js (merge {:staffwidth staff-w
+                                                   :scale 1.1
+                                                   :add_classes true}
+                                                  opts)))
+          v (first visual)]
+      (swap! synth-state assoc :visual v)
+      v)))
 
 (defn stop!
   "Stop any current playback."
@@ -44,8 +45,7 @@
   (boolean (:synth @synth-state)))
 
 (defn prepare!
-  "Init + prime the synth. Returns a promise that resolves when ready to start.
-   Does NOT start playback — call start! for that."
+  "Init + prime the synth. Returns a promise that resolves when ready to start."
   []
   (stop!)
   (when-let [visual (:visual @synth-state)]
@@ -59,7 +59,6 @@
           (.then (fn [] (.prime synth)))
           (.then (fn []
                    (let [dur (.-duration synth)]
-                     ;; Only store if generation still matches (not stopped in the meantime)
                      (when (= gen (:generation @synth-state))
                        (swap! synth-state assoc :synth synth :duration dur))
                      {:synth synth :duration dur :generation gen})))
@@ -67,8 +66,7 @@
                     (js/console.error "Prepare failed:" e)))))))
 
 (defn start!
-  "Start a pre-primed synth. Near-zero latency.
-   on-end is called when playback finishes naturally."
+  "Start a pre-primed synth. Near-zero latency."
   [& [{:keys [on-end]}]]
   (when-let [synth (:synth @synth-state)]
     (.start synth)
@@ -83,7 +81,7 @@
          (* (+ dur 0.5) 1000))))))
 
 (defn play!
-  "Convenience: prepare then start. Used when no count-in is needed."
+  "Convenience: prepare then start."
   [& [{:keys [on-end]}]]
   (when-let [p (prepare!)]
     (-> p
