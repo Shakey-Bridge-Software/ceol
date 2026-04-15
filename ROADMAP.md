@@ -20,19 +20,10 @@
 - [x] Count-in: pre-primed abc.js synth, time-sig aware taps (4 taps for short bars, 1 bar for others), accent on downbeats
 - [x] Beat engine: shared pure beat math module (beats-for-tune, ms-per-beat/bar)
 - [x] Editor Esc to blur (restore keyboard shortcuts), auto-focus on open
-
-## Features — next up
-
-### Session mode
-Simulates a real trad session. Shuffle learned tunes, no lookahead.
-- [ ] `:learned?` boolean flag on tunes (toggle in UI, persist to localStorage)
-- [ ] Visual indicator on learned tunes in sidebar (checkmark or dot)
-- [ ] Session mode toggle button
-- [ ] Shuffle all learned tunes/sets into random queue
-- [ ] Count-in before each tune
-- [ ] Configurable pause between tunes (2-3 seconds)
-- [ ] No peeking — UI doesn't show what's next until it starts
-- [ ] Auto-stop after all tunes played (or loop the session)
+- [x] Session mode: learned flag (k hotkey), queue building (sets as units when all tunes learned), shuffle, count-in between items, 2s pause, no lookahead, third sidebar tab
+- [x] Session UI: clean read-only main panel (no controls), progress bar, NOW PLAYING, PLAYED history
+- [x] Promise-based render sync: render-abc! synchronous, render-sheet-music! creates promise, wait-for-render! for session advance
+- [x] Tests: 43 tests, 183 assertions (chords, ABC, state, sets, beat engine, session)
 
 ### Melody mute
 Practice rhythm guitar by silencing the melody.
