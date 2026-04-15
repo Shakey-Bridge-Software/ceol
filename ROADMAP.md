@@ -16,6 +16,10 @@
 - [x] Code review + fixes (parse-long portability, guitar timeout, watch dedup, fetch error handling)
 - [x] TUI: count-in, setlists, set queue playback, local ABC, orphan cleanup
 - [x] Documentation (CLAUDE.md, README.md, ROADMAP.md)
+- [x] Metronome: standalone click (self-correcting clock), stops when playback starts
+- [x] Count-in: pre-primed abc.js synth, time-sig aware taps (4 taps for short bars, 1 bar for others), accent on downbeats
+- [x] Beat engine: shared pure beat math module (beats-for-tune, ms-per-beat/bar)
+- [x] Editor Esc to blur (restore keyboard shortcuts), auto-focus on open
 
 ## Features — next up
 
@@ -48,12 +52,6 @@ Choose the melody sound.
 - [ ] Button or dropdown in playback bar
 - [ ] Persist preference to localStorage
 
-### Count-in click (web)
-Already in TUI, bring to web. Shares beat-timing infrastructure with metronome (see below).
-- [ ] Woodblock or click sound before tune starts
-- [ ] Respects time signature and tempo
-- [ ] Toggle on/off (keyboard shortcut: `c`)
-
 ### Half-speed quick button
 One-tap slow practice alongside existing tempo controls.
 - [ ] Button that toggles between current tempo and 50% speed
@@ -73,13 +71,6 @@ Compact visual reference showing first 1-2 bars per tune. **Implementation note:
 - [ ] Lazy rendering on scroll into viewport
 - [ ] Sortable by name and type
 - [ ] Quick navigation — click incipit to select tune
-
-### Metronome
-Standalone click, independent of playback. **Implementation note:** shares beat-timing infrastructure with count-in — extract a common `beat-engine` module (BPM, time-sig, beat scheduling, accent patterns) used by both.
-- [ ] Configurable BPM
-- [ ] Time signature aware (accent on beat 1)
-- [ ] Visual beat indicator
-- [ ] Can run alongside playback or solo
 
 ## Polish
 
