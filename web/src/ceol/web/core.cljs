@@ -619,7 +619,10 @@
                                   :session-set-index (:session-set-index result)
                                   :session-within-set? true
                                   :selected-tune-id (:tune-id result))
-                           (js/setTimeout #(handle-action! :session/play-current nil) 500))
+                           ;; Wait for render then play
+                           (js/setTimeout
+                            #(handle-action! :session/play-current nil)
+                            800))
 
                        :next-item
                        (let [next-idx (:session-index result)
@@ -634,13 +637,14 @@
                                 :session-within-set? false
                                 :session-pausing? true
                                 :session-played (conj (:session-played s) (:session-index s)))
-                         ;; 2s pause then count-in then play
+                         ;; 2s pause, then update tune, wait for render, then play
                          (js/setTimeout
                           (fn []
                             (swap! state/app-state assoc
                                    :selected-tune-id next-tune-id
                                    :session-pausing? false)
-                            (handle-action! :session/play-current nil))
+                            ;; Wait for render cycle (Replicant + abc.js + visual stored)
+                            (js/setTimeout #(handle-action! :session/play-current nil) 300))
                           2000))
 
                        :reshuffle
@@ -663,7 +667,11 @@
                                 (swap! state/app-state assoc
                                        :selected-tune-id first-tid
                                        :session-pausing? false)
-                                (handle-action! :session/play-current nil))
+                                (js/requestAnimationFrame
+                                 (fn []
+                                   (js/requestAnimationFrame
+                                    (fn []
+                                      (handle-action! :session/play-current nil))))))
                               2000))))
 
                        :done
