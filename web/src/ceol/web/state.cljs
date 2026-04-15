@@ -49,7 +49,16 @@
          :adding-to-set nil
          :metronome? false
          :count-in? false
-         :current-beat nil}))
+         :current-beat nil
+         ;; Learned + Session
+         :learned-tune-ids #{}
+         :session-mode? false
+         :session-queue []
+         :session-index 0
+         :session-set-index 0
+         :session-pausing? false
+         :session-within-set? false
+         :session-played []}))
 
 ;; --- Tune queries ---
 
@@ -140,3 +149,74 @@
 
         :else
         {:action :stop}))))
+
+;; --- Learned + Session (pure logic) ---
+
+(defn learned? [state tune-id]
+  (contains? (:learned-tune-ids state) tune-id))
+
+(defn count-ready-sets
+  "Count sets where all tunes are learned."
+  [state]
+  (count (filter (fn [[_ s]]
+                   (every? #(learned? state %) (:tune-ids s)))
+                 (:sets state))))
+
+(defn build-session-queue
+  "Build the session queue from learned tunes and sets.
+   Returns unshuffled vector of {:type :tune/:set ...} items."
+  [learned-ids sets]
+  (let [;; Step 1: complete sets (all tunes learned)
+        complete-sets (filter (fn [[_ s]]
+                                (and (seq (:tune-ids s))
+                                     (every? learned-ids (:tune-ids s))))
+                              sets)
+        ;; Step 2: tune-ids covered by complete sets
+        set-tune-ids (into #{} (mapcat (fn [[_ s]] (:tune-ids s)) complete-sets))
+        ;; Step 3: standalone learned tunes not in any complete set
+        standalone-ids (remove set-tune-ids learned-ids)
+        ;; Step 4: build queue
+        set-items (mapv (fn [[id s]] {:type :set :set-id id :name (:name s) :tune-ids (:tune-ids s)})
+                        complete-sets)
+        tune-items (mapv (fn [tid] {:type :tune :tune-id tid}) standalone-ids)]
+    (into set-items tune-items)))
+
+(defn shuffle-queue [queue]
+  (vec (sort-by (fn [_] (rand)) queue)))
+
+(defn advance-session
+  "Given session state, compute next action after a tune finishes.
+   Returns {:action :advance-in-set/:next-item/:done/:reshuffle, ...}"
+  [queue session-index session-set-index loop?]
+  (when (seq queue)
+    (let [current (nth queue session-index nil)]
+      (cond
+        ;; Currently in a set — check if more tunes
+        (and (= :set (:type current))
+             (< (inc session-set-index) (count (:tune-ids current))))
+        {:action :advance-in-set
+         :tune-id (nth (:tune-ids current) (inc session-set-index))
+         :session-set-index (inc session-set-index)}
+
+        ;; More items in queue
+        (< (inc session-index) (count queue))
+        {:action :next-item
+         :session-index (inc session-index)}
+
+        ;; End of queue, loop on
+        loop?
+        {:action :reshuffle}
+
+        ;; End of queue, no loop
+        :else
+        {:action :done}))))
+
+(defn session-current-tune-id
+  "Get the tune-id currently playing in the session."
+  [state]
+  (when-let [queue (seq (:session-queue state))]
+    (let [item (nth queue (:session-index state) nil)]
+      (case (:type item)
+        :tune (:tune-id item)
+        :set (nth (:tune-ids item) (:session-set-index state) nil)
+        nil))))

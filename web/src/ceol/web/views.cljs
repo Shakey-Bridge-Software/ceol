@@ -35,15 +35,18 @@
     :on {:click [[:filter/set type-key]]}}
    (get tune-type-labels type-key)])
 
-(defn tune-row [tune selected-id]
-  (let [active? (= (:id tune) selected-id)]
+(defn tune-row [tune selected-id learned-ids]
+  (let [active? (= (:id tune) selected-id)
+        learned? (contains? (or learned-ids #{}) (:id tune))]
     [:div.tune-row {:class (when active? "active")
                     :on {:click [[:tune/select (:id tune)]]}}
      [:div.tune-dot {:class (when active? "active")}]
      [:div.tune-info
       [:div.tune-name (:name tune)]
       [:div.tune-meta
-       (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]]))
+       (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]
+     (when learned?
+       [:span.learned-indicator "\u2713"])]))
 
 ;; --- Sets tab components ---
 
@@ -143,9 +146,87 @@
         (map (fn [s] (set-card s state)) (sort-by :name sets))
         [:div.sets-empty "No sets yet"]))]])
 
+;; --- Session tab ---
+
+(defn session-preview-item [item state]
+  (case (:type item)
+    :set [:div.session-item.session-set
+          [:span.session-item-icon "\u25A4"]
+          [:div.session-item-info
+           [:div.session-item-name (:name item)]
+           [:div.session-item-meta (str (count (:tune-ids item)) " tunes")]]]
+    :tune (let [tune (state/tune-by-id state (:tune-id item))]
+            [:div.session-item
+             [:span.session-item-icon "\u266A"]
+             [:div.session-item-name (or (:name tune) "Unknown")]])
+    nil))
+
+(defn session-tab-pre [state]
+  (let [learned-count (count (:learned-tune-ids state))
+        ready-sets (state/count-ready-sets state)
+        queue (state/build-session-queue (:learned-tune-ids state) (:sets state))]
+    [:div.session-content
+     [:div.session-summary
+      [:span.session-stats (str learned-count " learned tune" (when (not= 1 learned-count) "s")
+                                " \u00b7 " ready-sets " set" (when (not= 1 ready-sets) "s") " ready")]]
+     (if (pos? (count queue))
+       [:div.session-actions
+        [:button.session-start {:on {:click [[:session/start]]}} "Start Session"]
+        [:div.session-preview
+         [:div.session-preview-label "SESSION QUEUE PREVIEW"]
+         (map (fn [item] (session-preview-item item state)) queue)]]
+       [:div.session-empty "Mark tunes as learned to start a session"])]))
+
+(defn session-tab-active [state]
+  (let [queue (:session-queue state)
+        idx (:session-index state)
+        total (count queue)
+        current (nth queue idx nil)
+        progress (if (pos? total) (/ (inc idx) total) 0)]
+    [:div.session-content
+     [:div.session-active-header
+      [:span.session-active-label "SESSION ACTIVE"]
+      [:span.session-active-count (str (inc idx) " of " total)]]
+     [:div.session-progress-bar
+      [:div.session-progress-fill {:style {:width (str (* progress 100) "%")}}]]
+     [:div.session-now-playing
+      [:div.session-now-label "NOW PLAYING"]
+      (case (:type current)
+        :set [:div.session-now-info
+              [:div.session-now-name (:name current)]
+              [:div.session-now-meta (str (inc (:session-set-index state)) "/"
+                                          (count (:tune-ids current)))]]
+        :tune (let [tune (state/tune-by-id state (:tune-id current))]
+                [:div.session-now-info
+                 [:div.session-now-name (:name tune)]])
+        nil)]
+     [:div.session-next
+      [:div.session-next-label "NEXT"]
+      [:div.session-next-val "?"]]
+     (when (seq (:session-played state))
+       [:div.session-history
+        [:div.session-history-label "PLAYED"]
+        (map (fn [played-idx]
+               (let [item (nth queue played-idx nil)]
+                 [:div.session-history-item
+                  [:span.session-history-check "\u2713"]
+                  [:span (case (:type item)
+                           :set (:name item)
+                           :tune (let [t (state/tune-by-id state (:tune-id item))]
+                                   (:name t))
+                           "?")]]))
+             (:session-played state))])
+     [:button.session-end {:on {:click [[:session/stop]]}} "End Session"]]))
+
+(defn session-tab [state]
+  (if (:session-mode? state)
+    (session-tab-active state)
+    (session-tab-pre state)))
+
 (defn sidebar [state]
   (let [current-filter (:filter state)
         selected-id (:selected-tune-id state)
+        learned-ids (:learned-tune-ids state)
         tunes (state/filtered-tunes state)]
     [:div.sidebar
      [:div.sidebar-header
@@ -155,16 +236,21 @@
       [:button.tab {:class (when (= :tunes (:tab state)) "active")
                     :on {:click [[:tab/set :tunes]]}} "Tunes"]
       [:button.tab {:class (when (= :sets (:tab state)) "active")
-                    :on {:click [[:tab/set :sets]]}} "Sets"]]
-     (if (= :sets (:tab state))
-       (sets-tab state)
+                    :on {:click [[:tab/set :sets]]}} "Sets"]
+      [:button.tab {:class (str (when (= :session (:tab state)) "active")
+                                (when (:session-mode? state) " session-live"))
+                    :on {:click [[:tab/set :session]]}} "Session"]]
+     (case (:tab state)
+       :sets (sets-tab state)
+       :session (session-tab state)
+       ;; default: tunes
        [:div.tunes-content
         [:div.filters-row
          [:div.filters
           (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
          [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]]
         [:div.tune-list
-         (map (fn [t] (tune-row t selected-id)) tunes)]])]))
+         (map (fn [t] (tune-row t selected-id learned-ids)) tunes)]])]))
 
 (defn tune-header [tune state]
   (when tune
@@ -221,6 +307,10 @@
         [:button.edit-toggle {:class (when editor-open? "active")
                               :on {:click [[:editor/toggle]]}}
          "Edit"]
+        (let [is-learned? (state/learned? state tune-id)]
+          [:button.learned-toggle {:class (when is-learned? "active")
+                                   :on {:click [[:learned/toggle tune-id]]}}
+           (if is-learned? "\u2713 Learned" "Learned")])
         (when (state/custom-tune? tune-id)
           [:button.delete-tune {:on {:click [[:tune/delete tune-id]]}}
            "Delete"])]])))
@@ -257,7 +347,13 @@
 
 (defn playback-status [state]
   (when (:playing? state)
-    (if (:set-playing? state)
+    (cond
+      (:session-mode? state)
+      (let [idx (:session-index state)
+            total (count (:session-queue state))]
+        [:span.playback-status (str "Session \u2014 " (inc idx) "/" total)])
+
+      (:set-playing? state)
       (let [s (state/active-set state)
             idx (:set-tune-index state)
             total (count (:tune-ids s))
@@ -265,6 +361,8 @@
         [:span.playback-status
          (str "Set: " (:name s) " \u2014 " (inc idx) "/" total
               (when loop? " on loop"))])
+
+      :else
       (let [section (:playing-section state)
             part (case section :a "A part" :b "B part" "All parts")
             loop? (:loop? state)]
