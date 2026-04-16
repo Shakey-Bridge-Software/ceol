@@ -73,6 +73,9 @@ Compact visual reference showing first 1-2 bars per tune. **Implementation note:
 - [ ] Editor panel drag handle (low priority)
 - [ ] Tune list scroll position preservation on filter change
 - [ ] Loading state for guitar samples (first play delay)
+- [ ] Help button / hotkey reference overlay (question mark icon)
+- [ ] Playback bar layout stability — BPM shifts when loop/guitar toggled, count-in/metro buttons shift when guitar toggled. Fix width of playback bar zones so controls don't move.
+- [ ] Set rows in sidebar need more vertical breathing room — bottoms of rows are being cut off
 
 ## Known bugs
 
