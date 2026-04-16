@@ -52,6 +52,7 @@
                   "content": "IRISH TRADITIONAL MUSIC",
                   "fontFamily": "IBM Plex Mono",
                   "fontSize": 10,
+                  "fontWeight": "normal",
                   "letterSpacing": 2
                 }
               ]
@@ -114,7 +115,8 @@
                       "fill": "#666666",
                       "content": "Sets",
                       "fontFamily": "Geist",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -168,7 +170,8 @@
                       "fill": "#888888",
                       "content": "Polka",
                       "fontFamily": "Geist",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -190,7 +193,8 @@
                       "fill": "#888888",
                       "content": "Jig",
                       "fontFamily": "Geist",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -212,7 +216,8 @@
                       "fill": "#888888",
                       "content": "Reel",
                       "fontFamily": "Geist",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -234,7 +239,8 @@
                       "fill": "#888888",
                       "content": "Hornpipe",
                       "fontFamily": "Geist",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -256,7 +262,8 @@
                       "fill": "#888888",
                       "content": "Slip Jig",
                       "fontFamily": "Geist",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -278,7 +285,8 @@
                       "fill": "#888888",
                       "content": "Slide",
                       "fontFamily": "Geist",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -341,7 +349,8 @@
                           "fill": "#888888",
                           "content": "Polka · G Ionian · 2/4",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -383,7 +392,8 @@
                           "fill": "#AAAAAA",
                           "content": "The Kerry Polka",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -392,7 +402,8 @@
                           "fill": "#555555",
                           "content": "Polka · D Ionian · 2/4",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -434,7 +445,8 @@
                           "fill": "#AAAAAA",
                           "content": "The Ocean Jig",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -443,7 +455,8 @@
                           "fill": "#555555",
                           "content": "Jig · G Ionian · 6/8",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -485,7 +498,8 @@
                           "fill": "#AAAAAA",
                           "content": "Crowley's Reel",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -494,7 +508,8 @@
                           "fill": "#555555",
                           "content": "Reel · A Dorian · 4/4",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -536,7 +551,8 @@
                           "fill": "#AAAAAA",
                           "content": "Boys of Bluehill",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -545,7 +561,8 @@
                           "fill": "#555555",
                           "content": "Hornpipe · D Ionian · 4/4",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -587,7 +604,8 @@
                           "fill": "#AAAAAA",
                           "content": "Fig for a Kiss",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -596,7 +614,8 @@
                           "fill": "#555555",
                           "content": "Slip Jig · E Dorian · 9/8",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -638,7 +657,8 @@
                           "fill": "#AAAAAA",
                           "content": "The Foggy Dew",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -647,7 +667,8 @@
                           "fill": "#555555",
                           "content": "Other · D Aeolian · 4/4",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -694,7 +715,8 @@
                       "fill": "#1A1A1A",
                       "content": "Maggie in the Woods",
                       "fontFamily": "Newsreader",
-                      "fontSize": 24
+                      "fontSize": 24,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -704,6 +726,7 @@
                       "content": "Polka · G Ionian · 2/4 · 120 BPM",
                       "fontFamily": "IBM Plex Mono",
                       "fontSize": 11,
+                      "fontWeight": "normal",
                       "letterSpacing": 0.5
                     }
                   ]
@@ -1904,7 +1927,8 @@
                           "fill": "#666666",
                           "content": "Loop",
                           "fontFamily": "Geist",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -1938,7 +1962,8 @@
                           "fill": "#666666",
                           "content": "−",
                           "fontFamily": "Geist",
-                          "fontSize": 16
+                          "fontSize": 16,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -1973,7 +1998,8 @@
                           "fill": "#666666",
                           "content": "+",
                           "fontFamily": "Geist",
-                          "fontSize": 16
+                          "fontSize": 16,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -2072,6 +2098,7 @@
               "content": "IRISH TRADITIONAL MUSIC",
               "fontFamily": "IBM Plex Mono",
               "fontSize": 10,
+              "fontWeight": "normal",
               "letterSpacing": 2
             }
           ]
@@ -2104,7 +2131,8 @@
                   "fill": "#666666",
                   "content": "Tunes",
                   "fontFamily": "Geist",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -2180,7 +2208,8 @@
                   "fill": "#666666",
                   "content": "New Set",
                   "fontFamily": "Geist",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -2220,7 +2249,8 @@
                       "fill": "#888888",
                       "content": "3 tunes · Polkas",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2229,7 +2259,8 @@
                       "fill": "#555555",
                       "content": "Maggie → Kerry → Rathlin",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -2270,7 +2301,8 @@
                       "fill": "#AAAAAA",
                       "content": "Jig Set",
                       "fontFamily": "Geist",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2279,7 +2311,8 @@
                       "fill": "#555555",
                       "content": "3 tunes · Jigs",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2288,7 +2321,8 @@
                       "fill": "#444444",
                       "content": "Ocean → Miller → Leg of Duck",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -2329,7 +2363,8 @@
                       "fill": "#AAAAAA",
                       "content": "Reel Set",
                       "fontFamily": "Geist",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2338,7 +2373,8 @@
                       "fill": "#555555",
                       "content": "2 tunes · Reels",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2347,7 +2383,8 @@
                       "fill": "#444444",
                       "content": "Crowley's → Wind that Shakes",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -2388,7 +2425,8 @@
                       "fill": "#AAAAAA",
                       "content": "Learning",
                       "fontFamily": "Geist",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2397,7 +2435,8 @@
                       "fill": "#555555",
                       "content": "4 tunes · Mixed",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2406,7 +2445,8 @@
                       "fill": "#444444",
                       "content": "Boys of Bluehill → Fig for Kiss → ...",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -2469,6 +2509,7 @@
               "content": "IRISH TRADITIONAL MUSIC",
               "fontFamily": "IBM Plex Mono",
               "fontSize": 10,
+              "fontWeight": "normal",
               "letterSpacing": 2
             }
           ]
@@ -2501,7 +2542,8 @@
                   "fill": "#666666",
                   "content": "Tunes",
                   "fontFamily": "Geist",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -2612,7 +2654,8 @@
                       "fill": "#555555",
                       "content": "1",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2623,7 +2666,8 @@
                       "width": "fill_container",
                       "content": "Maggie in the Woods",
                       "fontFamily": "Geist",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "icon_font",
@@ -2658,7 +2702,8 @@
                       "fill": "#555555",
                       "content": "2",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "frame",
@@ -2683,7 +2728,8 @@
                           "fill": "#F5F4F0",
                           "content": "ker",
                           "fontFamily": "Geist",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "rectangle",
@@ -2740,7 +2786,8 @@
                           "fill": "#F5F4F0",
                           "content": "Polka",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 9
+                          "fontSize": 9,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -2763,7 +2810,8 @@
                           "width": "fill_container",
                           "content": "The Kerry Slides",
                           "fontFamily": "Geist",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -2772,7 +2820,8 @@
                           "fill": "#555555",
                           "content": "Slide",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 9
+                          "fontSize": 9,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -2797,7 +2846,8 @@
                       "fill": "#444444",
                       "content": "Enter to add",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 9
+                      "fontSize": 9,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2806,7 +2856,8 @@
                       "fill": "#333333",
                       "content": "·",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 9
+                      "fontSize": 9,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2815,7 +2866,8 @@
                       "fill": "#444444",
                       "content": "Enter on empty = done",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 9
+                      "fontSize": 9,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2824,7 +2876,8 @@
                       "fill": "#333333",
                       "content": "·",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 9
+                      "fontSize": 9,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -2833,7 +2886,8 @@
                       "fill": "#444444",
                       "content": "Esc to cancel",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 9
+                      "fontSize": 9,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -2873,7 +2927,8 @@
                           "fill": "#AAAAAA",
                           "content": "Jig Set",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -2882,7 +2937,8 @@
                           "fill": "#555555",
                           "content": "3 tunes · Jigs",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -2913,7 +2969,8 @@
                           "fill": "#AAAAAA",
                           "content": "Reel Set",
                           "fontFamily": "Geist",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -2922,7 +2979,8 @@
                           "fill": "#555555",
                           "content": "2 tunes · Reels",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -2977,6 +3035,7 @@
               "content": "IRISH TRADITIONAL MUSIC",
               "fontFamily": "IBM Plex Mono",
               "fontSize": 10,
+              "fontWeight": "normal",
               "letterSpacing": 2
             }
           ]
@@ -3034,7 +3093,8 @@
                   "fill": "#666666",
                   "content": "Sets",
                   "fontFamily": "Geist",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }
@@ -3088,7 +3148,8 @@
                   "fill": "#888888",
                   "content": "Polka",
                   "fontFamily": "Geist",
-                  "fontSize": 11
+                  "fontSize": 11,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -3110,7 +3171,8 @@
                   "fill": "#888888",
                   "content": "Jig",
                   "fontFamily": "Geist",
-                  "fontSize": 11
+                  "fontSize": 11,
+                  "fontWeight": "normal"
                 }
               ]
             }
@@ -3173,7 +3235,8 @@
                       "fill": "#888888",
                       "content": "Polka · G Ionian · 2/4",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -3225,7 +3288,8 @@
                       "fill": "#AAAAAA",
                       "content": "The Kerry Polka",
                       "fontFamily": "Geist",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -3234,7 +3298,8 @@
                       "fill": "#555555",
                       "content": "Polka · D Ionian · 2/4",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -3287,7 +3352,8 @@
                       "fill": "#CCCCCC",
                       "content": "The Ocean Jig",
                       "fontFamily": "Geist",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -3296,7 +3362,8 @@
                       "fill": "#555555",
                       "content": "Jig · G Ionian · 6/8",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -3348,7 +3415,8 @@
                       "fill": "#AAAAAA",
                       "content": "Crowley's Reel",
                       "fontFamily": "Geist",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -3357,7 +3425,8 @@
                       "fill": "#555555",
                       "content": "Reel · A Dorian · 4/4",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -3409,7 +3478,8 @@
                       "fill": "#AAAAAA",
                       "content": "Boys of Bluehill",
                       "fontFamily": "Geist",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -3418,7 +3488,8 @@
                       "fill": "#555555",
                       "content": "Hornpipe · D Ionian · 4/4",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 10
+                      "fontSize": 10,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -3494,7 +3565,8 @@
                   "fill": "#EEEEEE",
                   "content": "Add to Set...",
                   "fontFamily": "Geist",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -3536,7 +3608,8 @@
                   "fill": "#EEEEEE",
                   "content": "Play",
                   "fontFamily": "Geist",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }
@@ -3595,6 +3668,7 @@
                   "content": "IRISH TRADITIONAL MUSIC",
                   "fontFamily": "IBM Plex Mono",
                   "fontSize": 10,
+                  "fontWeight": "normal",
                   "letterSpacing": 2
                 }
               ]
@@ -3652,7 +3726,8 @@
                       "fill": "#666666",
                       "content": "Sets",
                       "fontFamily": "Geist",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -3747,7 +3822,8 @@
                           "fill": "#888888",
                           "content": "Polka · G Ionian · 2/4",
                           "fontFamily": "IBM Plex Mono",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -3793,7 +3869,8 @@
                       "fill": "#1A1A1A",
                       "content": "Maggie in the Woods (p8)",
                       "fontFamily": "Newsreader",
-                      "fontSize": 22
+                      "fontSize": 22,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -3802,7 +3879,8 @@
                       "fill": "#666666",
                       "content": "Polka · G Ionian · 2/4 · 120 BPM",
                       "fontFamily": "IBM Plex Mono",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -4355,7 +4433,8 @@
                               "fill": "#555555",
                               "content": "Chords: \"G\" \"Am\"",
                               "fontFamily": "IBM Plex Mono",
-                              "fontSize": 10
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -4364,7 +4443,8 @@
                               "fill": "#555555",
                               "content": "Notes: A-G a-g",
                               "fontFamily": "IBM Plex Mono",
-                              "fontSize": 10
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -4373,7 +4453,8 @@
                               "fill": "#8F5A3C",
                               "content": "Live preview",
                               "fontFamily": "IBM Plex Mono",
-                              "fontSize": 10
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -4407,7 +4488,8 @@
                               "content": "1",
                               "textAlign": "right",
                               "fontFamily": "IBM Plex Mono",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -4416,7 +4498,8 @@
                               "fill": "#D4D4D4",
                               "content": "|:\"G\"GDG3/2A/2|\"G\"Bee2|\"D\"dBGA|\"C\"BAA2|\"G\"GDG3/2A/2|\"G\"Bee2|\"D\"dBAB/2A/2|\"G\"G2G2:|",
                               "fontFamily": "IBM Plex Mono",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -4438,7 +4521,8 @@
                               "content": "2",
                               "textAlign": "right",
                               "fontFamily": "IBM Plex Mono",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -4447,7 +4531,8 @@
                               "fill": "#D4D4D4",
                               "content": "|:\"G\"gf#ed|\"G\"Bee2|\"D\"dBGA|\"C\"BAA2|\"G\"gf#ed|\"G\"Bee2|\"D\"dBAB/2A/2|\"G\"G2G2:|",
                               "fontFamily": "IBM Plex Mono",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -4544,7 +4629,8 @@
                           "fill": "#666666",
                           "content": "Loop",
                           "fontFamily": "Geist",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -4578,7 +4664,8 @@
                           "fill": "#666666",
                           "content": "−",
                           "fontFamily": "Geist",
-                          "fontSize": 16
+                          "fontSize": 16,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -4613,7 +4700,8 @@
                           "fill": "#666666",
                           "content": "+",
                           "fontFamily": "Geist",
-                          "fontSize": 16
+                          "fontSize": 16,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -4682,6 +4770,1305 @@
       },
       "width": 2492,
       "height": 450
+    },
+    {
+      "type": "frame",
+      "id": "bEDR8",
+      "x": 2960,
+      "y": 0,
+      "name": "sidebar-session-pre",
+      "width": 280,
+      "height": 900,
+      "fill": "#1A1A1A",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": [
+        24,
+        16
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "z3rMW",
+          "name": "spHead",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "ptNdZ",
+              "name": "spLogo",
+              "fill": "#F5F4F0",
+              "content": "ceol",
+              "fontFamily": "Newsreader",
+              "fontSize": 28,
+              "fontWeight": "300",
+              "letterSpacing": 1
+            },
+            {
+              "type": "text",
+              "id": "Mkz3E",
+              "name": "spTag",
+              "fill": "#666666",
+              "content": "IRISH TRADITIONAL MUSIC",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 10,
+              "letterSpacing": 2
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VdoyX",
+          "name": "spTabs",
+          "width": "fill_container",
+          "fill": "#111111",
+          "cornerRadius": 6,
+          "padding": 3,
+          "children": [
+            {
+              "type": "frame",
+              "id": "cqSn5",
+              "name": "spT1",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "padding": [
+                6,
+                0
+              ],
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "aj0Lx",
+                  "name": "spT1t",
+                  "fill": "#666666",
+                  "content": "Tunes",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eZXEZ",
+              "name": "spT2",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "padding": [
+                6,
+                0
+              ],
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "gPlU8",
+                  "name": "spT2t",
+                  "fill": "#666666",
+                  "content": "Sets",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "jIN6j",
+              "name": "spT3",
+              "width": "fill_container",
+              "fill": "#2A2A2A",
+              "cornerRadius": 4,
+              "padding": [
+                6,
+                0
+              ],
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lmSF0",
+                  "name": "spT3t",
+                  "fill": "#F5F4F0",
+                  "content": "Session",
+                  "fontFamily": "Geist",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "v7GTk",
+          "name": "spSummary",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            12,
+            0
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "If1a6",
+              "name": "spCount",
+              "fill": "#888888",
+              "content": "12 learned tunes · 2 sets ready",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 11
+            },
+            {
+              "type": "frame",
+              "id": "nooz3",
+              "name": "spStart",
+              "width": "fill_container",
+              "fill": "#8F5A3C",
+              "cornerRadius": 4,
+              "padding": [
+                12,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "QeCxG",
+                  "name": "spStartTxt",
+                  "fill": "#F5F4F0",
+                  "content": "Start Session",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JoWjc",
+          "name": "session-preview",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "wiyEs",
+              "name": "spLabel",
+              "fill": "#555555",
+              "content": "SESSION QUEUE PREVIEW",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 9,
+              "fontWeight": "500",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "upBMT",
+              "name": "spSet1",
+              "width": "fill_container",
+              "fill": "#2A2A2A",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                8,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "ItoxR",
+                  "name": "spSet1Icon",
+                  "width": 12,
+                  "height": 12,
+                  "iconFontName": "layers",
+                  "iconFontFamily": "lucide",
+                  "fill": "#8F5A3C"
+                },
+                {
+                  "type": "frame",
+                  "id": "kGpS0",
+                  "name": "spSet1Info",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CVgTw",
+                      "name": "spSet1Name",
+                      "fill": "#CCCCCC",
+                      "content": "Session Polkas",
+                      "fontFamily": "Geist",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qBxE1",
+                      "name": "spSet1Meta",
+                      "fill": "#555555",
+                      "content": "3 tunes",
+                      "fontFamily": "IBM Plex Mono",
+                      "fontSize": 9
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Mx916",
+              "name": "spSet2",
+              "width": "fill_container",
+              "fill": "#2A2A2A",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                8,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "VNptB",
+                  "name": "spSet2Icon",
+                  "width": 12,
+                  "height": 12,
+                  "iconFontName": "layers",
+                  "iconFontFamily": "lucide",
+                  "fill": "#8F5A3C"
+                },
+                {
+                  "type": "frame",
+                  "id": "llrMw",
+                  "name": "spSet2Info",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "F0m4N",
+                      "name": "spSet2Name",
+                      "fill": "#CCCCCC",
+                      "content": "Jig Set",
+                      "fontFamily": "Geist",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "IFYKG",
+                      "name": "spSet2Meta",
+                      "fill": "#555555",
+                      "content": "3 tunes",
+                      "fontFamily": "IBM Plex Mono",
+                      "fontSize": 9
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sXavI",
+              "name": "spTune1",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                8,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "xeOoz",
+                  "name": "spTune1Dot",
+                  "width": 12,
+                  "height": 12,
+                  "iconFontName": "music",
+                  "iconFontFamily": "lucide",
+                  "fill": "#666666"
+                },
+                {
+                  "type": "text",
+                  "id": "7AwL1",
+                  "name": "spTune1Name",
+                  "fill": "#AAAAAA",
+                  "content": "Foggy Dew",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eKCOP",
+              "name": "spTune2",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                8,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "alstW",
+                  "name": "spTune2Dot",
+                  "width": 12,
+                  "height": 12,
+                  "iconFontName": "music",
+                  "iconFontFamily": "lucide",
+                  "fill": "#666666"
+                },
+                {
+                  "type": "text",
+                  "id": "XXfxV",
+                  "name": "spTune2Name",
+                  "fill": "#AAAAAA",
+                  "content": "Boys of Bluehill",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qUlt3",
+              "name": "spTune3",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                8,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "ib0Lb",
+                  "name": "spTune3Dot",
+                  "width": 12,
+                  "height": 12,
+                  "iconFontName": "music",
+                  "iconFontFamily": "lucide",
+                  "fill": "#666666"
+                },
+                {
+                  "type": "text",
+                  "id": "wmXwq",
+                  "name": "spTune3Name",
+                  "fill": "#AAAAAA",
+                  "content": "Crowley's Reel",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qB7FM",
+              "name": "spTune4",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                8,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "XRfFI",
+                  "name": "spTune4Dot",
+                  "width": 12,
+                  "height": 12,
+                  "iconFontName": "music",
+                  "iconFontFamily": "lucide",
+                  "fill": "#666666"
+                },
+                {
+                  "type": "text",
+                  "id": "seqeJ",
+                  "name": "spTune4Name",
+                  "fill": "#AAAAAA",
+                  "content": "The Navigator",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "3WzM6",
+      "x": 3320,
+      "y": 0,
+      "name": "sidebar-session-active",
+      "width": 280,
+      "height": 900,
+      "fill": "#1A1A1A",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": [
+        24,
+        16
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "tSCna",
+          "name": "siHead",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "6wJ1i",
+              "name": "siLogo",
+              "fill": "#F5F4F0",
+              "content": "ceol",
+              "fontFamily": "Newsreader",
+              "fontSize": 28,
+              "fontWeight": "300",
+              "letterSpacing": 1
+            },
+            {
+              "type": "text",
+              "id": "su4JE",
+              "name": "siTag",
+              "fill": "#666666",
+              "content": "IRISH TRADITIONAL MUSIC",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 10,
+              "letterSpacing": 2
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "3RniE",
+          "name": "siTabs",
+          "width": "fill_container",
+          "fill": "#111111",
+          "cornerRadius": 6,
+          "padding": 3,
+          "children": [
+            {
+              "type": "frame",
+              "id": "qbSyo",
+              "name": "siT1",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "padding": [
+                6,
+                0
+              ],
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "0r5eQ",
+                  "name": "siT1t",
+                  "fill": "#666666",
+                  "content": "Tunes",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DpQaD",
+              "name": "siT2",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "padding": [
+                6,
+                0
+              ],
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mVYpH",
+                  "name": "siT2t",
+                  "fill": "#666666",
+                  "content": "Sets",
+                  "fontFamily": "Geist",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "4b5JA",
+              "name": "siT3",
+              "width": "fill_container",
+              "fill": "#8F5A3C",
+              "cornerRadius": 4,
+              "padding": [
+                6,
+                0
+              ],
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "yWeds",
+                  "name": "siT3t",
+                  "fill": "#F5F4F0",
+                  "content": "Session",
+                  "fontFamily": "Geist",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "rH6oo",
+          "name": "siStatus",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [
+            8,
+            0
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "tCCBt",
+              "name": "siProgress",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SjXbG",
+                  "name": "siProgLabel",
+                  "fill": "#8F5A3C",
+                  "content": "SESSION ACTIVE",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 9,
+                  "fontWeight": "500",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "SIfeS",
+                  "name": "siProgCount",
+                  "fill": "#F5F4F0",
+                  "content": "3 of 7",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 11,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "s2GAa",
+              "name": "siNowPlaying",
+              "width": "fill_container",
+              "fill": "#2A2A2A",
+              "cornerRadius": 4,
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "pw3Td",
+                  "name": "siNowLabel",
+                  "fill": "#555555",
+                  "content": "NOW PLAYING",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 9,
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "NIPe2",
+                  "name": "siNowSet",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "rJ5KM",
+                      "name": "siNowSetIcon",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "layers",
+                      "iconFontFamily": "lucide",
+                      "fill": "#8F5A3C"
+                    },
+                    {
+                      "type": "text",
+                      "id": "wcgzw",
+                      "name": "siNowSetName",
+                      "fill": "#F5F4F0",
+                      "content": "Session Polkas",
+                      "fontFamily": "Geist",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Yd2J1",
+                  "name": "siNowTune",
+                  "fill": "#888888",
+                  "content": "2/3 · The Kerry Polka",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 11
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YoN9a",
+              "name": "siNext",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#333333"
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                10,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "8MDEL",
+                  "name": "siNextLabel",
+                  "fill": "#555555",
+                  "content": "NEXT",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 9,
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "WhVhO",
+                  "name": "siNextVal",
+                  "fill": "#444444",
+                  "content": "?",
+                  "fontFamily": "Newsreader",
+                  "fontSize": 24,
+                  "fontWeight": "300"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "JJFbN",
+              "name": "siProgressBar",
+              "width": "fill_container",
+              "height": 4,
+              "fill": "#333333",
+              "cornerRadius": 2,
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "pS9fC",
+                  "name": "siProgressFill",
+                  "fill": "#8F5A3C",
+                  "width": 100,
+                  "height": 4
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "QouZk",
+          "name": "siHistory",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "FIYCa",
+              "name": "siHistLabel",
+              "fill": "#444444",
+              "content": "PLAYED",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 9,
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "yZa0G",
+              "name": "siH1",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                6,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "XKqjz",
+                  "name": "siH1Check",
+                  "width": 10,
+                  "height": 10,
+                  "iconFontName": "check",
+                  "iconFontFamily": "lucide",
+                  "fill": "#555555"
+                },
+                {
+                  "type": "text",
+                  "id": "blZDs",
+                  "name": "siH1Name",
+                  "fill": "#555555",
+                  "content": "Crowley's Reel",
+                  "fontFamily": "Geist",
+                  "fontSize": 11
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LvjAU",
+              "name": "siH2",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                6,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "JTtKH",
+                  "name": "siH2Check",
+                  "width": 10,
+                  "height": 10,
+                  "iconFontName": "check",
+                  "iconFontFamily": "lucide",
+                  "fill": "#555555"
+                },
+                {
+                  "type": "text",
+                  "id": "33wCl",
+                  "name": "siH2Name",
+                  "fill": "#555555",
+                  "content": "Foggy Dew",
+                  "fontFamily": "Geist",
+                  "fontSize": 11
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "eh9aB",
+          "name": "siEnd",
+          "width": "fill_container",
+          "cornerRadius": 4,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#555555"
+          },
+          "padding": [
+            10,
+            0
+          ],
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "L0USp",
+              "name": "siEndTxt",
+              "fill": "#888888",
+              "content": "End Session",
+              "fontFamily": "Geist",
+              "fontSize": 12
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "NuTL2",
+      "x": 0,
+      "y": 1960,
+      "name": "detail-learned-header",
+      "width": 900,
+      "height": 80,
+      "fill": "#F5F4F0",
+      "gap": 16,
+      "padding": [
+        16,
+        24
+      ],
+      "justifyContent": "space_between",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "nJugz",
+          "name": "ldTitle",
+          "layout": "vertical",
+          "gap": 2,
+          "children": [
+            {
+              "type": "text",
+              "id": "8ggjn",
+              "name": "ldName",
+              "fill": "#1A1A1A",
+              "content": "Maggie in the Woods (p8)",
+              "fontFamily": "Newsreader",
+              "fontSize": 22
+            },
+            {
+              "type": "text",
+              "id": "Rjmcf",
+              "name": "ldMeta",
+              "fill": "#666666",
+              "content": "polka · G Major · 2/4 · 120 BPM",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 11
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "UmeG3",
+          "name": "ldBtns",
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "YFnUt",
+              "name": "ldA",
+              "fill": "#8F5A3C",
+              "cornerRadius": 4,
+              "padding": [
+                5,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "XgWMZ",
+                  "name": "ldAt",
+                  "fill": "#F5F4F0",
+                  "content": "A",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "8EGt1",
+              "name": "ldB",
+              "cornerRadius": 4,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#CCCCCC"
+              },
+              "padding": [
+                5,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "a6QEU",
+                  "name": "ldBt",
+                  "fill": "#666666",
+                  "content": "B",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gRuX6",
+              "name": "ldAll",
+              "cornerRadius": 4,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#CCCCCC"
+              },
+              "padding": [
+                5,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "f1H48",
+                  "name": "ldAllt",
+                  "fill": "#666666",
+                  "content": "All",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dcXkK",
+              "name": "ldEdit",
+              "fill": "#2A2A2A",
+              "cornerRadius": 4,
+              "padding": [
+                5,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "J3Njr",
+                  "name": "ldEditt",
+                  "fill": "#F5F4F0",
+                  "content": "Edit",
+                  "fontFamily": "Geist",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hUuAo",
+              "name": "ldLearned",
+              "fill": "#2A6B3A",
+              "cornerRadius": 4,
+              "gap": 6,
+              "padding": [
+                5,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "Yff9l",
+                  "name": "ldLearnedIcon",
+                  "width": 12,
+                  "height": 12,
+                  "iconFontName": "check",
+                  "iconFontFamily": "lucide",
+                  "fill": "#F5F4F0"
+                },
+                {
+                  "type": "text",
+                  "id": "ewxI4",
+                  "name": "ldLearnedTxt",
+                  "fill": "#F5F4F0",
+                  "content": "Learned",
+                  "fontFamily": "Geist",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "yGNSs",
+      "x": 0,
+      "y": 2120,
+      "name": "detail-sidebar-learned",
+      "width": 260,
+      "height": 240,
+      "fill": "#1A1A1A",
+      "layout": "vertical",
+      "gap": 2,
+      "padding": 12,
+      "children": [
+        {
+          "type": "frame",
+          "id": "zFYxN",
+          "name": "slRow1",
+          "width": "fill_container",
+          "fill": "#2A2A2A",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            10,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "NulgB",
+              "name": "slDot1",
+              "fill": "#8F5A3C",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "frame",
+              "id": "UyOQp",
+              "name": "slInfo1",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PYcZX",
+                  "name": "slName1",
+                  "fill": "#F5F4F0",
+                  "content": "Maggie in the Woods",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "HNdDk",
+                  "name": "slMeta1",
+                  "fill": "#888888",
+                  "content": "Polka · G Ionian · 2/4",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10
+                }
+              ]
+            },
+            {
+              "type": "icon_font",
+              "id": "usKnV",
+              "name": "slCheck1",
+              "width": 10,
+              "height": 10,
+              "iconFontName": "check",
+              "iconFontFamily": "lucide",
+              "fill": "#2A6B3A"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JAF6p",
+          "name": "slRow2",
+          "width": "fill_container",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            10,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "KxUnb",
+              "name": "slDot2",
+              "fill": "#444444",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "frame",
+              "id": "tMnaZ",
+              "name": "slInfo2",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "9hwV4",
+                  "name": "slName2",
+                  "fill": "#AAAAAA",
+                  "content": "The Kerry Polka",
+                  "fontFamily": "Geist",
+                  "fontSize": 13
+                },
+                {
+                  "type": "text",
+                  "id": "njl5W",
+                  "name": "slMeta2",
+                  "fill": "#555555",
+                  "content": "Polka · D Ionian · 2/4",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10
+                }
+              ]
+            },
+            {
+              "type": "icon_font",
+              "id": "4PPZb",
+              "name": "slCheck2",
+              "width": 10,
+              "height": 10,
+              "iconFontName": "check",
+              "iconFontFamily": "lucide",
+              "fill": "#2A6B3A"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "NyDNk",
+          "name": "slRow3",
+          "width": "fill_container",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            10,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "eb8W5",
+              "name": "slDot3",
+              "fill": "#444444",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "frame",
+              "id": "8KZda",
+              "name": "slInfo3",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "8V9Od",
+                  "name": "slName3",
+                  "fill": "#AAAAAA",
+                  "content": "The Ocean Jig",
+                  "fontFamily": "Geist",
+                  "fontSize": 13
+                },
+                {
+                  "type": "text",
+                  "id": "rlVww",
+                  "name": "slMeta3",
+                  "fill": "#555555",
+                  "content": "Jig · G Ionian · 6/8",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "QyBIj",
+          "name": "slRow4",
+          "width": "fill_container",
+          "cornerRadius": 4,
+          "gap": 8,
+          "padding": [
+            10,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "Pxb6f",
+              "name": "slDot4",
+              "fill": "#444444",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "frame",
+              "id": "yJ8ym",
+              "name": "slInfo4",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "oWWX2",
+                  "name": "slName4",
+                  "fill": "#AAAAAA",
+                  "content": "Crowley's Reel",
+                  "fontFamily": "Geist",
+                  "fontSize": 13
+                },
+                {
+                  "type": "text",
+                  "id": "oMyyy",
+                  "name": "slMeta4",
+                  "fill": "#555555",
+                  "content": "Reel · A Dorian · 4/4",
+                  "fontFamily": "IBM Plex Mono",
+                  "fontSize": 10
+                }
+              ]
+            },
+            {
+              "type": "icon_font",
+              "id": "8J6QT",
+              "name": "slCheck4",
+              "width": 10,
+              "height": 10,
+              "iconFontName": "check",
+              "iconFontFamily": "lucide",
+              "fill": "#2A6B3A"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
