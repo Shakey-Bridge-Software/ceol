@@ -89,19 +89,22 @@
            1000)))
 
 (defn load-saved-edits!
-  "Load abc-edits from localStorage, falling back to default-abc-edits.edn."
+  "Load abc-edits from localStorage, merging defaults for any missing tune IDs."
   []
-  (if-let [raw (.getItem js/localStorage "ceol-abc-edits")]
-    (try
-      (let [edits (reader/read-string raw)]
-        (swap! state/app-state assoc :abc-edits edits))
-      (catch :default _ nil))
+  (let [local-raw (.getItem js/localStorage "ceol-abc-edits")
+        local-edits (when local-raw
+                      (try (reader/read-string local-raw)
+                           (catch :default _ nil)))]
     (-> (js/fetch "/data/default-abc-edits.edn")
         (.then #(.text %))
         (.then (fn [text]
-                 (let [edits (reader/read-string text)]
-                   (swap! state/app-state assoc :abc-edits edits))))
-        (.catch (fn [e] (js/console.error "Failed to load default ABC edits:" e))))))
+                 (let [defaults (reader/read-string text)
+                       merged (merge defaults local-edits)]
+                   (swap! state/app-state assoc :abc-edits merged))))
+        (.catch (fn [e]
+                  (js/console.error "Failed to load default ABC edits:" e)
+                  (when local-edits
+                    (swap! state/app-state assoc :abc-edits local-edits)))))))
 
 (defn save-learned!
   "Save learned tune IDs to localStorage."
