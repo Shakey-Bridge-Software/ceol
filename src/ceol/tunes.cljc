@@ -70,7 +70,7 @@
    ;; --- Connie Doolans additions ---
    {:id 23 :name "The Butterfly (p27)"                  :type :slip-jig :time-sig "9/8" :key "E" :mode-name "Dorian"
     :session-id 10 :abc nil :abc-status :none :midi-path nil :midi-status :none}
-   {:id 24 :name "Planxty Irwin (p36)"                  :type :other    :time-sig "3/4" :key "C" :mode-name "Ionian"
+   {:id 24 :name "Planxty Irwin (p36)"                  :type :other    :time-sig "3/4" :key "G" :mode-name "Ionian"
     :session-id 790 :abc nil :abc-status :none :midi-path nil :midi-status :none}
    {:id 25 :name "Fanny Power (p37)"                    :type :other    :time-sig "3/4" :key "G" :mode-name "Ionian"
     :session-id 957 :abc nil :abc-status :none :midi-path nil :midi-status :none}
@@ -98,7 +98,7 @@
     :session-id 793 :abc nil :abc-status :none :midi-path nil :midi-status :none}
    {:id 37 :name "The Connaughtman's Rambles (p20)"     :type :jig      :time-sig "6/8" :key "G" :mode-name "Ionian"
     :session-id 19 :abc nil :abc-status :none :midi-path nil :midi-status :none}
-   {:id 38 :name "Paddy Clancy's (p14)"                 :type :jig      :time-sig "6/8" :key "A" :mode-name "Dorian"
+   {:id 38 :name "Paddy Clancy's (p14)"                 :type :jig      :time-sig "6/8" :key "D" :mode-name "Ionian"
     :session-id 832 :abc nil :abc-status :none :midi-path nil :midi-status :none}
    {:id 39 :name "The Kesh"                       :type :jig      :time-sig "6/8" :key "G" :mode-name "Ionian"
     :session-id 55 :abc nil :abc-status :none :midi-path nil :midi-status :none}
@@ -131,7 +131,11 @@
    {:id 53 :name "Julia Clifford's (p33)"               :type :hornpipe :time-sig "4/4" :key "D" :mode-name "Ionian"
     :session-id nil :abc nil :abc-status :none :midi-path nil :midi-status :none}
    {:id 54 :name "St. Patrick's Day (p38)"              :type :other    :time-sig "4/4" :key "D" :mode-name "Ionian"
-    :session-id 385 :abc nil :abc-status :none :midi-path nil :midi-status :none}])
+    :session-id 385 :abc nil :abc-status :none :midi-path nil :midi-status :none}
+   {:id 55 :name "Stack of Barley (p32)"                :type :hornpipe :time-sig "4/4" :key "G" :mode-name "Ionian"
+    :session-id nil :abc nil :abc-status :none :midi-path nil :midi-status :none}
+   {:id 56 :name "Cronin's Hornpipe (p34)"              :type :hornpipe :time-sig "4/4" :key "G" :mode-name "Ionian"
+    :session-id nil :abc nil :abc-status :none :midi-path nil :midi-status :none}])
 
 (defn tune-by-id [tunes id]
   (first (filter #(= id (:id %)) tunes)))

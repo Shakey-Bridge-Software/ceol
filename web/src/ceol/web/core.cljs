@@ -89,13 +89,19 @@
            1000)))
 
 (defn load-saved-edits!
-  "Load abc-edits from localStorage."
+  "Load abc-edits from localStorage, falling back to default-abc-edits.edn."
   []
-  (when-let [raw (.getItem js/localStorage "ceol-abc-edits")]
+  (if-let [raw (.getItem js/localStorage "ceol-abc-edits")]
     (try
       (let [edits (reader/read-string raw)]
         (swap! state/app-state assoc :abc-edits edits))
-      (catch :default _ nil))))
+      (catch :default _ nil))
+    (-> (js/fetch "/data/default-abc-edits.edn")
+        (.then #(.text %))
+        (.then (fn [text]
+                 (let [edits (reader/read-string text)]
+                   (swap! state/app-state assoc :abc-edits edits))))
+        (.catch (fn [e] (js/console.error "Failed to load default ABC edits:" e))))))
 
 (defn save-learned!
   "Save learned tune IDs to localStorage."
@@ -118,13 +124,19 @@
   (.setItem js/localStorage "ceol-sets" (pr-str (:sets @state/app-state))))
 
 (defn load-sets!
-  "Load sets from localStorage."
+  "Load sets from localStorage, falling back to default-sets.edn."
   []
-  (when-let [raw (.getItem js/localStorage "ceol-sets")]
+  (if-let [raw (.getItem js/localStorage "ceol-sets")]
     (try
       (let [sets (reader/read-string raw)]
         (swap! state/app-state assoc :sets sets))
-      (catch :default _ nil))))
+      (catch :default _ nil))
+    (-> (js/fetch "/data/default-sets.edn")
+        (.then #(.text %))
+        (.then (fn [text]
+                 (let [sets (reader/read-string text)]
+                   (swap! state/app-state assoc :sets sets))))
+        (.catch (fn [e] (js/console.error "Failed to load default sets:" e))))))
 
 (defn save-custom-tunes!
   "Save custom tunes to localStorage."
