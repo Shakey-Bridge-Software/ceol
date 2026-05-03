@@ -395,7 +395,7 @@
                                       :current-beat nil)
                                (when (:loop? s)
                                  (handle-action! :playback/play nil))))))
-              start-guitar! (fn []
+              start-guitar! (fn [start-at]
                               (when (and tune abc-body (string? abc-body))
                                 (guitar/set-muted! (not (:guitar? s)))
                                 (let [section (:section s)
@@ -414,22 +414,28 @@
                                       filled (reduce (fn [acc c]
                                                        (conj acc (or c (peek acc) tonic)))
                                                      [] bar-chords)]
-                                  (guitar/play! filled (:type tune) (:time-sig tune)))))]
+                                  (guitar/play! filled (:type tune) (:time-sig tune) start-at))))]
           ;; Stop standalone metronome if running
           (when (metro/running?)
             (metro/stop!)
             (swap! state/app-state assoc :metronome? false :current-beat nil))
           ;; Count-in path: prepare synth → count-in → start
-          ;; No count-in: play immediately
+          ;; No count-in: prepare → start immediately
+          ;; In both cases capture AudioContext.currentTime at the moment start! fires
+          ;; so guitar can schedule notes on the same Web Audio clock.
           (if (and (:count-in? s) (not set-advancing?))
             (-> (abc-bridge/prepare!)
                 (.then (fn [_]
                          (metro/count-in! beat-params
                                           (fn []
-                                            (abc-bridge/start! {:on-end on-end})
-                                            (start-guitar!))))))
-            (do (abc-bridge/play! {:on-end on-end})
-                (start-guitar!))))))
+                                            (let [start-at (abc-bridge/now)]
+                                              (abc-bridge/start! {:on-end on-end})
+                                              (start-guitar! start-at)))))))
+            (-> (abc-bridge/prepare!)
+                (.then (fn [_]
+                         (let [start-at (abc-bridge/now)]
+                           (abc-bridge/start! {:on-end on-end})
+                           (start-guitar! start-at)))))))))
 
     :playback/stop
     (do (abc-bridge/stop!)
@@ -734,7 +740,7 @@
         (metro/stop!)
         (swap! state/app-state assoc :metronome? false :current-beat nil))
       ;; Count-in for new items (not within-set advances)
-      (let [start-guitar! (fn []
+      (let [start-guitar! (fn [start-at]
                             (when (and tune abc-body (string? abc-body))
                               (guitar/set-muted! (not (:guitar? s)))
                               (let [parts (split-abc-body abc-body)
@@ -747,18 +753,22 @@
                                                    (into c c)))
                                     filled (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
                                                    [] bar-chords)]
-                                (guitar/play! filled (:type tune) (:time-sig tune)))))]
+                                (guitar/play! filled (:type tune) (:time-sig tune) start-at))))]
         (if within-set?
-          ;; Within set: no count-in, play immediately
-          (do (abc-bridge/play! {:on-end on-end})
-              (start-guitar!))
+          ;; Within set: no count-in, prepare → start immediately
+          (-> (abc-bridge/prepare!)
+              (.then (fn [_]
+                       (let [start-at (abc-bridge/now)]
+                         (abc-bridge/start! {:on-end on-end})
+                         (start-guitar! start-at)))))
           ;; New item: count-in then play
           (-> (abc-bridge/prepare!)
               (.then (fn [_]
                        (metro/count-in! beat-params
                                         (fn []
-                                          (abc-bridge/start! {:on-end on-end})
-                                          (start-guitar!)))))))))
+                                          (let [start-at (abc-bridge/now)]
+                                            (abc-bridge/start! {:on-end on-end})
+                                            (start-guitar! start-at))))))))))
 
     :session/stop
     (do (abc-bridge/stop!)

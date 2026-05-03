@@ -65,6 +65,11 @@
           (.catch (fn [e]
                     (js/console.error "Prepare failed:" e)))))))
 
+(defn now
+  "Returns the current AudioContext time in seconds."
+  []
+  (.-currentTime (get-audio-context)))
+
 (defn start!
   "Start a pre-primed synth. Near-zero latency."
   [& [{:keys [on-end]}]]

@@ -21,14 +21,7 @@
 
 ;; --- Guitar state ---
 
-(defonce guitar-state (atom {:synth nil :gain nil :muted? false :scheduled nil :started? false :init-promise nil}))
-
-(defn- ensure-started!
-  "Resume Tone.js AudioContext on first use (requires user gesture)."
-  []
-  (when-not (:started? @guitar-state)
-    (-> (.start Tone)
-        (.then (fn [] (swap! guitar-state assoc :started? true))))))
+(defonce guitar-state (atom {:synth nil :gain nil :muted? false :scheduled nil :init-promise nil}))
 
 (def ^:private sample-base-url
   "https://cdn.jsdelivr.net/npm/tonejs-instrument-guitar-acoustic-mp3@1.1.2/")
@@ -38,11 +31,14 @@
   ["A2" "C3" "E3" "A3" "C4" "E4" "A4"])
 
 (defn- init-synth!
-  "Create a Sampler with acoustic guitar samples. Returns a promise that resolves when loaded."
+  "Create a Sampler with acoustic guitar samples, sharing the abc.js AudioContext.
+   Returns a promise that resolves when loaded."
   []
   (if-let [p (:init-promise @guitar-state)]
     p
-    (let [gain (-> (Tone/Gain. 0.5) (.toDestination))
+    ;; Share the same AudioContext as abc.js so Tone.js scheduling is on the same clock.
+    (let [_ (Tone/setContext (Tone/Context. (abc-bridge/get-audio-context)))
+          gain (-> (Tone/Gain. 0.5) (.toDestination))
           urls (clj->js (reduce (fn [m note]
                                   (assoc m note (str note ".mp3")))
                                 {} sample-notes))
@@ -144,49 +140,54 @@
 ;; --- Playback ---
 
 (defn- schedule-notes!
-  "Schedule all guitar notes using setTimeout. Returns a cancel fn."
-  [chords tune-type]
+  "Schedule all guitar notes on the Web Audio clock using absolute AudioContext times.
+   start-at is AudioContext.currentTime (seconds) when bar 0 beat 0 should play.
+   Returns a cancel fn that silences via gain ramp."
+  [chords tune-type start-at]
   (let [pattern (get strum-patterns tune-type (:reel strum-patterns))
-        bar-ms (ms-per-bar tune-type)
-        timeouts (atom [])]
-    (doseq [[bar-idx chord-name] (map-indexed vector chords)]
-      (when-let [voicing (get chord-voicings (or chord-name "G"))]
-        (doseq [{:keys [time type]} pattern]
-          (let [ms (+ (* bar-idx bar-ms) (* time bar-ms))
-                notes (if (= type :bass)
-                        [(:bass voicing)]
-                        (:chord voicing))
-                dur (/ bar-ms 2000)]
-            (doseq [note notes]
-              (let [t (js/setTimeout
-                       (fn []
-                         (when-not (:muted? @guitar-state)
-                           (when-let [^js s (:synth @guitar-state)]
-                             (try
-                               (.triggerAttackRelease s note dur)
-                               (catch :default _)))))
-                       ms)]
-                (swap! timeouts conj t)))))))
-    (fn []
-      (doseq [t @timeouts]
-        (js/clearTimeout t))
-      (reset! timeouts []))))
+        bar-s   (/ (ms-per-bar tune-type) 1000.0)
+        dur-s   (/ (ms-per-bar tune-type) 2000.0)]
+    (when-let [^js s (:synth @guitar-state)]
+      (doseq [[bar-idx chord-name] (map-indexed vector chords)]
+        (when-let [voicing (get chord-voicings (or chord-name "G"))]
+          (doseq [{:keys [time type]} pattern]
+            (let [when-s (+ start-at (* bar-idx bar-s) (* time bar-s))
+                  notes  (if (= type :bass) [(:bass voicing)] (:chord voicing))]
+              (doseq [note notes]
+                (try
+                  (.triggerAttackRelease s note dur-s when-s)
+                  (catch :default _)))))))))
+  ;; Cancel = silence immediately via gain ramp (pre-scheduled Web Audio events
+  ;; can't be individually cancelled, so we mute the output instead)
+  (fn []
+    (when-let [^js gain (:gain @guitar-state)]
+      (.. gain -gain (rampTo 0 0.02)))))
 
 (defn stop!
-  "Stop guitar playback."
+  "Stop guitar playback by silencing the gain node."
   []
   (when-let [cancel (:scheduled @guitar-state)]
     (cancel))
   (swap! guitar-state assoc :scheduled nil))
 
 (defn play!
-  "Start guitar accompaniment. Waits for samples to load."
-  [chords tune-type time-sig]
+  "Start guitar accompaniment, scheduling notes on the Web Audio clock.
+   start-at is AudioContext.currentTime (seconds) when bar 0 should begin.
+   If start-at has already passed (e.g. samples still loading on first use),
+   re-anchors to now + 50 ms so notes don't burst."
+  [chords tune-type time-sig start-at]
   (stop!)
-  (ensure-started!)
+  (.start Tone)
   (-> (init-synth!)
       (.then (fn [_synth]
-               (let [cancel (schedule-notes! chords tune-type)]
+               ;; Restore gain (stop! may have silenced it)
+               (when-let [^js gain (:gain @guitar-state)]
+                 (.. gain -gain (rampTo (if (:muted? @guitar-state) 0 0.6) 0.01)))
+               ;; Re-anchor if samples took too long to load
+               (let [ctx  (abc-bridge/get-audio-context)
+                     now  (.-currentTime ctx)
+                     t0   (if (> start-at now) start-at (+ now 0.05))
+                     cancel (schedule-notes! chords tune-type t0)]
                  (swap! guitar-state assoc :scheduled cancel))))
       (.catch (fn [e]
                 (js/console.warn "Guitar playback failed:" e)))))
