@@ -83,6 +83,9 @@ Compact visual reference showing first 1-2 bars per tune. **Implementation note:
 - **Guitar doesn't start with melody after count-in** — when count-in is enabled, `guitar/play!` is called at the same time as `abc-bridge/start!` but guitar scheduling starts from time 0 immediately via setTimeout, while abc.js `.start()` goes through the Web Audio pipeline. Fix: ensure guitar timing starts from the same reference point as the melody. Could pre-schedule guitar notes relative to `AudioContext.currentTime` rather than setTimeout from "now".
 - **Guitar strums over the lead-in bar** — tunes with a pickup/anacrusis (e.g. 2-beat lead-in in 4/4) get guitar accompaniment on the pickup instead of waiting for the first downbeat of the first full bar. Could be either: (a) lead-in not correctly denoted in ABC (user-authored content may not use a partial-length first bar), or (b) guitar scheduler treats bar 1 as a full bar regardless. Investigate both: how existing tunes encode the pickup, and whether `guitar/play!` offsets by the pickup length.
 - **Deleted custom tune leaves greyed-out sheet music behind** — after `:tune/delete`, the empty-state text "Select a tune to view sheet music" shows alongside the previously-rendered SVG. abc.js writes the SVG into `#sheet-music` outside Replicant's vdom, so when Replicant swaps `[:div#sheet-music]` → `[:div.sheet-empty]` the orphan SVG survives. Fix: in `render-sheet-music!` (`web/src/ceol/web/core.cljs:203`), add an else branch that clears `#sheet-music` innerHTML when no tune is selected. Optionally add `:replicant/key` to force a clean remount.
+- None of the melody/metronome/guitar seem to care about while-playing BPM changes
+- If you turn the metronome on while the melody is playing, the metronome doesn't sync up with the beat
+- work on the triplets, visually confusing
 
 ## Future ideas
 
@@ -94,3 +97,10 @@ Compact visual reference showing first 1-2 bars per tune. **Implementation note:
 - Recording — record yourself playing along
 - Tune difficulty rating
 - Practice log / stats tracking
+- mobile friendly version
+- version number & changelog
+- multiple devices
+- import/export
+- transpose keys
+- hotkey / feature helper
+- tutorial mode

@@ -89,9 +89,10 @@
   (let [notes (re-seq abc-note-re bar-str)]
     (reduce
      (fn [acc [i note]]
-       (when-let [pc (abc-note->pitch-class note)]
+       (if-let [pc (abc-note->pitch-class note)]
          (let [weight (if (zero? i) 2 1)]
-           (update acc pc (fnil + 0) weight))))
+           (update acc pc (fnil + 0) weight))
+         acc))
      {}
      (map-indexed vector notes))))
 

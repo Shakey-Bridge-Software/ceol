@@ -281,9 +281,8 @@
 
 (defn render-flash [state]
   (when-let [f (:flash state)]
-    (let [warning? (or (str/includes? f "failed") (str/includes? f "error"))
-          color (if warning? color-danger color-accent)]
-      (charm/styled (str "  " f) :fg color))))
+    (let [color (if (= :error (:type f)) color-danger color-accent)]
+      (charm/styled (str "  " (:msg f)) :fg color))))
 
 ;; -- Staff panel --
 

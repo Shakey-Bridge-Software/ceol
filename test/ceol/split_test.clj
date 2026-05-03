@@ -1,5 +1,5 @@
 (ns ceol.split-test
-  (:require [ceol.audio :as audio]
+  (:require [ceol.abc :as abc]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing run-tests]]))
 
@@ -28,7 +28,7 @@
 (defn- split-bodies
   "Split an ABC string and return {:a body-a :b body-b} or nil."
   [abc-str]
-  (when-let [parts (audio/split-abc-parts abc-str)]
+  (when-let [parts (abc/split-abc-parts abc-str)]
     {:a (body-of (:a parts))
      :b (body-of (:b parts))}))
 
@@ -353,7 +353,7 @@
 
 (deftest split-preserves-headers
   (testing "split parts retain all header fields"
-    (let [parts (audio/split-abc-parts maggie-abc)]
+    (let [parts (abc/split-abc-parts maggie-abc)]
       (is (str/includes? (:a parts) "M:2/4") "part A has time sig")
       (is (str/includes? (:a parts) "Q:1/4=70") "part A has tempo")
       (is (str/includes? (:a parts) "K:G") "part A has key")
@@ -362,7 +362,7 @@
 
 (deftest split-adds-repeat-markers
   (testing "split parts have |: and :| markers"
-    (let [parts (audio/split-abc-parts maggie-abc)
+    (let [parts (abc/split-abc-parts maggie-abc)
           a-body (body-of (:a parts))
           b-body (body-of (:b parts))]
       (is (str/starts-with? a-body "|:") "part A starts with |:")
@@ -374,7 +374,7 @@
   (testing "single-part ABC returns nil"
     (let [single (make-abc "Single Part" "2/4" "Q:1/4=70" "G"
                            "|:GABc dBAG|GABc dBAG:|")]
-      (is (nil? (audio/split-abc-parts single))))))
+      (is (nil? (abc/split-abc-parts single))))))
 
 (defn -main [& _args]
   (let [{:keys [fail error]} (run-tests 'ceol.split-test)]

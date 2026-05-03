@@ -79,6 +79,12 @@
       (is (= 1 (get freqs 9)))   ;; A = weight 1
       (is (= 1 (get freqs 11))))) ;; B = weight 1
 
+  (testing "non-note characters don't corrupt accumulator"
+    (let [freqs (chords/bar-pitch-classes "G|B")]
+      (is (map? freqs))
+      (is (= 2 (get freqs 7)))  ;; G still weight 2
+      (is (= 1 (get freqs 11))))) ;; B still weight 1
+
   (testing "empty bar returns empty map"
     (is (empty? (chords/bar-pitch-classes "")))))
 

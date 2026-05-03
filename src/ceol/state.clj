@@ -10,7 +10,10 @@
             [babashka.process :as proc]))
 
 (defn flash [state msg]
-  (assoc state :flash msg))
+  (assoc state :flash {:msg msg :type :info}))
+
+(defn flash-error [state msg]
+  (assoc state :flash {:msg msg :type :error}))
 
 (defn clear-flash [state]
   (assoc state :flash nil))
@@ -230,7 +233,7 @@
               (let [[s sc] (start-spinner (assoc state :loading tune-id))
                     s' (update-tune s tune-id assoc :midi-status :converting)]
                 [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])
-              [(flash state "no ABC available") nil])))
+              [(flash-error state "no ABC available") nil])))
 
         ;; ABC ready, no MIDI -> convert then play
         (= :ready (:abc-status tune))
@@ -303,7 +306,7 @@
             (let [[s sc] (start-spinner (assoc state :loading tune-id))
                   s' (update-tune s tune-id assoc :midi-status :converting)]
               [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if loop? 50 1)))])
-            [(flash state "no ABC available") nil])))
+            [(flash-error state "no ABC available") nil])))
 
       (= :ready (:abc-status tune))
       (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))

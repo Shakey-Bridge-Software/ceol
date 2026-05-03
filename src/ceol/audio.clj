@@ -61,11 +61,7 @@
   (let [key-match (first (filter #(str/starts-with? (or (:key %) "") tune-key) settings))]
     (or key-match (first settings))))
 
-;; Delegate to ceol.abc for pure functions shared with web
-(def build-abc-string abc/build-abc-string)
-(def adjust-abc-tempo abc/adjust-abc-tempo)
-(def split-abc-parts abc/split-abc-parts)
-(defn- tempo-for-type [t ts] (abc/tempo-for-type t ts))
+;; Pure ABC functions live in ceol.abc — use them directly via the abc/ alias
 
 ;; --- Commands (async via charm/cmd) ---
 
@@ -90,7 +86,7 @@
              abc-key (session-key->abc-key (:key setting))
              session-id (:id result)]
          (if abc-body
-           (let [abc-str (build-abc-string tune abc-body abc-key)]
+           (let [abc-str (abc/build-abc-string tune abc-body abc-key)]
              ;; Cache the result
              (data/update-cache! tune-id {:session-id session-id :abc abc-str})
              {:type :abc-fetched
@@ -126,10 +122,10 @@
        (let [tune-id (:id tune)
              ;; Extract section if needed
              section-abc (if section
-                           (or (get (split-abc-parts abc-str) section) abc-str)
+                           (or (get (abc/split-abc-parts abc-str) section) abc-str)
                            abc-str)
              ;; Apply tempo offset
-             tempo-abc (adjust-abc-tempo section-abc (or tempo-offset 0))
+             tempo-abc (abc/adjust-abc-tempo section-abc (or tempo-offset 0))
              ;; Bake in repeats for looping
              final-abc (repeat-abc-body tempo-abc loop-count)
              abc-path (data/abc-file-path tune-id)
@@ -218,7 +214,7 @@
 (defn effective-tempo-str
   "Return Q: string for a tune after applying tempo offset."
   [tune tempo-offset]
-  (let [base-q (tempo-for-type (:type tune) (:time-sig tune))
+  (let [base-q (abc/tempo-for-type (:type tune) (:time-sig tune))
         offset (or tempo-offset 0)]
     (if (zero? offset)
       base-q

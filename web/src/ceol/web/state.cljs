@@ -182,7 +182,7 @@
     (into set-items tune-items)))
 
 (defn shuffle-queue [queue]
-  (vec (sort-by (fn [_] (rand)) queue)))
+  (into [] (shuffle queue)))
 
 (defn advance-session
   "Given session state, compute next action after a tune finishes.
