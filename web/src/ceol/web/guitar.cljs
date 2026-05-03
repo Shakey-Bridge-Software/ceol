@@ -124,26 +124,11 @@
               {:time 0.667 :type :bass} {:time 0.778 :type :chord} {:time 0.889 :type :chord}]
    :slide    [{:time 0.0 :type :bass} {:time 0.25 :type :chord} {:time 0.5 :type :bass} {:time 0.75 :type :chord}]})
 
-(defn- ms-per-bar
-  "Calculate milliseconds per bar from tune type."
-  [tune-type]
-  (let [[bpm beats-per-bar] (case tune-type
-                              :polka    [120 2]
-                              :jig      [100 2]
-                              :reel     [100 4]
-                              :hornpipe [100 4]
-                              :slip-jig [100 3]
-                              :slide    [100 4]
-                              [100 4])]
-    (* (/ 60000.0 bpm) beats-per-bar)))
-
-;; --- Playback ---
-
 (defn- schedule-notes!
   "Schedule all guitar notes on the Web Audio clock using absolute AudioContext times.
    start-at is AudioContext.currentTime (seconds) when bar 0 beat 0 should play.
    Returns a cancel fn that silences via gain ramp."
-  [chords tune-type start-at]
+  [chords tune-type ms-per-bar start-at]
   (let [pattern (get strum-patterns tune-type (:reel strum-patterns))
         bar-s   (/ (ms-per-bar tune-type) 1000.0)
         dur-s   (/ (ms-per-bar tune-type) 2000.0)]
@@ -172,10 +157,11 @@
 
 (defn play!
   "Start guitar accompaniment, scheduling notes on the Web Audio clock.
+   ms-per-bar comes from beat/beats-for-tune so tempo offset is respected.
    start-at is AudioContext.currentTime (seconds) when bar 0 should begin.
    If start-at has already passed (e.g. samples still loading on first use),
    re-anchors to now + 50 ms so notes don't burst."
-  [chords tune-type time-sig start-at]
+  [chords tune-type ms-per-bar start-at]
   (stop!)
   (.start Tone)
   (-> (init-synth!)
@@ -187,7 +173,7 @@
                (let [ctx  (abc-bridge/get-audio-context)
                      now  (.-currentTime ctx)
                      t0   (if (> start-at now) start-at (+ now 0.05))
-                     cancel (schedule-notes! chords tune-type t0)]
+                     cancel (schedule-notes! chords tune-type ms-per-bar t0)]
                  (swap! guitar-state assoc :scheduled cancel))))
       (.catch (fn [e]
                 (js/console.warn "Guitar playback failed:" e)))))

@@ -175,8 +175,9 @@
 
 (defn- start-guitar!
   "Schedule guitar accompaniment from start-at (AudioContext seconds).
-   section: :a, :b, or nil for the whole tune. s: app state snapshot."
-  [s tune abc-body section start-at]
+   section: :a, :b, or nil for the whole tune. s: app state snapshot.
+   ms-per-bar: from beat/beats-for-tune, so tempo offset is respected."
+  [s tune abc-body section ms-per-bar start-at]
   (when (and tune abc-body (string? abc-body))
     (guitar/set-muted! (not (:guitar? s)))
     (let [parts      (abc/split-abc-body abc-body)
@@ -193,7 +194,7 @@
                            (into chords chords))))
           filled     (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
                              [] bar-chords)]
-      (guitar/play! filled (:type tune) (:time-sig tune) start-at))))
+      (guitar/play! filled (:type tune) ms-per-bar start-at))))
 
 (defn handle-action! [action args]
   (case action
@@ -364,12 +365,12 @@
                                           (fn []
                                             (let [start-at (abc-bridge/now)]
                                               (abc-bridge/start! {:on-end on-end})
-                                              (start-guitar! s tune abc-body (:section s) start-at)))))))
+                                              (start-guitar! s tune abc-body (:section s) (:ms-per-bar beat-params) start-at)))))))
             (-> (abc-bridge/prepare!)
                 (.then (fn [_]
                          (let [start-at (abc-bridge/now)]
                            (abc-bridge/start! {:on-end on-end})
-                           (start-guitar! s tune abc-body (:section s) start-at))))))))
+                           (start-guitar! s tune abc-body (:section s) (:ms-per-bar beat-params) start-at))))))))
 
     :playback/stop
     (do (abc-bridge/stop!)
@@ -680,7 +681,7 @@
             (.then (fn [_]
                      (let [start-at (abc-bridge/now)]
                        (abc-bridge/start! {:on-end on-end})
-                       (start-guitar! s tune abc-body nil start-at)))))
+                       (start-guitar! s tune abc-body nil (:ms-per-bar beat-params) start-at)))))
         ;; New item: count-in then play
         (-> (abc-bridge/prepare!)
             (.then (fn [_]
@@ -688,7 +689,7 @@
                                       (fn []
                                         (let [start-at (abc-bridge/now)]
                                           (abc-bridge/start! {:on-end on-end})
-                                          (start-guitar! s tune abc-body nil start-at)))))))))
+                                          (start-guitar! s tune abc-body nil (:ms-per-bar beat-params) start-at)))))))))
 
 
     :session/stop
