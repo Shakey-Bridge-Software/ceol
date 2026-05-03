@@ -33,6 +33,32 @@
   {:top "━" :bottom "━" :left "┃" :right "┃"
    :top-left "╭" :top-right "╮" :bottom-left "╰" :bottom-right "╯"})
 
+;; -- Tune type labels and status icons (TUI-specific display) --
+
+(def type-labels
+  {:all      "All"
+   :polka    "Polka"
+   :jig      "Jig"
+   :reel     "Reel"
+   :hornpipe "Hornpipe"
+   :slip-jig "Slip Jig"
+   :slide    "Slide"
+   :other    "Other"})
+
+(defn- type-label [type]
+  (get type-labels type (name type)))
+
+(defn- status-icon [tune]
+  (let [{:keys [abc-status midi-status local-abc?]} tune]
+    (cond
+      (= midi-status :ready)      (if local-abc? "[*>>]" "[>>>]")
+      (= midi-status :converting) "[...]"
+      (= midi-status :failed)     "[ ! ]"
+      (= abc-status :ready)       (if local-abc? "[*AB]" "[ABC]")
+      (= abc-status :fetching)    "[...]"
+      (= abc-status :failed)      "[ ! ]"
+      :else                       "[   ]")))
+
 ;; -- Helpers --
 
 (defn content-width [state]
@@ -63,7 +89,7 @@
         left-str (if setlist-str (str left-str setlist-str) left-str)
 
         filter-str (when-not (:active-setlist state)
-                     (charm/styled (tunes/type-label (:filter state)) :fg color-dim))
+                     (charm/styled (type-label (:filter state)) :fg color-dim))
         count-str (charm/styled (str (count (state/visible-tunes state)) " tunes") :fg color-muted)
         right-str (if filter-str
                     (str filter-str "  " count-str)
@@ -153,13 +179,13 @@
         name-str (charm/styled (:name tune) :fg name-color :bold selected?)
 
         ;; Type + time sig + key (right portion)
-        type-str (charm/styled (tunes/type-label (:type tune)) :fg type-color)
+        type-str (charm/styled (type-label (:type tune)) :fg type-color)
         sig-str (charm/styled (:time-sig tune) :fg color-dim)
         key-str (charm/styled (str (:key tune) " " (subs (:mode-name tune) 0 3))
                               :fg color-dim)
 
         ;; Status icon
-        status (tunes/status-icon tune)
+        status (status-icon tune)
         status-color (case (:midi-status tune)
                        :ready color-accent
                        :failed color-danger

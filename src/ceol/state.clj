@@ -9,6 +9,13 @@
             [clojure.string :as str]
             [babashka.process :as proc]))
 
+(def tune-types [:all :polka :jig :reel :hornpipe :slip-jig :slide :other])
+
+(defn- next-filter [current]
+  (let [idx (.indexOf tune-types current)
+        next-idx (mod (inc idx) (count tune-types))]
+    (nth tune-types next-idx)))
+
 (defn flash [state msg]
   (assoc state :flash {:msg msg :type :info}))
 
@@ -554,7 +561,7 @@
         (if (:active-setlist state)
           [(flash state "filter disabled in setlist mode") nil]
           [(-> state
-               (update :filter tunes/next-filter)
+               (update :filter next-filter)
                (assoc :cursor 0)
                (clamp-cursor))
            nil])

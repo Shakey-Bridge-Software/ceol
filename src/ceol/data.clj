@@ -37,18 +37,23 @@
     (spit tmp (pr-str cache))
     (.renameTo (io/file tmp) (io/file cache-file))))
 
+(def ^:private tune-defaults
+  {:abc nil :abc-status :none :midi-path nil :midi-status :none})
+
 (defn hydrate-tunes [tunes]
   (let [cache (load-cache)]
     (mapv (fn [tune]
-            (if-let [cached (get cache (:id tune))]
-              (merge tune
-                     (when (:session-id cached) {:session-id (:session-id cached)})
-                     (when (:abc cached) {:abc (:abc cached) :abc-status :ready})
-                     (when (:midi-path cached)
-                       (if (.exists (io/file (:midi-path cached)))
-                         {:midi-path (:midi-path cached) :midi-status :ready}
-                         {})))
-              tune))
+            (let [base   (merge tune-defaults tune)
+                  cached (get cache (:id tune))]
+              (if cached
+                (merge base
+                       (when (:session-id cached) {:session-id (:session-id cached)})
+                       (when (:abc cached) {:abc (:abc cached) :abc-status :ready})
+                       (when (:midi-path cached)
+                         (if (.exists (io/file (:midi-path cached)))
+                           {:midi-path (:midi-path cached) :midi-status :ready}
+                           {})))
+                base)))
           tunes)))
 
 (def ^:private cache-lock (Object.))
