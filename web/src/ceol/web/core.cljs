@@ -13,55 +13,6 @@
 
 (defonce el (js/document.getElementById "app"))
 
-(defn build-full-abc
-  "Build a complete ABC string from a tune and its raw ABC body.
-   Skips %%MIDI directive (not needed for abc.js web rendering)."
-  [tune abc-body]
-  (let [mode-abbrev (case (:mode-name tune)
-                      "Ionian" ""
-                      "Dorian" "dor"
-                      "Aeolian" "m"
-                      "")
-        k-field (str (:key tune) mode-abbrev)
-        tempo (abc/tempo-for-type (:type tune) (:time-sig tune))]
-    (str "X:1\n"
-         "T:" (:name tune) "\n"
-         "M:" (:time-sig tune) "\n"
-         "L:1/8\n"
-         tempo "\n"
-         "K:" k-field "\n"
-         abc-body "\n")))
-
-(defn add-line-breaks
-  "Insert newlines after every n-th bar in ABC body for multi-line rendering.
-   Counts single | barlines (not :| or |: which are repeat markers)."
-  [abc-body bars-per-line]
-  (let [chars (seq abc-body)]
-    (loop [remaining chars
-           bar-count 0
-           result []]
-      (if (empty? remaining)
-        (apply str result)
-        (let [c (first remaining)]
-          (if (= c \|)
-            (let [next-c (second remaining)
-                  ;; Don't count :| |: || as a simple barline for line-break purposes
-                  ;; but DO count them for output
-                  simple-bar? (and (not= next-c \|)
-                                   (not= next-c \:)
-                                   ;; check if previous char was :
-                                   (not= (peek result) \:))
-                  new-count (if simple-bar? (inc bar-count) bar-count)
-                  need-break? (and simple-bar?
-                                   (pos? bars-per-line)
-                                   (zero? (mod new-count bars-per-line)))]
-              (recur (rest remaining)
-                     new-count
-                     (if need-break?
-                       (conj result c \newline)
-                       (conj result c))))
-            (recur (rest remaining) bar-count (conj result c))))))))
-
 (defn inject-chords-if-needed
   "If the ABC body doesn't already have chord annotations, suggest and inject them."
   [abc-body tune]
@@ -189,25 +140,6 @@
          x))
      actions)))
 
-(defn split-abc-body
-  "Split an ABC body (no headers) into A and B parts.
-   Returns {:a \"...\" :b \"...\"} or nil if can't split.
-   Each part gets proper barlines so it can stand alone."
-  [body]
-  (let [idx (.indexOf body ":|||:")]
-    (if (pos? idx)
-      (let [a (.trim (.substring body 0 (+ idx 2)))
-            b (.trim (.substring body (+ idx 3)))]
-        (when (and (seq a) (seq b))
-          {:a a :b b}))
-      (let [idx (.indexOf body ":|")]
-        (when (pos? idx)
-          (let [after-idx (+ idx 2)
-                rest-body (.trim (.substring body after-idx))]
-            (when (seq rest-body)
-              {:a (.trim (.substring body 0 after-idx))
-               :b rest-body})))))))
-
 (defonce render-promise (atom (js/Promise.resolve nil)))
 
 (defn wait-for-render!
@@ -224,12 +156,12 @@
       (when (string? abc-body)
         (let [section (:section s)
               body (if section
-                     (let [parts (split-abc-body abc-body)]
+                     (let [parts (abc/split-abc-body abc-body)]
                        (if parts
                          (get parts section abc-body)
                          abc-body))
                      abc-body)
-              raw-abc (build-full-abc tune (add-line-breaks body 4))
+              raw-abc (abc/build-abc-string tune (abc/add-line-breaks body 4) nil {:midi? false})
               final-abc (abc/adjust-abc-tempo raw-abc (or (:tempo-offset s) 0))
               p (js/Promise.
                  (fn [resolve _]
@@ -240,6 +172,28 @@
                           (resolve visual))
                         (resolve nil))))))]
           (reset! render-promise p))))))
+
+(defn- start-guitar!
+  "Schedule guitar accompaniment from start-at (AudioContext seconds).
+   section: :a, :b, or nil for the whole tune. s: app state snapshot."
+  [s tune abc-body section start-at]
+  (when (and tune abc-body (string? abc-body))
+    (guitar/set-muted! (not (:guitar? s)))
+    (let [parts      (abc/split-abc-body abc-body)
+          tonic      (:key tune)
+          bar-chords (if section
+                       (let [part-body (if parts (get parts section abc-body) abc-body)
+                             chords    (guitar/extract-bar-chords part-body)]
+                         (into chords chords))
+                       (if parts
+                         (let [a-chords (guitar/extract-bar-chords (:a parts))
+                               b-chords (guitar/extract-bar-chords (:b parts))]
+                           (vec (concat a-chords a-chords b-chords b-chords)))
+                         (let [chords (guitar/extract-bar-chords abc-body)]
+                           (into chords chords))))
+          filled     (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
+                             [] bar-chords)]
+      (guitar/play! filled (:type tune) (:time-sig tune) start-at))))
 
 (defn handle-action! [action args]
   (case action
@@ -395,26 +349,6 @@
                                       :current-beat nil)
                                (when (:loop? s)
                                  (handle-action! :playback/play nil))))))
-              start-guitar! (fn [start-at]
-                              (when (and tune abc-body (string? abc-body))
-                                (guitar/set-muted! (not (:guitar? s)))
-                                (let [section (:section s)
-                                      parts (split-abc-body abc-body)
-                                      tonic (:key tune)
-                                      bar-chords (if section
-                                                   (let [part-body (if parts (get parts section abc-body) abc-body)
-                                                         chords (guitar/extract-bar-chords part-body)]
-                                                     (into chords chords))
-                                                   (if parts
-                                                     (let [a-chords (guitar/extract-bar-chords (:a parts))
-                                                           b-chords (guitar/extract-bar-chords (:b parts))]
-                                                       (vec (concat a-chords a-chords b-chords b-chords)))
-                                                     (let [chords (guitar/extract-bar-chords abc-body)]
-                                                       (into chords chords))))
-                                      filled (reduce (fn [acc c]
-                                                       (conj acc (or c (peek acc) tonic)))
-                                                     [] bar-chords)]
-                                  (guitar/play! filled (:type tune) (:time-sig tune) start-at))))]
           ;; Stop standalone metronome if running
           (when (metro/running?)
             (metro/stop!)
@@ -430,12 +364,12 @@
                                           (fn []
                                             (let [start-at (abc-bridge/now)]
                                               (abc-bridge/start! {:on-end on-end})
-                                              (start-guitar! start-at)))))))
+                                              (start-guitar! s tune abc-body (:section s) start-at)))))))
             (-> (abc-bridge/prepare!)
                 (.then (fn [_]
                          (let [start-at (abc-bridge/now)]
                            (abc-bridge/start! {:on-end on-end})
-                           (start-guitar! start-at)))))))))
+                           (start-guitar! s tune abc-body (:section s) start-at))))))))
 
     :playback/stop
     (do (abc-bridge/stop!)
@@ -740,35 +674,22 @@
         (metro/stop!)
         (swap! state/app-state assoc :metronome? false :current-beat nil))
       ;; Count-in for new items (not within-set advances)
-      (let [start-guitar! (fn [start-at]
-                            (when (and tune abc-body (string? abc-body))
-                              (guitar/set-muted! (not (:guitar? s)))
-                              (let [parts (split-abc-body abc-body)
-                                    tonic (:key tune)
-                                    bar-chords (if parts
-                                                 (let [a (guitar/extract-bar-chords (:a parts))
-                                                       b (guitar/extract-bar-chords (:b parts))]
-                                                   (vec (concat a a b b)))
-                                                 (let [c (guitar/extract-bar-chords abc-body)]
-                                                   (into c c)))
-                                    filled (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
-                                                   [] bar-chords)]
-                                (guitar/play! filled (:type tune) (:time-sig tune) start-at))))]
-        (if within-set?
-          ;; Within set: no count-in, prepare → start immediately
-          (-> (abc-bridge/prepare!)
-              (.then (fn [_]
-                       (let [start-at (abc-bridge/now)]
-                         (abc-bridge/start! {:on-end on-end})
-                         (start-guitar! start-at)))))
-          ;; New item: count-in then play
-          (-> (abc-bridge/prepare!)
-              (.then (fn [_]
-                       (metro/count-in! beat-params
-                                        (fn []
-                                          (let [start-at (abc-bridge/now)]
-                                            (abc-bridge/start! {:on-end on-end})
-                                            (start-guitar! start-at))))))))))
+      (if within-set?
+        ;; Within set: no count-in, prepare → start immediately
+        (-> (abc-bridge/prepare!)
+            (.then (fn [_]
+                     (let [start-at (abc-bridge/now)]
+                       (abc-bridge/start! {:on-end on-end})
+                       (start-guitar! s tune abc-body nil start-at)))))
+        ;; New item: count-in then play
+        (-> (abc-bridge/prepare!)
+            (.then (fn [_]
+                     (metro/count-in! beat-params
+                                      (fn []
+                                        (let [start-at (abc-bridge/now)]
+                                          (abc-bridge/start! {:on-end on-end})
+                                          (start-guitar! s tune abc-body nil start-at)))))))))
+
 
     :session/stop
     (do (abc-bridge/stop!)

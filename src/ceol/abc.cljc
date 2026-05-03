@@ -19,15 +19,16 @@
       "Q:1/4=100")))
 
 (defn build-abc-string
-  "Construct a full ABC file from tune metadata and ABC notation body."
-  [tune abc-body abc-key]
+  "Construct a full ABC file from tune metadata and ABC notation body.
+   Options: :midi? (default true) — include %%MIDI program 105 directive."
+  [tune abc-body abc-key & [{:keys [midi?] :or {midi? true}}]]
   (let [mode-abbrev (case (:mode-name tune)
                       "Ionian"  ""
                       "Dorian"  "dor"
                       "Aeolian" "m"
                       "")
-        k-field (str (:key tune) mode-abbrev)
-        tempo (tempo-for-type (:type tune) (:time-sig tune))
+        k-field    (str (:key tune) mode-abbrev)
+        tempo      (tempo-for-type (:type tune) (:time-sig tune))
         clean-body (str/replace abc-body "! " "\n")]
     (str "X:1\n"
          "T:" (:name tune) "\n"
@@ -35,7 +36,7 @@
          "L:1/8\n"
          tempo "\n"
          "K:" (or abc-key k-field) "\n"
-         "%%MIDI program 105\n"
+         (when midi? "%%MIDI program 105\n")
          clean-body "\n")))
 
 (defn adjust-abc-tempo
@@ -46,6 +47,34 @@
     (str/replace abc-str #"(Q:\d+/\d+=)(\d+)"
                  (fn [[_ prefix bpm-str]]
                    (str prefix (max 40 (+ (#?(:clj parse-long :cljs js/parseInt) bpm-str) offset)))))))
+
+(defn add-line-breaks
+  "Insert newlines after every bars-per-line simple barlines in an ABC body.
+   Skips repeat markers (|: :| ||) so only plain | barlines trigger breaks."
+  [abc-body bars-per-line]
+  (let [chars (seq abc-body)]
+    (loop [remaining chars
+           bar-count 0
+           result    []]
+      (if (empty? remaining)
+        (apply str result)
+        (let [c (first remaining)]
+          (if (= c \|)
+            (let [next-c  (second remaining)
+                  prev-c  (peek result)
+                  simple? (and (not= next-c \|)
+                               (not= next-c \:)
+                               (not= prev-c \:))
+                  new-count (if simple? (inc bar-count) bar-count)
+                  break?    (and simple?
+                                 (pos? bars-per-line)
+                                 (zero? (mod new-count bars-per-line)))]
+              (recur (rest remaining)
+                     new-count
+                     (if break?
+                       (conj result c \newline)
+                       (conj result c))))
+            (recur (rest remaining) bar-count (conj result c))))))))
 
 (defn header-line? [line]
   (or (re-matches #"^[A-Z]:.*" line)
@@ -73,22 +102,38 @@
             p)]
     (str "|:" p (if (str/ends-with? p ":|") "" ":|"))))
 
+(defn split-abc-body
+  "Split an ABC body string (no headers) at the A/B section boundary.
+   Returns {:a \"...\" :b \"...\"} or nil if no clear split point found."
+  [body]
+  (or
+   ;; :|||: — compact close-repeat double-bar open-repeat
+   (when-let [idx (str/index-of body ":|||:")]
+     (let [a (str/trim (subs body 0 (+ idx 2)))
+           b (str/trim (subs body (+ idx 3)))]
+       (when (and (seq a) (seq b)) {:a a :b b})))
+   ;; || |: or ||\n|: — double barline followed by open repeat
+   (when-let [[a b] (or (split-body-at body "|| |:")
+                        (split-body-at body "||\n|:"))]
+     {:a a :b (str "|:" b)})
+   ;; ||\n — double barline only
+   (when-let [[a b] (split-body-at body "||\n")]
+     (when (and (seq a) (seq b)) {:a a :b b}))
+   ;; :| — simple close repeat; A includes :| and B is the remainder
+   (when-let [idx (str/index-of body ":|")]
+     (let [after (+ idx 2)
+           b     (str/trim (subs body after))]
+       (when (seq b)
+         {:a (str/trim (subs body 0 after)) :b b})))))
+
 (defn split-abc-parts
-  "Split ABC into parts A and B. Tries || boundary first, then falls back to first :|.
+  "Split a full ABC string into parts A and B. Tries common section boundaries.
    Returns {:a \"full-abc-for-A\" :b \"full-abc-for-B\"} or nil."
   [abc-str]
-  (let [lines (str/split-lines abc-str)
+  (let [lines        (str/split-lines abc-str)
         header-lines (vec (take-while header-line? lines))
-        header (str/join "\n" header-lines)
-        body (str/join "\n" (drop (count header-lines) lines))
-        [a b] (or (split-body-at body "|| |:")
-                  (split-body-at body "||\n|:")
-                  (split-body-at body "||\n")
-                  (when-let [idx (str/index-of body ":|")]
-                    (let [a (str/trim (subs body 0 idx))
-                          rest-body (str/trim (subs body (+ idx 2)))]
-                      (when (seq rest-body)
-                        [a rest-body]))))]
-    (when (and a b)
+        header       (str/join "\n" header-lines)
+        body         (str/join "\n" (drop (count header-lines) lines))]
+    (when-let [{:keys [a b]} (split-abc-body body)]
       {:a (str header "\n" (ensure-repeats a) "\n")
        :b (str header "\n" (ensure-repeats b) "\n")})))

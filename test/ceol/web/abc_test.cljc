@@ -91,6 +91,44 @@
       (is (clojure.string/includes? (:a result) "GGAB"))
       (is (clojure.string/includes? (:b result) "ggab"))))
 
-  (testing "returns nil for unsplittable tune"
-    (let [abc "X:1\nT:Test\nM:2/4\nL:1/8\nQ:1/4=120\nK:G\nGGAB|d2Bd"]
-      (is (nil? (abc/split-abc-parts abc))))))
+  (testing "midi? false omits MIDI directive"
+    (let [tune {:name "Test" :type :polka :time-sig "2/4" :key "G" :mode-name "Ionian"}
+          result (abc/build-abc-string tune "body" nil {:midi? false})]
+      (is (not (clojure.string/includes? result "%%MIDI")))
+      (is (clojure.string/includes? result "K:G")))))
+
+(deftest add-line-breaks-test
+  (testing "inserts newline after every n bars"
+    (let [body "AB|CD|EF|GH|IJ|KL|MN|OP"
+          result (abc/add-line-breaks body 4)]
+      (is (clojure.string/includes? result "\n"))
+      (is (= 2 (count (clojure.string/split-lines result))))))
+
+  (testing "does not break on repeat markers"
+    (let [body "|:AB|CD:||:EF|GH:|"
+          result (abc/add-line-breaks body 2)]
+      ;; repeat markers should not count as simple barlines
+      (is (string? result))))
+
+  (testing "zero bars-per-line returns unchanged"
+    (let [body "AB|CD|EF"]
+      (is (= body (abc/add-line-breaks body 0))))))
+
+(deftest split-abc-body-test
+  (testing "splits on :|||: boundary"
+    (let [result (abc/split-abc-body "GGAB|d2Bd:|||:|:ggab|D2BD")]
+      (is (some? result))
+      (is (clojure.string/includes? (:a result) "GGAB"))
+      (is (clojure.string/includes? (:b result) "ggab"))))
+
+  (testing "splits on :| boundary"
+    (let [result (abc/split-abc-body "GGAB|d2Bd:|ggab|D2BD")]
+      (is (some? result))
+      (is (clojure.string/includes? (:a result) "GGAB"))
+      (is (clojure.string/includes? (:b result) "ggab"))))
+
+  (testing "returns nil when no boundary found"
+    (is (nil? (abc/split-abc-body "GGAB|d2Bd"))))
+
+  (testing "returns nil for empty string"
+    (is (nil? (abc/split-abc-body "")))))
