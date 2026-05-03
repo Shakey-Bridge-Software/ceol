@@ -158,12 +158,47 @@
    If count-in is enabled, plays the count-in first and defers the tune."
   [state tune-id midi-path]
   (if (:count-in state)
-    (let [tune (tunes/tune-by-id (:tunes state) tune-id)
-          tempo-q (audio/effective-tempo-str tune (:tempo-offset state))]
+    (let [tune    (tunes/tune-by-id (:tunes state) tune-id)
+          tempo-q (-> (abc/tempo-for-type (:type tune) (:time-sig tune))
+                      (abc/adjust-abc-tempo (or (:tempo-offset state) 0)))]
       [(assoc state :playing tune-id :counting-in true :pending-midi-path midi-path)
        (audio/countin-convert-and-play-cmd (:time-sig tune) tempo-q)])
     [(assoc state :playing tune-id)
      (audio/play-cmd midi-path)]))
+
+(defn- start-tune-pipeline
+  "Given a tune (with local-abc already applied), start the pipeline needed
+   to get it playing: MIDI variant exists → play; ABC ready → convert;
+   nothing → fetch. Returns [state cmd]."
+  [state tune]
+  (let [tune-id      (:id tune)
+        tempo-offset (:tempo-offset state)
+        section      (:section state)
+        loop?        (:loop state)
+        loop-count   (if loop? 50 1)]
+    (cond
+      ;; MIDI variant on disk → play immediately
+      (= :ready (:midi-status tune))
+      (let [target-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
+        (if (.exists (io/file target-path))
+          (start-playback state tune-id target-path)
+          (if (:abc tune)
+            (let [[s sc] (start-spinner (assoc state :loading tune-id))
+                  s'     (update-tune s tune-id assoc :midi-status :converting)]
+              [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count loop-count))])
+            [(flash-error state "no ABC available") nil])))
+
+      ;; ABC ready, no MIDI → convert then play
+      (= :ready (:abc-status tune))
+      (let [[s sc] (start-spinner (assoc state :loading tune-id))
+            s'     (update-tune s tune-id assoc :midi-status :converting)]
+        [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count loop-count))])
+
+      ;; Nothing → fetch → convert → play
+      :else
+      (let [[s sc] (start-spinner (assoc state :loading tune-id))
+            s'     (update-tune s tune-id assoc :abc-status :fetching)]
+        [s' (charm/batch sc (audio/fetch-abc-cmd tune))]))))
 
 (defn prepare-tune
   "Start the fetch-convert pipeline for a tune."
@@ -230,29 +265,9 @@
                            (clear-countin-state))]
             (play-or-stop state')))
 
-        ;; MIDI ready -> check if correct variant exists
-        (= :ready (:midi-status tune))
-        (let [target-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
-          (if (.exists (io/file target-path))
-            (start-playback state tune-id target-path)
-            ;; Need to convert for this tempo/section variant
-            (if (:abc tune)
-              (let [[s sc] (start-spinner (assoc state :loading tune-id))
-                    s' (update-tune s tune-id assoc :midi-status :converting)]
-                [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])
-              [(flash-error state "no ABC available") nil])))
-
-        ;; ABC ready, no MIDI -> convert then play
-        (= :ready (:abc-status tune))
-        (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
-              state'' (update-tune state' tune-id assoc :midi-status :converting)]
-          [state'' (charm/batch spinner-cmd (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))])
-
-        ;; Nothing -> fetch -> convert -> play
+        ;; MIDI ready, ABC ready, or nothing → delegate to pipeline
         :else
-        (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
-              state'' (update-tune state' tune-id assoc :abc-status :fetching)]
-          [state'' (charm/batch spinner-cmd (audio/fetch-abc-cmd tune))])))
+        (start-tune-pipeline state tune)))
     [state nil]))
 
 (defn stop-playback! [state]
@@ -294,36 +309,13 @@
 ;; --- Set queue helpers ---
 
 (defn play-tune-by-id
-  "Look up a tune by id and start the play pipeline (like play-or-stop but for a specific tune)."
+  "Look up a tune by id and start the play pipeline."
   [state tune-id]
-  (let [tune (tunes/tune-by-id (:tunes state) tune-id)
-        [state tune] (apply-local-abc state tune)
-        tempo-offset (:tempo-offset state)
-        section (:section state)
-        loop? (:loop state)]
-    (cond
-      (nil? tune)
-      [(flash state "tune not found") nil]
-
-      (= :ready (:midi-status tune))
-      (let [target-path (data/midi-file-path-for tune-id tempo-offset section :loop? loop?)]
-        (if (.exists (io/file target-path))
-          (start-playback state tune-id target-path)
-          (if (:abc tune)
-            (let [[s sc] (start-spinner (assoc state :loading tune-id))
-                  s' (update-tune s tune-id assoc :midi-status :converting)]
-              [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if loop? 50 1)))])
-            [(flash-error state "no ABC available") nil])))
-
-      (= :ready (:abc-status tune))
-      (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
-            state'' (update-tune state' tune-id assoc :midi-status :converting)]
-        [state'' (charm/batch spinner-cmd (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if loop? 50 1)))])
-
-      :else
-      (let [[state' spinner-cmd] (start-spinner (assoc state :loading tune-id))
-            state'' (update-tune state' tune-id assoc :abc-status :fetching)]
-        [state'' (charm/batch spinner-cmd (audio/fetch-abc-cmd tune))]))))
+  (let [tune        (tunes/tune-by-id (:tunes state) tune-id)
+        [state tune] (apply-local-abc state tune)]
+    (if (nil? tune)
+      [(flash-error state "tune not found") nil]
+      (start-tune-pipeline state tune))))
 
 (defn- advance-set-queue
   "Advance to the next tune in set-queue. Returns [state cmd] or nil if no queue/past end."

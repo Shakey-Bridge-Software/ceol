@@ -211,16 +211,6 @@
        "%%MIDI program 115\n"
        (countin-body time-sig) "\n"))
 
-(defn effective-tempo-str
-  "Return Q: string for a tune after applying tempo offset."
-  [tune tempo-offset]
-  (let [base-q (abc/tempo-for-type (:type tune) (:time-sig tune))
-        offset (or tempo-offset 0)]
-    (if (zero? offset)
-      base-q
-      (str/replace base-q #"(Q:\d+/\d+=)(\d+)"
-                   (fn [[_ prefix bpm-str]]
-                     (str prefix (max 40 (+ (parse-long bpm-str) offset))))))))
 
 (defn- extract-bpm
   "Extract integer BPM from a Q: string like \"Q:3/8=70\"."
