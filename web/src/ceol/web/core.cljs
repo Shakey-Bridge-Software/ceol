@@ -1,7 +1,7 @@
 (ns ceol.web.core
   "Entry point, Replicant dispatch, action handlers, keyboard shortcuts, and init.
    Owns the single handle-action! dispatcher which is the only place app-state
-   is mutated. Rendering is triggered reactively via add-watch on app-state."
+   is mutated. Delegates localStorage I/O to persist.cljs and rendering to render.cljs."
   (:require [replicant.dom :as r]
             [ceol.web.state :as state]
             [ceol.web.views :as views]
@@ -11,10 +11,10 @@
             [ceol.web.metronome :as metro]
             [ceol.web.beat-engine :as beat]
             [ceol.abc :as abc]
-            [cljs.reader :as reader]
+            [ceol.web.persist :as persist]
+            [ceol.web.render :as render]
             [clojure.walk :as walk]))
 
-(defonce el (js/document.getElementById "app"))
 
 (defn inject-chords-if-needed
   "If the ABC body doesn't already have chord annotations, suggest and inject them."
@@ -26,108 +26,6 @@
     (let [chord-names (chords/suggest-chords abc-body (:key tune) (:mode-name tune))]
       (chords/inject-chords abc-body chord-names))))
 
-(defonce save-timer (atom nil))
-
-(defn schedule-save!
-  "Save abc-edits to localStorage after 1s debounce."
-  []
-  (when-let [t @save-timer]
-    (js/clearTimeout t))
-  (reset! save-timer
-          (js/setTimeout
-           (fn []
-             (let [edits (:abc-edits @state/app-state)]
-               (when (seq edits)
-                 (.setItem js/localStorage "ceol-abc-edits"
-                           (pr-str edits)))))
-           1000)))
-
-(defn load-saved-edits!
-  "Load abc-edits from localStorage, merging defaults for any missing tune IDs."
-  []
-  (let [local-raw (.getItem js/localStorage "ceol-abc-edits")
-        local-edits (when local-raw
-                      (try (reader/read-string local-raw)
-                           (catch :default _ nil)))]
-    (-> (js/fetch "/data/default-abc-edits.edn")
-        (.then #(.text %))
-        (.then (fn [text]
-                 (let [defaults (reader/read-string text)
-                       merged (merge defaults local-edits)]
-                   (swap! state/app-state assoc :abc-edits merged))))
-        (.catch (fn [e]
-                  (js/console.error "Failed to load default ABC edits:" e)
-                  (when local-edits
-                    (swap! state/app-state assoc :abc-edits local-edits)))))))
-
-(defn save-learned!
-  "Save learned tune IDs to localStorage."
-  []
-  (.setItem js/localStorage "ceol-learned-tunes"
-            (pr-str (:learned-tune-ids @state/app-state))))
-
-(defn load-learned!
-  "Load learned tune IDs from localStorage."
-  []
-  (when-let [raw (.getItem js/localStorage "ceol-learned-tunes")]
-    (try
-      (let [ids (reader/read-string raw)]
-        (swap! state/app-state assoc :learned-tune-ids (set ids)))
-      (catch :default _ nil))))
-
-(defn save-sets!
-  "Save sets to localStorage."
-  []
-  (.setItem js/localStorage "ceol-sets" (pr-str (:sets @state/app-state))))
-
-(defn load-sets!
-  "Load sets from localStorage, falling back to default-sets.edn."
-  []
-  (if-let [raw (.getItem js/localStorage "ceol-sets")]
-    (try
-      (let [sets (reader/read-string raw)]
-        (swap! state/app-state assoc :sets sets))
-      (catch :default _ nil))
-    (-> (js/fetch "/data/default-sets.edn")
-        (.then #(.text %))
-        (.then (fn [text]
-                 (let [sets (reader/read-string text)]
-                   (swap! state/app-state assoc :sets sets))))
-        (.catch (fn [e] (js/console.error "Failed to load default sets:" e))))))
-
-(defn save-custom-tunes!
-  "Save custom tunes to localStorage."
-  []
-  (let [custom (:custom-tunes @state/app-state)]
-    (.setItem js/localStorage "ceol-custom-tunes" (pr-str custom))))
-
-(defn load-custom-tunes!
-  "Load custom tunes from localStorage and merge into state."
-  []
-  (when-let [raw (.getItem js/localStorage "ceol-custom-tunes")]
-    (try
-      (let [custom (reader/read-string raw)]
-        (swap! state/app-state (fn [s]
-                                 (merge s {:custom-tunes custom}
-                                        (state/merge-tunes state/base-tunes custom)))))
-      (catch :default _ nil))))
-
-(defn- tune-by-id-from-base [tune-id]
-  (first (filter #(= tune-id (:id %)) state/base-tunes)))
-
-(defn update-tune-field!
-  "Update a field on a tune and persist."
-  [tune-id field value]
-  (swap! state/app-state
-         (fn [s]
-           (let [custom (update (:custom-tunes s) tune-id
-                                (fn [existing]
-                                  (merge (or existing
-                                             (tune-by-id-from-base tune-id))
-                                         {:id tune-id field value})))
-                 merged (state/merge-tunes state/base-tunes custom)]
-             (merge s {:custom-tunes custom} merged))))
-  (save-custom-tunes!))
 
 (defn resolve-event-placeholders [dispatch-data actions]
   (let [js-event (:replicant/js-event dispatch-data)]
@@ -142,38 +40,6 @@
          x))
      actions)))
 
-(defonce render-promise (atom (js/Promise.resolve nil)))
-
-(defn wait-for-render!
-  "Returns a promise that resolves when the current render is complete."
-  []
-  @render-promise)
-
-(defn render-sheet-music!
-  "Imperatively render ABC into the #sheet-music div if present.
-   Creates a promise that resolves when rendering is complete."
-  [s]
-  (when-let [tune (state/selected-tune s)]
-    (when-let [abc-body (state/edited-abc-for-tune s (:id tune))]
-      (when (string? abc-body)
-        (let [section (:section s)
-              body (if section
-                     (let [parts (abc/split-abc-body abc-body)]
-                       (if parts
-                         (get parts section abc-body)
-                         abc-body))
-                     abc-body)
-              raw-abc (abc/build-abc-string tune (abc/add-line-breaks body 4) nil {:midi? false})
-              final-abc (abc/adjust-abc-tempo raw-abc (or (:tempo-offset s) 0))
-              p (js/Promise.
-                 (fn [resolve _]
-                   (js/requestAnimationFrame
-                    (fn []
-                      (if-let [el (js/document.getElementById "sheet-music")]
-                        (let [visual (abc-bridge/render-abc! el final-abc)]
-                          (resolve visual))
-                        (resolve nil))))))]
-          (reset! render-promise p))))))
 
 (defn- start-guitar!
   "Schedule guitar accompaniment from start-at (AudioContext seconds).
@@ -301,7 +167,7 @@
     (let [[tune-id new-val] args]
       (when (string? new-val)
         (swap! state/app-state assoc-in [:abc-edits tune-id] new-val)
-        (schedule-save!)))
+        (persist/schedule-save!)))
 
     :editor/keydown
     (let [[key] args]
@@ -337,17 +203,17 @@
                      merged (state/merge-tunes state/base-tunes custom)]
                  (merge s {:custom-tunes custom} merged
                         {:selected-tune-id new-id :editing-field :name}))))
-      (save-custom-tunes!))
+      (persist/save-custom-tunes!))
 
     :tune/update-field
     (let [[tune-id field value] args]
-      (update-tune-field! tune-id field value)
+      (persist/update-tune-field! tune-id field value)
       (swap! state/app-state assoc :editing-field nil))
 
     :tune/update-key-mode
     (let [[tune-id key-name mode-name] args]
-      (update-tune-field! tune-id :key key-name)
-      (update-tune-field! tune-id :mode-name mode-name)
+      (persist/update-tune-field! tune-id :key key-name)
+      (persist/update-tune-field! tune-id :mode-name mode-name)
       (swap! state/app-state assoc :editing-field nil))
 
     :tune/delete
@@ -358,7 +224,7 @@
                  (let [custom (dissoc (:custom-tunes s) tune-id)
                        merged (state/merge-tunes state/base-tunes custom)]
                    (merge s {:custom-tunes custom} merged {:selected-tune-id nil}))))
-        (save-custom-tunes!)))
+        (persist/save-custom-tunes!)))
 
     :field/edit
     (let [[field] args]
@@ -523,7 +389,7 @@
                                 :creating-set? false
                                 :active-set-id set-id
                                 :selected-tune-id (first tune-ids))))
-                (save-sets!)))))
+                (persist/save-sets!)))))
 
         "Escape"
         (swap! state/app-state assoc :creating-set? false)
@@ -569,13 +435,13 @@
       (swap! state/app-state update-in [:sets set-id :tune-ids]
              (fn [ids]
                (if (some #{tune-id} ids) ids (conj (or ids []) tune-id))))
-      (save-sets!))
+      (persist/save-sets!))
 
     :set/remove-tune
     (let [[set-id tune-id] args]
       (swap! state/app-state update-in [:sets set-id :tune-ids]
              (fn [ids] (vec (remove #{tune-id} ids))))
-      (save-sets!))
+      (persist/save-sets!))
 
     :set/start-adding
     (let [[set-id] args]
@@ -596,7 +462,7 @@
                      (let [tid (:id tune)]
                        (if (some #{tid} ids) ids (conj (or ids []) tid)))))
             (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0)
-            (save-sets!))
+            (persist/save-sets!))
           ;; Empty enter = done adding
           (swap! state/app-state assoc :adding-to-set nil))
 
@@ -618,7 +484,7 @@
                                    (update :sets dissoc set-id)
                                    (cond-> (= set-id (:active-set-id s))
                                      (assoc :active-set-id nil)))))
-      (save-sets!))
+      (persist/save-sets!))
 
     ;; --- Learned + Session ---
 
@@ -626,7 +492,7 @@
     (let [[tune-id] args]
       (swap! state/app-state update :learned-tune-ids
              (fn [ids] (if (contains? ids tune-id) (disj ids tune-id) (conj ids tune-id))))
-      (save-learned!))
+      (persist/save-learned!))
 
     :session/start
     (let [s @state/app-state
@@ -648,7 +514,7 @@
                  :selected-tune-id first-tune-id
                  :tab :session)
           ;; Auto-play first item — wait for render
-          (-> (wait-for-render!)
+          (-> (render/wait-for-render!)
               (.then #(handle-action! :session/play-current nil))))))
 
     :session/play-current
@@ -674,7 +540,7 @@
                            ;; Wait for render then play (500ms gap between set tunes)
                            (js/setTimeout
                             (fn []
-                              (-> (wait-for-render!)
+                              (-> (render/wait-for-render!)
                                   (.then #(handle-action! :session/play-current nil))))
                             500))
 
@@ -697,7 +563,7 @@
                             (swap! state/app-state assoc
                                    :selected-tune-id next-tune-id
                                    :session-pausing? false)
-                            (-> (wait-for-render!)
+                            (-> (render/wait-for-render!)
                                 (.then #(handle-action! :session/play-current nil))))
                           2000))
 
@@ -721,7 +587,7 @@
                                 (swap! state/app-state assoc
                                        :selected-tune-id first-tid
                                        :session-pausing? false)
-                                (-> (wait-for-render!)
+                                (-> (render/wait-for-render!)
                                     (.then #(handle-action! :session/play-current nil))))
                               2000))))
 
@@ -769,33 +635,7 @@
     (doseq [[action & args] actions]
       (handle-action! action args))))
 
-(defonce prev-render-key (atom nil))
 
-(remove-watch state/app-state ::render)
-(add-watch state/app-state ::render
-           (fn [_ _ old-s s]
-             (r/render el (views/app s))
-             ;; Only re-render sheet music when tune or ABC changed
-             (let [tune-id (:selected-tune-id s)
-                   abc (state/edited-abc-for-tune s tune-id)
-                   new-key [tune-id abc (:section s) (:tempo-offset s)]]
-               (when (not= new-key @prev-render-key)
-                 (reset! prev-render-key new-key)
-                 ;; Evict stale non-string edits (e.g. from earlier bug)
-                 (when (and abc (not (string? abc)))
-                   (swap! state/app-state update :abc-edits dissoc tune-id))
-                 (render-sheet-music! s)))))
-
-(defn load-abc-data!
-  "Fetch local-abc.edn and merge into app state."
-  []
-  (-> (js/fetch "/data/local-abc.edn")
-      (.then #(.text %))
-      (.then (fn [text]
-               (let [data (reader/read-string text)]
-                 (swap! state/app-state assoc :abc-data data))))
-      (.catch (fn [e]
-                (js/console.error "Failed to load ABC data:" e)))))
 
 (defn- input-focused? []
   (let [tag (some-> js/document .-activeElement .-tagName str)]
@@ -840,9 +680,10 @@
 
 (defn init! []
   (r/set-dispatch! execute!)
-  (load-custom-tunes!)
-  (load-sets!)
-  (load-learned!)
-  (load-abc-data!)
-  (load-saved-edits!)
-  (r/render el (views/app @state/app-state)))
+  (render/setup-render-watch!)
+  (persist/load-custom-tunes!)
+  (persist/load-sets!)
+  (persist/load-learned!)
+  (persist/load-abc-data!)
+  (persist/load-saved-edits!)
+  (r/render render/el (views/app @state/app-state)))
