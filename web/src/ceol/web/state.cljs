@@ -6,70 +6,81 @@
   (mapv #(select-keys % [:id :name :type :time-sig :key :mode-name :session-id])
         tunes/catalog))
 
+(def ^:private base-tune-ids
+  "Set of IDs from the base catalog. Used for O(1) custom-tune? checks."
+  (set (map :id base-tunes)))
+
 (defn merge-tunes
-  "Merge base catalog with custom tunes. Custom overrides by ID."
+  "Merge base catalog with custom tunes (custom overrides by ID).
+   Returns a partial state map {:tunes {id→tune} :tune-order [ids]}
+   suitable for merging directly into app-state."
   [base custom]
   (let [updated-base (mapv (fn [t]
                              (if-let [overrides (get custom (:id t))]
                                (merge t overrides)
                                t))
                            base)
-        new-tunes (->> (vals custom)
-                       (remove #(some (fn [bt] (= (:id bt) (:id %))) base))
-                       vec)]
-    (into updated-base new-tunes)))
+        new-tunes    (->> (vals custom)
+                          (remove #(some (fn [bt] (= (:id bt) (:id %))) base))
+                          vec)
+        all-tunes    (into updated-base new-tunes)]
+    {:tunes      (into {} (map (juxt :id identity)) all-tunes)
+     :tune-order (mapv :id all-tunes)}))
 
 (defonce app-state
-  (atom {:tunes base-tunes
-         :custom-tunes {}
-         :abc-data {}
-         :abc-edits {}
-         :selected-tune-id nil
-         :filter :all
-         :tab :tunes
-         :editor-open? false
-         :guitar? false
-         :editing-field nil
-         :playing? false
-         :playing-section nil
-         :section nil
-         :loop? false
-         :tempo-offset 0
-         ;; Sets
-         :sets {}
-         :active-set-id nil
-         :set-playing? false
-         :set-tune-index 0
-         ;; Set creation
-         :creating-set? false
-         :creating-set-name nil
-         :creating-set-tunes []
-         :typeahead-query ""
-         :typeahead-index 0
-         :adding-to-set nil
-         :metronome? false
-         :count-in? false
-         :current-beat nil
-         ;; Learned + Session
-         :learned-tune-ids #{}
-         :session-mode? false
-         :session-queue []
-         :session-index 0
-         :session-set-index 0
-         :session-pausing? false
-         :session-within-set? false
-         :session-played []}))
+  (atom (merge
+         {:custom-tunes    {}
+          :abc-data        {}
+          :abc-edits       {}
+          :selected-tune-id nil
+          :filter          :all
+          :tab             :tunes
+          :editor-open?    false
+          :guitar?         false
+          :editing-field   nil
+          :playing?        false
+          :playing-section nil
+          :section         nil
+          :loop?           false
+          :tempo-offset    0
+          ;; Sets
+          :sets            {}
+          :active-set-id   nil
+          :set-playing?    false
+          :set-tune-index  0
+          ;; Set creation
+          :creating-set?       false
+          :creating-set-name   nil
+          :creating-set-tunes  []
+          :typeahead-query     ""
+          :typeahead-index     0
+          :adding-to-set       nil
+          :metronome?          false
+          :count-in?           false
+          :current-beat        nil
+          ;; Learned + Session
+          :learned-tune-ids    #{}
+          :session-mode?       false
+          :session-queue       []
+          :session-index       0
+          :session-set-index   0
+          :session-pausing?    false
+          :session-within-set? false
+          :session-played      []}
+         (merge-tunes base-tunes {}))))
 
 ;; --- Tune queries ---
 
 (defn tune-by-id [state id]
-  (first (filter #(= id (:id %)) (:tunes state))))
+  (get (:tunes state) id))
 
 (defn filtered-tunes [state]
-  (let [f (:filter state)]
+  (let [tunes (:tunes state)
+        order (:tune-order state)
+        f     (:filter state)]
     (if (= f :all)
-      (:tunes state)
-      (filterv #(= f (:type %)) (:tunes state)))))
+      (mapv tunes order)
+      (filterv #(= f (:type %)) (mapv tunes order)))))
 
 (defn selected-tune [state]
   (when-let [id (:selected-tune-id state)]
@@ -87,12 +98,12 @@
 (defn custom-tune?
   "Is this tune ID a custom (user-added) tune, not from the base catalog?"
   [tune-id]
-  (not (some #(= tune-id (:id %)) base-tunes)))
+  (not (contains? base-tune-ids tune-id)))
 
 (defn next-tune-id
   "Generate the next available tune ID."
   [state]
-  (let [all-ids (map :id (:tunes state))]
+  (let [all-ids (keys (:tunes state))]
     (if (seq all-ids)
       (inc (apply max all-ids))
       1000)))
@@ -103,10 +114,10 @@
   "Generate the next set ID string."
   [state]
   (let [existing (keys (:sets state))
-        nums (->> existing
-                  (map #(second (re-find #"set-(\d+)" %)))
-                  (remove nil?)
-                  (map #(js/parseInt % 10)))]
+        nums     (->> existing
+                      (map #(second (re-find #"set-(\d+)" %)))
+                      (remove nil?)
+                      (map #(js/parseInt % 10)))]
     (str "set-" (if (seq nums) (inc (apply max nums)) 1))))
 
 (defn active-set
@@ -126,7 +137,7 @@
   (if (str/blank? query)
     []
     (let [q (str/lower-case query)]
-      (->> (:tunes state)
+      (->> (vals (:tunes state))
            (filter #(str/includes? (str/lower-case (:name %)) q))
            (take n)
            vec))))
@@ -166,19 +177,15 @@
   "Build the session queue from learned tunes and sets.
    Returns unshuffled vector of {:type :tune/:set ...} items."
   [learned-ids sets]
-  (let [;; Step 1: complete sets (all tunes learned)
-        complete-sets (filter (fn [[_ s]]
-                                (and (seq (:tune-ids s))
-                                     (every? learned-ids (:tune-ids s))))
-                              sets)
-        ;; Step 2: tune-ids covered by complete sets
-        set-tune-ids (into #{} (mapcat (fn [[_ s]] (:tune-ids s)) complete-sets))
-        ;; Step 3: standalone learned tunes not in any complete set
+  (let [complete-sets  (filter (fn [[_ s]]
+                                 (and (seq (:tune-ids s))
+                                      (every? learned-ids (:tune-ids s))))
+                               sets)
+        set-tune-ids   (into #{} (mapcat (fn [[_ s]] (:tune-ids s)) complete-sets))
         standalone-ids (remove set-tune-ids learned-ids)
-        ;; Step 4: build queue
-        set-items (mapv (fn [[id s]] {:type :set :set-id id :name (:name s) :tune-ids (:tune-ids s)})
-                        complete-sets)
-        tune-items (mapv (fn [tid] {:type :tune :tune-id tid}) standalone-ids)]
+        set-items      (mapv (fn [[id s]] {:type :set :set-id id :name (:name s) :tune-ids (:tune-ids s)})
+                             complete-sets)
+        tune-items     (mapv (fn [tid] {:type :tune :tune-id tid}) standalone-ids)]
     (into set-items tune-items)))
 
 (defn shuffle-queue [queue]
@@ -191,23 +198,19 @@
   (when (seq queue)
     (let [current (nth queue session-index nil)]
       (cond
-        ;; Currently in a set — check if more tunes
         (and (= :set (:type current))
              (< (inc session-set-index) (count (:tune-ids current))))
-        {:action :advance-in-set
-         :tune-id (nth (:tune-ids current) (inc session-set-index))
+        {:action          :advance-in-set
+         :tune-id         (nth (:tune-ids current) (inc session-set-index))
          :session-set-index (inc session-set-index)}
 
-        ;; More items in queue
         (< (inc session-index) (count queue))
-        {:action :next-item
-         :session-index (inc session-index)}
+        {:action         :next-item
+         :session-index  (inc session-index)}
 
-        ;; End of queue, loop on
         loop?
         {:action :reshuffle}
 
-        ;; End of queue, no loop
         :else
         {:action :done}))))
 
@@ -218,5 +221,5 @@
     (let [item (nth queue (:session-index state) nil)]
       (case (:type item)
         :tune (:tune-id item)
-        :set (nth (:tune-ids item) (:session-set-index state) nil)
+        :set  (nth (:tune-ids item) (:session-set-index state) nil)
         nil))))

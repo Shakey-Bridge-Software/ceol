@@ -105,9 +105,8 @@
     (try
       (let [custom (reader/read-string raw)]
         (swap! state/app-state (fn [s]
-                                 (-> s
-                                     (assoc :custom-tunes custom)
-                                     (assoc :tunes (state/merge-tunes state/base-tunes custom))))))
+                                 (merge s {:custom-tunes custom}
+                                        (state/merge-tunes state/base-tunes custom)))))
       (catch :default _ nil))))
 
 (defn- tune-by-id-from-base [tune-id]
@@ -124,7 +123,7 @@
                                              (tune-by-id-from-base tune-id))
                                          {:id tune-id field value})))
                  merged (state/merge-tunes state/base-tunes custom)]
-             (assoc s :custom-tunes custom :tunes merged))))
+             (merge s {:custom-tunes custom} merged))))
   (save-custom-tunes!))
 
 (defn resolve-event-placeholders [dispatch-data actions]
@@ -272,8 +271,8 @@
              (fn [s]
                (let [custom (assoc (:custom-tunes s) new-id new-tune)
                      merged (state/merge-tunes state/base-tunes custom)]
-                 (assoc s :custom-tunes custom :tunes merged
-                        :selected-tune-id new-id :editing-field :name))))
+                 (merge s {:custom-tunes custom} merged
+                        {:selected-tune-id new-id :editing-field :name}))))
       (save-custom-tunes!))
 
     :tune/update-field
@@ -294,8 +293,7 @@
                (fn [s]
                  (let [custom (dissoc (:custom-tunes s) tune-id)
                        merged (state/merge-tunes state/base-tunes custom)]
-                   (assoc s :custom-tunes custom :tunes merged
-                          :selected-tune-id nil))))
+                   (merge s {:custom-tunes custom} merged {:selected-tune-id nil}))))
         (save-custom-tunes!)))
 
     :field/edit
