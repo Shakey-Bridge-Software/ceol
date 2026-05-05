@@ -1,4 +1,8 @@
 (ns ceol.staff
+  "Terminal staff notation renderer. Converts a parsed ABC timeline into a
+   5-line staff grid of Unicode characters, with colour highlights for the
+   currently playing note. build-grid is the core data transform;
+   render-staff-compact wraps multi-line output for limited terminal height."
   (:require [charm.core :as charm]
             [ceol.notation :as notation]
             [clojure.string :as str]))

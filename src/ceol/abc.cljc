@@ -1,4 +1,8 @@
 (ns ceol.abc
+  "Pure ABC string utilities shared between TUI and web.
+   No state, no I/O. Covers header assembly (build-abc-string), tempo
+   adjustment (adjust-abc-tempo), line breaking (add-line-breaks), and
+   A/B section splitting (split-abc-body, split-abc-parts)."
   (:require [clojure.string :as str]))
 
 (defn tempo-for-type

@@ -1,4 +1,7 @@
 (ns ceol.core
+  "TUI entry point. Wires together charm/run with state/init-state,
+   state/update-state, and view/render. Registers a shutdown hook to
+   kill any orphaned FluidSynth processes on exit."
   (:require [charm.core :as charm]
             [ceol.state :as state]
             [ceol.view :as view]

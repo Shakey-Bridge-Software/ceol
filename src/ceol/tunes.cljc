@@ -1,4 +1,8 @@
-(ns ceol.tunes)
+(ns ceol.tunes
+  "Static tune catalog (54+ entries) and pure catalog query functions.
+   Catalog entries contain only identity data: id, name, type, time-sig,
+   key, mode-name, session-id. Runtime state (abc, midi status) is added
+   by data/hydrate-tunes in the TUI and is never part of catalog data.")
 
 (def catalog
   [{:id 1  :name "Maggie in the Woods (p8)"            :type :polka    :time-sig "2/4" :key "G" :mode-name "Ionian"

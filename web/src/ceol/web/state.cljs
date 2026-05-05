@@ -1,4 +1,8 @@
 (ns ceol.web.state
+  "App state atom, query functions, and pure domain logic.
+   The single source of truth for all UI state. Query functions are pure
+   and take the state map as their first argument. Side-effectful mutations
+   live in core.cljs via handle-action!."
   (:require [ceol.tunes :as tunes]
             [clojure.string :as str]))
 
@@ -26,6 +30,64 @@
         all-tunes    (into updated-base new-tunes)]
     {:tunes      (into {} (map (juxt :id identity)) all-tunes)
      :tune-order (mapv :id all-tunes)}))
+
+;; ---------------------------------------------------------------------------
+;; App state shape
+;;
+;; Tune data
+;;   :tunes            {id → tune-map}   all tunes, base catalog merged with custom
+;;   :tune-order       [id ...]          display order (catalog order + custom appended)
+;;   :custom-tunes     {id → tune-map}   user-added/edited tunes, persisted to localStorage
+;;   :abc-data         {id → abc-body}   raw ABC bodies loaded from local-abc.edn
+;;   :abc-edits        {id → abc-body}   user-edited ABC (with chords), persisted to localStorage
+;;
+;; Selection & UI
+;;   :selected-tune-id  id | nil
+;;   :filter            :all | :polka | :jig | :reel | :hornpipe | :slip-jig | :slide | :other
+;;   :tab               :tunes | :sets | :session
+;;   :editor-open?      bool
+;;   :editing-field     :name | nil       which header field is in inline-edit mode
+;;
+;; Playback
+;;   :playing?          bool              melody is currently playing
+;;   :playing-section   :a | :b | nil     section that was active when play started
+;;   :section           :a | :b | nil     currently selected section (for next play)
+;;   :loop?             bool
+;;   :guitar?           bool              guitar track enabled (unmuted)
+;;   :tempo-offset      int               BPM delta from type default, clamped [-40, +40]
+;;   :metronome?        bool              standalone metronome running
+;;   :count-in?         bool              count-in enabled for next play
+;;   :current-beat      int | nil         current beat index for metronome UI highlight
+;;
+;; Set playback
+;;   :set-playing?      bool              playing through a set (auto-advance between tunes)
+;;   :set-tune-index    int               index within the active set's tune-ids
+;;   :set-advancing?    bool              mid-set auto-advance in progress; suppresses
+;;                                        count-in so only the first tune of a set gets one
+;;
+;; Sets
+;;   :sets              {set-id → set-map}  set-map: {:id :name :tune-ids [...]}
+;;   :active-set-id     set-id | nil       expanded/selected set
+;;
+;; Set creation wizard
+;;   :creating-set?       bool
+;;   :creating-set-name   str | nil        confirmed set name (after Enter on step 1)
+;;   :creating-set-tunes  [tune-id ...]    tunes added so far in wizard
+;;   :typeahead-query     str              current search input
+;;   :typeahead-index     int              highlighted result index
+;;   :adding-to-set       set-id | nil     set currently being added to (post-creation)
+;;
+;; Learned & Session
+;;   :learned-tune-ids    #{id ...}        persisted to localStorage
+;;   :session-mode?       bool             session active (read-only main panel)
+;;   :session-queue       [{:type :tune/:set ...}]  shuffled play queue
+;;   :session-index       int              current position in queue
+;;   :session-set-index   int              current tune index within a set item
+;;   :session-pausing?    bool             true during the 2s gap between queue items
+;;   :session-within-set? bool             true while advancing through tunes inside a set;
+;;                                         suppresses count-in for mid-set transitions
+;;   :session-played      [queue-index ...] indices of completed queue items (for history)
+;; ---------------------------------------------------------------------------
 
 (defonce app-state
   (atom (merge

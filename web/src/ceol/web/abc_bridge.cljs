@@ -1,4 +1,8 @@
 (ns ceol.web.abc-bridge
+  "abc.js interop: SVG sheet music rendering and Web Audio synth playback.
+   Owns the shared AudioContext (get-audio-context) used by both abc.js and
+   the guitar/metronome Tone.js nodes. Public API: render-abc!, prepare!,
+   start!, play!, stop!, playing?, now."
   (:require ["abcjs" :as ABCJS]))
 
 (defonce synth-state (atom {:synth nil :visual nil :generation 0 :audio-ctx nil :duration nil}))

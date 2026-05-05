@@ -1,4 +1,8 @@
 (ns ceol.web.metronome
+  "Self-correcting click track using performance.now() to cancel setTimeout drift.
+   Provides standalone metronome (start-clicking!) and count-in (count-in!).
+   Uses the same Tone.js AudioContext as guitar/abc-bridge via Tone/PolySynth.
+   Public API: start-clicking!, count-in!, stop!, running?"
   (:require ["tone" :as Tone]
             [ceol.web.beat-engine :as beat]))
 

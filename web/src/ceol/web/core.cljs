@@ -1,4 +1,7 @@
 (ns ceol.web.core
+  "Entry point, Replicant dispatch, action handlers, keyboard shortcuts, and init.
+   Owns the single handle-action! dispatcher which is the only place app-state
+   is mutated. Rendering is triggered reactively via add-watch on app-state."
   (:require [replicant.dom :as r]
             [ceol.web.state :as state]
             [ceol.web.views :as views]
@@ -194,6 +197,67 @@
           filled     (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
                              [] bar-chords)]
       (guitar/play! filled (:type tune) ms-per-bar start-at))))
+
+;; ---------------------------------------------------------------------------
+;; Action dispatch
+;;
+;; Actions are vectors dispatched via Replicant's :on handlers or handle-keydown.
+;; Each entry below: action keyword, expected args, one-line description.
+;;
+;; Tune
+;;   :filter/set          [filter-type]              set sidebar filter
+;;   :tab/set             [tab-key]                  switch sidebar tab
+;;   :tune/select         [tune-id]                  select tune, inject chords if needed
+;;   :tune/add            []                         create new custom tune
+;;   :tune/update-field   [tune-id field value]      update one field on a tune
+;;   :tune/update-key-mode [tune-id key mode-name]   update key + mode together
+;;   :tune/delete         [tune-id]                  delete custom tune (no-op on catalog)
+;;   :tune/add-to-set     [tune-id]                  add tune to active/only set
+;;   :abc/render          []                         no-op (render triggered by state watch)
+;;
+;; Editor
+;;   :editor/toggle       []                         open/close ABC editor panel
+;;   :editor/update       [tune-id new-abc]          live-update ABC body
+;;   :editor/keydown      [key]                      handle Escape to blur editor
+;;
+;; Inline field editing
+;;   :field/edit          [field-key]                enter inline edit mode
+;;   :field/cancel        []                         exit inline edit without saving
+;;   :field/keydown       [key]                      Enter to confirm, Escape to cancel
+;;
+;; Playback
+;;   :playback/play       []                         toggle play/stop
+;;   :playback/stop       []                         stop unconditionally
+;;   :guitar/toggle       []                         toggle guitar track mute
+;;   :section/set         [section]                  set active section (:a :b nil)
+;;   :loop/toggle         []                         toggle loop
+;;   :metronome/toggle    []                         toggle standalone metronome
+;;   :count-in/toggle     []                         toggle count-in
+;;   :tempo/up            []                         +5 BPM
+;;   :tempo/down          []                         -5 BPM
+;;   :tempo/reset         []                         reset BPM to type default
+;;
+;; Sets
+;;   :set/start-create    []                         open set creation wizard
+;;   :set/name-keydown    [key value]                wizard step 1: confirm name
+;;   :set/typeahead       [query]                    update typeahead search query
+;;   :set/tune-keydown    [key]                      wizard step 2: pick tune / finish
+;;   :set/pick-tune       [tune-id]                  add tune to wizard list
+;;   :set/uncreate-tune   [tune-id]                  remove tune from wizard list
+;;   :set/toggle          [set-id]                   expand/collapse set in sidebar
+;;   :set/select-tune     [set-id tune-id]           select tune within a set
+;;   :set/add-tune        [set-id tune-id]           add tune to existing set
+;;   :set/remove-tune     [set-id tune-id]           remove tune from set
+;;   :set/start-adding    [set-id]                   open inline typeahead for set
+;;   :set/add-tune-keydown [set-id key]              handle keydown in set's add-tune input
+;;   :set/delete          [set-id]                   delete set
+;;
+;; Learned & Session
+;;   :learned/toggle      [tune-id]                  toggle learned flag
+;;   :session/start       []                          build queue and start session
+;;   :session/play-current []                         play current session item (internal)
+;;   :session/stop        []                          end session
+;; ---------------------------------------------------------------------------
 
 (defn handle-action! [action args]
   (case action

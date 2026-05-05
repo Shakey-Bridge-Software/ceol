@@ -1,4 +1,8 @@
 (ns ceol.notation
+  "ABC tokenizer, timeline builder, and note-finding utilities.
+   Pure functions only. parse-abc is the main entry point: takes a full ABC
+   string and returns {:tokens [...] :timeline [...] :tempo {...} :time-sig {...} :key str}.
+   Timeline events have :start-ms/:end-ms offsets for real-time note tracking."
   (:require [clojure.string :as str]))
 
 ;; --- ABC Parser for Irish trad subset ---

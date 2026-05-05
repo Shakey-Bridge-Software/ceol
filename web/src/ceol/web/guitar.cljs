@@ -1,4 +1,8 @@
 (ns ceol.web.guitar
+  "Acoustic rhythm guitar accompaniment via Tone.js Sampler (CDN samples).
+   Shares the abc.js AudioContext so note scheduling is on the same Web Audio
+   clock as the melody. Public API: play!, stop!, set-muted!, muted?,
+   extract-bar-chords. Timing comes from beat/beats-for-tune via ms-per-bar."
   (:require ["tone" :as Tone]
             [ceol.web.abc-bridge :as abc-bridge]
             [clojure.string :as str]))

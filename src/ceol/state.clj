@@ -1,4 +1,8 @@
 (ns ceol.state
+  "TUI state management: initialisation, update-state dispatch, navigation,
+   spinner, staff display, and audio pipeline (play/stop/prepare/advance).
+   All state transitions return [new-state cmd-or-nil] per the charm.clj
+   Elm architecture. Side-effectful audio operations are in audio.clj."
   (:require [charm.core :as charm]
             [charm.components.spinner :as spinner]
             [ceol.tunes :as tunes]
@@ -30,6 +34,48 @@
     (let [result @(proc/process {:cmd ["which" cmd] :out :string :err :string})]
       (zero? (:exit result)))
     (catch Exception _ false)))
+
+;; ---------------------------------------------------------------------------
+;; TUI state shape
+;;
+;; Navigation
+;;   :cursor           int               index into (visible-tunes state)
+;;   :mode             :browse | :help
+;;   :filter           :all | :polka | :jig | :reel | :hornpipe | :slip-jig | :slide | :other
+;;   :width :height    int               terminal dimensions from :window-size msgs
+;;   :flash            {:msg str :type :info | :error} | nil  status bar message
+;;
+;; Tune data
+;;   :tunes            [tune-map ...]    full catalog, hydrated from cache
+;;   :setlists         {slug → setlist}  loaded from ~/.ceol/setlists/
+;;   :active-setlist   slug | nil        currently active setlist filter
+;;
+;; Playback
+;;   :playing          tune-id | nil     currently playing tune
+;;   :play-proc        Process | nil     live fluidsynth process
+;;   :loading          tune-id | nil     tune being fetched/converted (shows spinner)
+;;   :spinner          spinner-state     charm spinner; nil when not loading
+;;   :loop             bool
+;;   :tempo-offset     int               BPM delta, clamped [-40, +40]
+;;   :section          :a | :b | nil
+;;
+;; Count-in
+;;   :count-in         bool              count-in enabled
+;;   :counting-in      bool              count-in click currently playing
+;;   :countin-proc     Process | nil     live fluidsynth process for count-in click
+;;   :pending-midi-path str | nil        MIDI path to play after count-in finishes
+;;
+;; Set queue
+;;   :set-queue        {:tune-ids [...] :index int :set-name str} | nil
+;;                                       active set playback queue; nil when not in set mode
+;;
+;; Staff notation
+;;   :show-staff       bool              terminal staff panel visible
+;;   :notation         [event ...]       parsed timeline from notation/parse-abc
+;;   :notation-tune-id tune-id | nil     tune whose notation is currently rendered
+;;   :play-start-ms    long | nil        System/currentTimeMillis when playback started
+;;   :current-note-idx int | nil         index of currently highlighted note in staff
+;; ---------------------------------------------------------------------------
 
 (defn init-state []
   (data/ensure-dirs!)

@@ -1,4 +1,7 @@
 (ns ceol.web.views
+  "Pure Replicant hiccup components. All functions take state and return hiccup.
+   No side effects, no state mutation. Actions are dispatched via Replicant's
+   r/set-dispatch! — components emit action vectors, never call functions."
   (:require [ceol.web.state :as state]
             [ceol.abc :as abc]))
 

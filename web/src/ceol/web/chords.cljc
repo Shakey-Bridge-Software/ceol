@@ -1,4 +1,8 @@
 (ns ceol.web.chords
+  "Chord suggestion algorithm and ABC chord injection.
+   Pure functions only — no state, no I/O. suggest-chords scores candidate
+   chords against pitch-class frequencies per bar. inject-chords inserts
+   \"ChordName\" annotations into an ABC body string."
   (:require [clojure.string :as str]))
 
 ;; --- Music theory ---

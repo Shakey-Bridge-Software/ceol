@@ -1,4 +1,8 @@
 (ns ceol.view
+  "TUI rendering: all charm.clj view functions. Pure — takes state, returns
+   styled strings. Covers header, tune list, status bar, staff panel, help
+   overlay, and flash messages. The render fn is the single entry point
+   called by charm/run on every state change."
   (:require [charm.core :as charm]
             [charm.components.spinner :as spinner]
             [ceol.tunes :as tunes]

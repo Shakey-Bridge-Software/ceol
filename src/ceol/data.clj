@@ -1,4 +1,7 @@
 (ns ceol.data
+  "TUI file I/O: cache read/write, local-abc loading, setlist loading,
+   soundfont discovery, and MIDI/ABC file path generation.
+   All paths are under ~/.ceol/. No business logic — pure I/O primitives."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]))

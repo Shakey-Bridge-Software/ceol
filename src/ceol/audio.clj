@@ -1,4 +1,8 @@
 (ns ceol.audio
+  "TUI audio pipeline: thesession.org API, abc2midi conversion, FluidSynth
+   playback, and count-in click generation. All operations are async —
+   they return charm/cmd thunks that run on a background thread and deliver
+   typed result messages back to update-state."
   (:require [babashka.http-client :as http]
             [babashka.process :as proc]
             [ceol.abc :as abc]
