@@ -13,10 +13,12 @@
     (is (= "set-6" (state/next-set-id {:sets {"set-2" {} "set-5" {}}})))))
 
 (deftest search-tunes-test
-  (let [s {:tunes [{:id 1 :name "Maggie in the Woods" :type :polka}
-                   {:id 2 :name "The Kerry Polka" :type :polka}
-                   {:id 3 :name "The Ocean Jig" :type :jig}
-                   {:id 4 :name "Crowley's Reel" :type :reel}]}]
+  (let [tunes [{:id 1 :name "Maggie in the Woods" :type :polka}
+               {:id 2 :name "The Kerry Polka" :type :polka}
+               {:id 3 :name "The Ocean Jig" :type :jig}
+               {:id 4 :name "Crowley's Reel" :type :reel}]
+        s {:tunes      (into {} (map (juxt :id identity)) tunes)
+           :tune-order (mapv :id tunes)}]
 
     (testing "substring match"
       (is (= 1 (count (state/search-tunes s "maggie" 5))))
@@ -67,7 +69,9 @@
       (is (nil? (state/advance-set sets "set-99" 0 false))))))
 
 (deftest set-tunes-test
-  (let [s {:tunes [{:id 1 :name "A"} {:id 2 :name "B"} {:id 3 :name "C"}]
+  (let [tunes [{:id 1 :name "A"} {:id 2 :name "B"} {:id 3 :name "C"}]
+        s {:tunes      (into {} (map (juxt :id identity)) tunes)
+           :tune-order (mapv :id tunes)
            :sets {"set-1" {:tune-ids [3 1]}}}]
 
     (testing "resolves tune-ids to tune maps in order"

@@ -5,7 +5,8 @@
             [ceol.web.state-test]
             [ceol.web.sets-test]
             [ceol.web.beat-engine-test]
-            [ceol.web.session-test]))
+            [ceol.web.session-test]
+            [ceol.web.actions-test]))
 
 (defn main []
   (run-tests 'ceol.web.abc-test
@@ -13,4 +14,5 @@
              'ceol.web.state-test
              'ceol.web.sets-test
              'ceol.web.beat-engine-test
-             'ceol.web.session-test))
+             'ceol.web.session-test
+             'ceol.web.actions-test))
