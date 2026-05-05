@@ -76,6 +76,22 @@
 ;;   :play-start-ms    long | nil        System/currentTimeMillis when playback started
 ;;   :current-note-idx int | nil         index of currently highlighted note in staff
 ;; ---------------------------------------------------------------------------
+;;
+;; File sections
+;;   init-state                          lines ~80-120
+;;   Helpers (flash, spinner, cursor)    lines ~120-200
+;;   Audio pipeline                      lines ~200-390
+;;     start-playback, start-tune-pipeline, prepare-tune,
+;;     play-or-stop, stop-playback!, reconvert-current,
+;;     play-tune-by-id, advance-set-queue
+;;   Staff helpers                       lines ~390-410
+;;   update-state dispatch               lines ~410-end
+;;
+;; Note: pipeline helpers (start-spinner, update-tune, flash, apply-local-abc,
+;; clear-countin-state) are shared between the audio pipeline and update-state,
+;; which prevents clean extraction of the pipeline into a separate namespace
+;; without introducing a third shared-helpers namespace.
+;; ---------------------------------------------------------------------------
 
 (defn init-state []
   (data/ensure-dirs!)
@@ -116,7 +132,9 @@
                 state)]
     state))
 
-;; --- Tune helpers ---
+;; =============================================================================
+;; Helpers: flash messages, cursor, spinner, tune mutation, local ABC
+;; =============================================================================
 
 (defn visible-tunes [state]
   (if-let [slug (:active-setlist state)]
@@ -176,7 +194,9 @@
                       t))
                   tunes))))
 
-;; --- Navigation ---
+;; =============================================================================
+;; Navigation
+;; =============================================================================
 
 (defn cursor-up [state]
   (update state :cursor #(max 0 (dec %))))
@@ -185,7 +205,9 @@
   (let [max-idx (max 0 (dec (count (visible-tunes state))))]
     (update state :cursor #(min max-idx (inc %)))))
 
-;; --- Spinner management ---
+;; =============================================================================
+;; Spinner
+;; =============================================================================
 
 (defn start-spinner [state]
   (let [[s cmd] (spinner/spinner-init (spinner/spinner :dots :id :ceol-spinner))]
@@ -194,7 +216,12 @@
 (defn stop-spinner [state]
   (assoc state :spinner nil))
 
-;; --- Audio pipeline ---
+;; =============================================================================
+;; Audio pipeline
+;;
+;; Fetch → convert → play flow. start-tune-pipeline is the shared cond that
+;; drives prepare-tune, play-or-stop, and play-tune-by-id.
+;; =============================================================================
 
 (defn- clear-countin-state [state]
   (assoc state :counting-in false :countin-proc nil :pending-midi-path nil))
@@ -352,7 +379,9 @@
               [s' (charm/batch sc (audio/convert-midi-cmd tune (:abc tune) tempo-offset section :loop-count (if (:loop state) 50 1)))]))))
       [state nil])))
 
-;; --- Set queue helpers ---
+;; =============================================================================
+;; Set queue helpers
+;; =============================================================================
 
 (defn play-tune-by-id
   "Look up a tune by id and start the play pipeline."
@@ -387,7 +416,9 @@
                 :notation nil :notation-tune-id nil
                 :play-start-ms nil :current-note-idx nil) nil]))))
 
-;; --- Staff helpers ---
+;; =============================================================================
+;; Staff helpers
+;; =============================================================================
 
 (defn- update-staff-for-selected
   "When staff is visible and not playing, update notation for the selected tune.
@@ -407,7 +438,12 @@
                    :notation-tune-id nil)))))
     state))
 
-;; --- Main update ---
+;; =============================================================================
+;; Main update-state dispatch
+;;
+;; Handles all message types from charm/run. Pure: takes [state msg], returns
+;; [new-state cmd-or-nil]. Audio side-effects dispatched via audio.clj cmds.
+;; =============================================================================
 
 (defn update-state [state msg]
   (cond
