@@ -1,7 +1,8 @@
 (ns ceol.web.core
   "Entry point, Replicant dispatch, action handlers, keyboard shortcuts, and init.
-   Owns the single handle-action! dispatcher which is the only place app-state
-   is mutated. Delegates localStorage I/O to persist.cljs and rendering to render.cljs."
+   Delegates localStorage I/O to persist.cljs and rendering to render.cljs.
+   Complex playback and session orchestration live in handlers/playback.cljs
+   and handlers/session.cljs respectively."
   (:require [replicant.dom :as r]
             [ceol.web.state :as state]
             [ceol.web.views :as views]
@@ -13,6 +14,8 @@
             [ceol.abc :as abc]
             [ceol.web.persist :as persist]
             [ceol.web.render :as render]
+            [ceol.web.handlers.playback :as playback]
+            [ceol.web.handlers.session :as session]
             [clojure.walk :as walk]))
 
 
@@ -40,29 +43,6 @@
          x))
      actions)))
 
-
-(defn- start-guitar!
-  "Schedule guitar accompaniment from start-at (AudioContext seconds).
-   section: :a, :b, or nil for the whole tune. s: app state snapshot.
-   ms-per-bar: from beat/beats-for-tune, so tempo offset is respected."
-  [s tune abc-body section ms-per-bar start-at]
-  (when (and tune abc-body (string? abc-body))
-    (guitar/set-muted! (not (:guitar? s)))
-    (let [parts      (abc/split-abc-body abc-body)
-          tonic      (:key tune)
-          bar-chords (if section
-                       (let [part-body (if parts (get parts section abc-body) abc-body)
-                             chords    (guitar/extract-bar-chords part-body)]
-                         (into chords chords))
-                       (if parts
-                         (let [a-chords (guitar/extract-bar-chords (:a parts))
-                               b-chords (guitar/extract-bar-chords (:b parts))]
-                           (vec (concat a-chords a-chords b-chords b-chords)))
-                         (let [chords (guitar/extract-bar-chords abc-body)]
-                           (into chords chords))))
-          filled     (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
-                             [] bar-chords)]
-      (guitar/play! filled (:type tune) ms-per-bar start-at))))
 
 ;; ---------------------------------------------------------------------------
 ;; Action dispatch
@@ -177,7 +157,7 @@
 
     :tune/add-to-set
     (let [[tune-id] args
-          s @state/app-state
+          s    @state/app-state
           sets (:sets s)]
       (cond
         (empty? sets)
@@ -185,10 +165,15 @@
 
         (= 1 (count sets))
         (let [set-id (key (first sets))]
-          (handle-action! :set/add-tune [set-id tune-id]))
+          (swap! state/app-state update-in [:sets set-id :tune-ids]
+                 (fn [ids] (if (some #{tune-id} ids) ids (conj (or ids []) tune-id))))
+          (persist/save-sets!))
 
         (:active-set-id s)
-        (handle-action! :set/add-tune [(:active-set-id s) tune-id])
+        (let [set-id (:active-set-id s)]
+          (swap! state/app-state update-in [:sets set-id :tune-ids]
+                 (fn [ids] (if (some #{tune-id} ids) ids (conj (or ids []) tune-id))))
+          (persist/save-sets!))
 
         :else
         (js/console.warn "Multiple sets — select one first")))
@@ -242,70 +227,10 @@
         nil))
 
     :playback/play
-    (if (abc-bridge/playing?)
-      (do (abc-bridge/stop!)
-          (guitar/stop!)
-          (metro/stop!)
-          (swap! state/app-state assoc :playing? false :current-beat nil))
-      (let [s @state/app-state
-            tune (state/selected-tune s)
-            abc-body (state/edited-abc-for-tune s (:id tune))
-            in-set? (and (:active-set-id s) (= :sets (:tab s)))
-            set-advancing? (:set-advancing? s)
-            beat-params (beat/beats-for-tune tune (:tempo-offset s))]
-        (swap! state/app-state assoc :playing? true
-               :playing-section (when-not in-set? (:section s))
-               :set-playing? (boolean in-set?)
-               :set-tune-index (if in-set? (or (:set-tune-index s) 0) 0)
-               :set-advancing? false)
-        (let [on-end (fn []
-                       (guitar/stop!)
-                       (let [s @state/app-state]
-                         (if (:set-playing? s)
-                           (let [result (state/advance-set (:sets s) (:active-set-id s)
-                                                           (:set-tune-index s) (:loop? s))]
-                             (case (:action result)
-                               (:play :loop)
-                               (do (swap! state/app-state assoc
-                                          :set-tune-index (:index result)
-                                          :selected-tune-id (:tune-id result)
-                                          :set-advancing? true)
-                                   (js/setTimeout #(handle-action! :playback/play nil) 500))
-                               (do (metro/stop!)
-                                   (swap! state/app-state assoc :playing? false :playing-section nil
-                                          :set-playing? false :set-tune-index 0 :current-beat nil))))
-                           (do (swap! state/app-state assoc :playing? false :playing-section nil
-                                      :current-beat nil)
-                               (when (:loop? s)
-                                 (handle-action! :playback/play nil))))))
-          ;; Stop standalone metronome if running
-          (when (metro/running?)
-            (metro/stop!)
-            (swap! state/app-state assoc :metronome? false :current-beat nil))
-          ;; Count-in path: prepare synth → count-in → start
-          ;; No count-in: prepare → start immediately
-          ;; In both cases capture AudioContext.currentTime at the moment start! fires
-          ;; so guitar can schedule notes on the same Web Audio clock.
-          (if (and (:count-in? s) (not set-advancing?))
-            (-> (abc-bridge/prepare!)
-                (.then (fn [_]
-                         (metro/count-in! beat-params
-                                          (fn []
-                                            (let [start-at (abc-bridge/now)]
-                                              (abc-bridge/start! {:on-end on-end})
-                                              (start-guitar! s tune abc-body (:section s) (:ms-per-bar beat-params) start-at)))))))
-            (-> (abc-bridge/prepare!)
-                (.then (fn [_]
-                         (let [start-at (abc-bridge/now)]
-                           (abc-bridge/start! {:on-end on-end})
-                           (start-guitar! s tune abc-body (:section s) (:ms-per-bar beat-params) start-at))))))))
+    (playback/play!)
 
     :playback/stop
-    (do (abc-bridge/stop!)
-        (guitar/stop!)
-        (metro/stop!)
-        (swap! state/app-state assoc :playing? false :playing-section nil
-               :set-playing? false :set-tune-index 0 :current-beat nil))
+    (playback/stop!)
 
     :guitar/toggle
     (let [new-val (not (:guitar? @state/app-state))]
@@ -495,138 +420,14 @@
       (persist/save-learned!))
 
     :session/start
-    (let [s @state/app-state
-          queue (state/build-session-queue (:learned-tune-ids s) (:sets s))
-          shuffled (state/shuffle-queue queue)]
-      (when (seq shuffled)
-        (let [first-item (first shuffled)
-              first-tune-id (case (:type first-item)
-                              :tune (:tune-id first-item)
-                              :set (first (:tune-ids first-item)))]
-          (swap! state/app-state assoc
-                 :session-mode? true
-                 :session-queue shuffled
-                 :session-index 0
-                 :session-set-index 0
-                 :session-played []
-                 :session-pausing? false
-                 :session-within-set? false
-                 :selected-tune-id first-tune-id
-                 :tab :session)
-          ;; Auto-play first item — wait for render
-          (-> (render/wait-for-render!)
-              (.then #(handle-action! :session/play-current nil))))))
+    (session/session-start!)
 
     :session/play-current
-    (let [s @state/app-state
-          tune-id (state/session-current-tune-id s)
-          tune (state/tune-by-id s tune-id)
-          abc-body (state/edited-abc-for-tune s tune-id)
-          beat-params (beat/beats-for-tune tune (:tempo-offset s))
-          within-set? (:session-within-set? s)
-          on-end (fn []
-                   (guitar/stop!)
-                   (let [s @state/app-state
-                         result (state/advance-session (:session-queue s)
-                                                       (:session-index s)
-                                                       (:session-set-index s)
-                                                       (:loop? s))]
-                     (case (:action result)
-                       :advance-in-set
-                       (do (swap! state/app-state assoc
-                                  :session-set-index (:session-set-index result)
-                                  :session-within-set? true
-                                  :selected-tune-id (:tune-id result))
-                           ;; Wait for render then play (500ms gap between set tunes)
-                           (js/setTimeout
-                            (fn []
-                              (-> (render/wait-for-render!)
-                                  (.then #(handle-action! :session/play-current nil))))
-                            500))
-
-                       :next-item
-                       (let [next-idx (:session-index result)
-                             queue (:session-queue s)
-                             next-item (nth queue next-idx)
-                             next-tune-id (case (:type next-item)
-                                            :tune (:tune-id next-item)
-                                            :set (first (:tune-ids next-item)))]
-                         (swap! state/app-state assoc
-                                :session-index next-idx
-                                :session-set-index 0
-                                :session-within-set? false
-                                :session-pausing? true
-                                :session-played (conj (:session-played s) (:session-index s)))
-                         ;; 2s pause, then update tune, wait for render, then play
-                         (js/setTimeout
-                          (fn []
-                            (swap! state/app-state assoc
-                                   :selected-tune-id next-tune-id
-                                   :session-pausing? false)
-                            (-> (render/wait-for-render!)
-                                (.then #(handle-action! :session/play-current nil))))
-                          2000))
-
-                       :reshuffle
-                       (let [new-queue (state/shuffle-queue
-                                        (state/build-session-queue (:learned-tune-ids s) (:sets s)))]
-                         (when (seq new-queue)
-                           (let [first-item (first new-queue)
-                                 first-tid (case (:type first-item)
-                                             :tune (:tune-id first-item)
-                                             :set (first (:tune-ids first-item)))]
-                             (swap! state/app-state assoc
-                                    :session-queue new-queue
-                                    :session-index 0
-                                    :session-set-index 0
-                                    :session-played []
-                                    :session-pausing? true
-                                    :session-within-set? false)
-                             (js/setTimeout
-                              (fn []
-                                (swap! state/app-state assoc
-                                       :selected-tune-id first-tid
-                                       :session-pausing? false)
-                                (-> (render/wait-for-render!)
-                                    (.then #(handle-action! :session/play-current nil))))
-                              2000))))
-
-                       :done
-                       (do (swap! state/app-state assoc
-                                  :playing? false :session-mode? false
-                                  :session-played (conj (:session-played s) (:session-index s)))
-                           (metro/stop!)))))]
-      ;; Set playing state
-      (swap! state/app-state assoc :playing? true :selected-tune-id tune-id)
-      ;; Stop metronome if running
-      (when (metro/running?)
-        (metro/stop!)
-        (swap! state/app-state assoc :metronome? false :current-beat nil))
-      ;; Count-in for new items (not within-set advances)
-      (if within-set?
-        ;; Within set: no count-in, prepare → start immediately
-        (-> (abc-bridge/prepare!)
-            (.then (fn [_]
-                     (let [start-at (abc-bridge/now)]
-                       (abc-bridge/start! {:on-end on-end})
-                       (start-guitar! s tune abc-body nil (:ms-per-bar beat-params) start-at)))))
-        ;; New item: count-in then play
-        (-> (abc-bridge/prepare!)
-            (.then (fn [_]
-                     (metro/count-in! beat-params
-                                      (fn []
-                                        (let [start-at (abc-bridge/now)]
-                                          (abc-bridge/start! {:on-end on-end})
-                                          (start-guitar! s tune abc-body nil (:ms-per-bar beat-params) start-at)))))))))
-
+    (session/session-play-current!)
 
     :session/stop
-    (do (abc-bridge/stop!)
-        (guitar/stop!)
-        (metro/stop!)
-        (swap! state/app-state assoc
-               :playing? false :session-mode? false
-               :session-pausing? false :current-beat nil))
+    (do (playback/stop!)
+        (swap! state/app-state assoc :session-mode? false :session-pausing? false))
 
     (js/console.warn "Unknown action:" action args)))
 
@@ -645,7 +446,7 @@
   (when-not (input-focused?)
     (let [key (.-key e)]
       (case key
-        " "       (do (.preventDefault e) (handle-action! :playback/play nil))
+        " "       (do (.preventDefault e) (playback/play!))
         "l"       (handle-action! :loop/toggle nil)
         "g"       (handle-action! :guitar/toggle nil)
         "e"       (handle-action! :editor/toggle nil)
