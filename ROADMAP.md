@@ -79,13 +79,11 @@ Compact visual reference showing first 1-2 bars per tune. **Implementation note:
 
 ## Known bugs
 
-- **Guitar drifts out of sync with melody** — guitar uses setTimeout scheduling which drifts from abc.js Web Audio clock over time. Same root cause as the metronome drift. Fix: use Web Audio scheduling (e.g. `AudioContext.currentTime` + pre-scheduled `AudioBufferSourceNode.start(time)`) or the self-correcting `performance.now()` clock pattern used in the metronome. Both bugs share the same underlying issue: setTimeout is driven by the JS event loop, abc.js synth is driven by the Web Audio hardware clock — they diverge over time.
-- **Guitar doesn't start with melody after count-in** — when count-in is enabled, `guitar/play!` is called at the same time as `abc-bridge/start!` but guitar scheduling starts from time 0 immediately via setTimeout, while abc.js `.start()` goes through the Web Audio pipeline. Fix: ensure guitar timing starts from the same reference point as the melody. Could pre-schedule guitar notes relative to `AudioContext.currentTime` rather than setTimeout from "now".
 - **Guitar strums over the lead-in bar** — tunes with a pickup/anacrusis (e.g. 2-beat lead-in in 4/4) get guitar accompaniment on the pickup instead of waiting for the first downbeat of the first full bar. Could be either: (a) lead-in not correctly denoted in ABC (user-authored content may not use a partial-length first bar), or (b) guitar scheduler treats bar 1 as a full bar regardless. Investigate both: how existing tunes encode the pickup, and whether `guitar/play!` offsets by the pickup length.
-- **Deleted custom tune leaves greyed-out sheet music behind** — after `:tune/delete`, the empty-state text "Select a tune to view sheet music" shows alongside the previously-rendered SVG. abc.js writes the SVG into `#sheet-music` outside Replicant's vdom, so when Replicant swaps `[:div#sheet-music]` → `[:div.sheet-empty]` the orphan SVG survives. Fix: in `render-sheet-music!` (`web/src/ceol/web/core.cljs:203`), add an else branch that clears `#sheet-music` innerHTML when no tune is selected. Optionally add `:replicant/key` to force a clean remount.
-- None of the melody/metronome/guitar seem to care about while-playing BPM changes
-- If you turn the metronome on while the melody is playing, the metronome doesn't sync up with the beat
-- work on the triplets, visually confusing
+- **Deleted custom tune leaves greyed-out sheet music behind** — after `:tune/delete`, the empty-state text "Select a tune to view sheet music" shows alongside the previously-rendered SVG. abc.js writes the SVG into `#sheet-music` outside Replicant's vdom, so when Replicant swaps `[:div#sheet-music]` → `[:div.sheet-empty]` the orphan SVG survives. Fix: in `render-sheet-music!` (`web/src/ceol/web/render.cljs:26`), add an else branch that clears `#sheet-music` innerHTML when no tune is selected. Optionally add `:replicant/key` to force a clean remount.
+- **Mid-playback BPM changes ignored** — melody/guitar/metronome capture `beat-params` once at `:playback/play` (see `handlers/playback.cljs:61`). Tempo handlers in `core.cljs:263-269` only mutate `:tempo-offset`; only the sheet re-renders. Fix: re-derive timing on tempo change, or restart playback from current position.
+- **Metronome toggled mid-play doesn't align to beat** — `:metronome/toggle` (`core.cljs:247-257`) starts a standalone metro with no phase reference to the running melody.
+- Triplets visually confusing
 
 ## Future ideas
 
