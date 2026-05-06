@@ -28,16 +28,15 @@
 ;; ---------------------------------------------------------------------------
 ;; guitar-state
 ;;
-;; :synth          Tone.Sampler   loaded acoustic guitar (cached after first init)
-;; :gain           Tone.Gain      master gain feeding destination
-;; :muted?         bool           UI mute (gain ramps 0 ↔ 0.6)
-;; :init-promise   Promise        cached load promise, shared by concurrent play! calls
-;; :generation     int            incremented on stop!; pending setTimeout callbacks
-;;                                that captured the previous generation become no-ops
-;; :timeouts       [int]          live setTimeout IDs for the active schedule
+;; :synth         Tone.Sampler  loaded acoustic guitar (cached after first init)
+;; :gain          Tone.Gain     master gain feeding destination
+;; :muted?        bool          UI mute (gain ramps 0 ↔ 0.6)
+;; :init-promise  Promise       cached load promise, shared by concurrent play! calls
+;; :scheduler-id  int           setInterval ID for the lookahead scheduler;
+;;                              cleared on stop! to halt future scheduling
 ;; ---------------------------------------------------------------------------
 (defonce guitar-state (atom {:synth nil :gain nil :muted? false
-                             :init-promise nil :generation 0 :timeouts []}))
+                             :init-promise nil :scheduler-id nil}))
 
 (def ^:private sample-base-url
   "https://cdn.jsdelivr.net/npm/tonejs-instrument-guitar-acoustic-mp3@1.1.2/")
@@ -140,58 +139,85 @@
               {:time 0.667 :type :bass} {:time 0.778 :type :chord} {:time 0.889 :type :chord}]
    :slide    [{:time 0.0 :type :bass} {:time 0.25 :type :chord} {:time 0.5 :type :bass} {:time 0.75 :type :chord}]})
 
-(defn- schedule-notes!
-  "Schedule guitar notes via setTimeout, gated by a generation counter so
-   stop! cleanly aborts. start-at is AudioContext.currentTime (seconds)
-   when bar 0 should play; we convert each note's offset to a wall-clock
-   ms delay relative to now. Stores live timeout IDs in guitar-state so
-   stop! can clearTimeout them.
+(def ^:private attack-compensation-s
+  "Empirical advance to align guitar onset with the melody. The acoustic
+   guitar sample has a slower attack envelope than the abcjs banjo, so
+   triggering slightly earlier puts perceived peaks together. Cannot
+   compensate for the cold-start lag on the very first play after page
+   load — that's a fundamental Web Audio cost. Tune by ear."
+  0.020)
 
-   Generation counter handles the race where a setTimeout fires between
-   stop! and play!: the captured gen will not match the current gen, so
-   the callback is a no-op."
+(defn- build-events
+  "Flatten the chord-per-bar list into a sorted seq of {:t when-s :note name}.
+   when-s is absolute AudioContext seconds (start-at + bar offset + sub-bar),
+   with attack-compensation-s subtracted to align perceived onset."
   [chords tune-type ms-per-bar start-at]
   (let [pattern (get strum-patterns tune-type (:reel strum-patterns))
-        bar-ms  ms-per-bar
-        dur-s   (/ ms-per-bar 2000.0)
-        ctx     (abc-bridge/get-audio-context)
-        gen     (:generation @guitar-state)
-        ids     (atom [])]
-    (when-let [^js s (:synth @guitar-state)]
-      (doseq [[bar-idx chord-name] (map-indexed vector chords)]
+        bar-s   (/ ms-per-bar 1000.0)]
+    (vec
+     (mapcat
+      (fn [bar-idx chord-name]
         (when-let [voicing (get chord-voicings (or chord-name "G"))]
-          (doseq [{:keys [time type]} pattern]
-            (let [;; Wall-clock ms delay until this strum:
-                  ;;   (start-at - now) seconds + bar offset + sub-bar offset
-                  bar-offset-ms (+ (* bar-idx bar-ms) (* time bar-ms))
-                  start-delay-ms (* 1000.0 (- start-at (.-currentTime ctx)))
-                  delay-ms (max 0 (+ start-delay-ms bar-offset-ms))
-                  notes    (if (= type :bass) [(:bass voicing)] (:chord voicing))
-                  id (js/setTimeout
-                      (fn []
-                        (when (and (= gen (:generation @guitar-state))
-                                   (:synth @guitar-state))
-                          (doseq [note notes]
-                            (try
-                              (.triggerAttackRelease s note dur-s)
-                              (catch :default _)))))
-                      delay-ms)]
-              (swap! ids conj id))))))
-    (swap! guitar-state assoc :timeouts @ids)))
+          (mapcat
+           (fn [{:keys [time type]}]
+             (let [t     (- (+ start-at (* bar-idx bar-s) (* time bar-s))
+                            attack-compensation-s)
+                   notes (if (= type :bass) [(:bass voicing)] (:chord voicing))]
+               (map (fn [n] {:t t :note n}) notes)))
+           pattern)))
+      (range (count chords))
+      chords))))
+
+(def ^:private lookahead-s
+  "How far ahead to pre-schedule events into Web Audio. 0.25s gives the
+   browser plenty of buffer while keeping the post-stop tail short."
+  0.25)
+
+(def ^:private tick-ms
+  "How often the scheduler wakes up to top up the queue. Must be < lookahead
+   so events don't slip past the lookahead window between ticks."
+  100)
+
+(defn- schedule-notes!
+  "Lookahead scheduler. Pre-schedules only events within the next
+   lookahead-s seconds via triggerAttackRelease, so stop! (clearInterval)
+   leaves at most lookahead-s of audio in the queue. Each pre-scheduled
+   note is sample-accurate on the AudioContext clock."
+  [chords tune-type ms-per-bar start-at]
+  (let [events (build-events chords tune-type ms-per-bar start-at)
+        dur-s  (/ ms-per-bar 2000.0)
+        ctx    (abc-bridge/get-audio-context)
+        cursor (atom 0)
+        tick   (fn tick []
+                 (when-let [^js s (:synth @guitar-state)]
+                   (let [horizon (+ (.-currentTime ctx) lookahead-s)]
+                     (loop [i @cursor]
+                       (if (and (< i (count events))
+                                (< (:t (nth events i)) horizon))
+                         (do (try
+                               (.triggerAttackRelease s (:note (nth events i))
+                                                      dur-s
+                                                      (:t (nth events i)))
+                               (catch :default _))
+                             (recur (inc i)))
+                         (reset! cursor i))))))]
+    ;; Schedule the first slice synchronously so bar 0 doesn't depend on
+    ;; the first setInterval firing.
+    (tick)
+    (let [id (js/setInterval tick tick-ms)]
+      (swap! guitar-state assoc :scheduler-id id))))
 
 (defn stop!
-  "Cancel pending strums + silence currently-sounding notes. Increments
-   the generation counter so any setTimeout already in flight aborts when
-   it fires. Safe to call repeatedly."
+  "Halt the lookahead scheduler and silence ringing notes. Up to
+   lookahead-s of already-queued events may still play out — this is
+   the trade-off for sample-accurate scheduling. releaseAll cuts
+   sustains so the tail is brief."
   []
-  (doseq [id (:timeouts @guitar-state)]
-    (js/clearTimeout id))
+  (when-let [id (:scheduler-id @guitar-state)]
+    (js/clearInterval id))
   (when-let [^js synth (:synth @guitar-state)]
     (try (.releaseAll synth) (catch :default _)))
-  (swap! guitar-state (fn [s]
-                        (-> s
-                            (update :generation inc)
-                            (assoc :timeouts [])))))
+  (swap! guitar-state assoc :scheduler-id nil))
 
 (defn play!
   "Start guitar accompaniment.

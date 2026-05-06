@@ -90,20 +90,20 @@
           (swap! state/app-state assoc :metronome? false :current-beat nil))
         ;; Count-in path: prepare → count-in → start
         ;; No count-in: prepare → start immediately
-        ;; AudioContext.currentTime captured at moment start! fires so guitar
-        ;; notes are scheduled on the same Web Audio clock as the melody.
+        ;; start-at is captured AFTER abc-bridge/start! so it reflects the
+        ;; melody's actual scheduling moment, not a few ms before it.
         (if (and (:count-in? s) (not set-advancing?))
           (-> (abc-bridge/prepare!)
               (.then (fn [_]
                        (metro/count-in! beat-params
                                         (fn []
+                                          (abc-bridge/start! {:on-end on-end})
                                           (let [start-at (abc-bridge/now)]
-                                            (abc-bridge/start! {:on-end on-end})
                                             (start-guitar! s tune abc-body (:section s)
                                                            (:ms-per-bar beat-params) start-at)))))))
           (-> (abc-bridge/prepare!)
               (.then (fn [_]
+                       (abc-bridge/start! {:on-end on-end})
                        (let [start-at (abc-bridge/now)]
-                         (abc-bridge/start! {:on-end on-end})
                          (start-guitar! s tune abc-body (:section s)
                                         (:ms-per-bar beat-params) start-at))))))))))
