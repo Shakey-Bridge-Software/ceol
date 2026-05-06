@@ -58,6 +58,13 @@
         (str/replace #"phrygian$" "phr")
         (str/replace #"locrian$" "loc"))))
 
+(defn- log!
+  "Write a tagged log line to stderr. The TUI owns stdout via charm.clj —
+   stdout writes from background threads corrupt the terminal UI."
+  [event & details]
+  (binding [*out* *err*]
+    (apply println (str "[audio:" event "]") details)))
+
 (defn- validated-response
   "Validate an API response against schema. On mismatch, log to stderr and
    return nil so callers see the same shape as a network failure."
@@ -66,9 +73,7 @@
     (nil? body) nil
     (m/validate schema body) body
     :else
-    (do (binding [*out* *err*]
-          (println (str "audio: " label " schema mismatch: "
-                        (me/humanize (m/explain schema body)))))
+    (do (log! "schema-mismatch" label (me/humanize (m/explain schema body)))
         nil)))
 
 (defn- search-session [tune-name]
@@ -116,36 +121,37 @@
   [tune]
   (charm/cmd
    (fn []
-     (try
-       (let [tune-id (:id tune)
-             result (if-let [sid (:session-id tune)]
-                      ;; Known session ID - fetch directly
-                      (get-session-tune sid)
-                      ;; Search by name
-                      (let [results (search-session (:name tune))
-                            match (best-match results tune)]
-                        (when match
-                          (get-session-tune (:id match)))))
-             setting (when result
-                       (pick-setting (:settings result) (:key tune)))
-             abc-body (:abc setting)
-             abc-key (session-key->abc-key (:key setting))
-             session-id (:id result)]
-         (if abc-body
-           (let [abc-str (abc/build-abc-string tune abc-body abc-key)]
-             ;; Cache the result
-             (data/update-cache! tune-id {:session-id session-id :abc abc-str})
-             {:type :abc-fetched
-              :tune-id tune-id
-              :abc abc-str
-              :session-id session-id})
+     (let [tune-id (:id tune)]
+       (log! "fetch-start" tune-id (:name tune))
+       (try
+         (let [result (if-let [sid (:session-id tune)]
+                        (get-session-tune sid)
+                        (let [results (search-session (:name tune))
+                              match (best-match results tune)]
+                          (when match
+                            (get-session-tune (:id match)))))
+               setting (when result
+                         (pick-setting (:settings result) (:key tune)))
+               abc-body (:abc setting)
+               abc-key (session-key->abc-key (:key setting))
+               session-id (:id result)]
+           (if abc-body
+             (let [abc-str (abc/build-abc-string tune abc-body abc-key)]
+               (data/update-cache! tune-id {:session-id session-id :abc abc-str})
+               (log! "fetch-ok" tune-id session-id)
+               {:type :abc-fetched
+                :tune-id tune-id
+                :abc abc-str
+                :session-id session-id})
+             (do (log! "fetch-no-abc" tune-id)
+                 {:type :abc-failed
+                  :tune-id tune-id
+                  :error "No ABC notation found"})))
+         (catch Exception e
+           (log! "fetch-error" tune-id (.getMessage e))
            {:type :abc-failed
             :tune-id tune-id
-            :error "No ABC notation found"}))
-       (catch Exception e
-         {:type :abc-failed
-          :tune-id (:id tune)
-          :error (.getMessage e)})))))
+            :error (.getMessage e)}))))))
 
 (defn- repeat-abc-body
   "Duplicate the body of an ABC string n times for seamless looping."
@@ -185,16 +191,19 @@
            (if (and (zero? (:exit result))
                     (.exists (io/file midi-path)))
              (do
-               ;; Only cache base (no tempo/section) conversions
                (when (and (nil? section) (or (nil? tempo-offset) (zero? tempo-offset)))
                  (data/update-cache! tune-id {:midi-path midi-path}))
+               (log! "midi-ready" tune-id midi-path)
                {:type :midi-ready
                 :tune-id tune-id
                 :midi-path midi-path})
-             {:type :midi-failed
-              :tune-id tune-id
-              :error (or (not-empty (:err result)) "abc2midi failed")})))
+             (let [err (or (not-empty (:err result)) "abc2midi failed")]
+               (log! "midi-failed" tune-id err)
+               {:type :midi-failed
+                :tune-id tune-id
+                :error err}))))
        (catch Exception e
+         (log! "midi-error" (:id tune) (.getMessage e))
          {:type :midi-failed
           :tune-id (:id tune)
           :error (.getMessage e)})))))
@@ -209,10 +218,12 @@
          (let [p (proc/process {:cmd ["fluidsynth" "-niq" sf midi-path]
                                 :out :string
                                 :err :string})]
+           (log! "play-start" midi-path)
            {:type :playback-started
             :proc (:proc p)})
-         {:type :playback-failed
-          :error "No soundfont found"})))))
+         (do (log! "play-failed" "no soundfont")
+             {:type :playback-failed
+              :error "No soundfont found"}))))))
 
 (defn watch-playback-cmd
   "Command to wait for fluidsynth process to finish."
