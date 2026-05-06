@@ -25,7 +25,19 @@
 
 ;; --- Guitar state ---
 
-(defonce guitar-state (atom {:synth nil :gain nil :muted? false :scheduled nil :init-promise nil}))
+;; ---------------------------------------------------------------------------
+;; guitar-state
+;;
+;; :synth          Tone.Sampler   loaded acoustic guitar (cached after first init)
+;; :gain           Tone.Gain      master gain feeding destination
+;; :muted?         bool           UI mute (gain ramps 0 ↔ 0.6)
+;; :init-promise   Promise        cached load promise, shared by concurrent play! calls
+;; :generation     int            incremented on stop!; pending setTimeout callbacks
+;;                                that captured the previous generation become no-ops
+;; :timeouts       [int]          live setTimeout IDs for the active schedule
+;; ---------------------------------------------------------------------------
+(defonce guitar-state (atom {:synth nil :gain nil :muted? false
+                             :init-promise nil :generation 0 :timeouts []}))
 
 (def ^:private sample-base-url
   "https://cdn.jsdelivr.net/npm/tonejs-instrument-guitar-acoustic-mp3@1.1.2/")
@@ -129,38 +141,60 @@
    :slide    [{:time 0.0 :type :bass} {:time 0.25 :type :chord} {:time 0.5 :type :bass} {:time 0.75 :type :chord}]})
 
 (defn- schedule-notes!
-  "Schedule all guitar notes on the Web Audio clock using absolute AudioContext times.
-   start-at is AudioContext.currentTime (seconds) when bar 0 beat 0 should play.
-   Returns a cancel fn that silences via gain ramp."
+  "Schedule guitar notes via setTimeout, gated by a generation counter so
+   stop! cleanly aborts. start-at is AudioContext.currentTime (seconds)
+   when bar 0 should play; we convert each note's offset to a wall-clock
+   ms delay relative to now. Stores live timeout IDs in guitar-state so
+   stop! can clearTimeout them.
+
+   Generation counter handles the race where a setTimeout fires between
+   stop! and play!: the captured gen will not match the current gen, so
+   the callback is a no-op."
   [chords tune-type ms-per-bar start-at]
   (let [pattern (get strum-patterns tune-type (:reel strum-patterns))
-        bar-s   (/ (ms-per-bar tune-type) 1000.0)
-        dur-s   (/ (ms-per-bar tune-type) 2000.0)]
+        bar-ms  ms-per-bar
+        dur-s   (/ ms-per-bar 2000.0)
+        ctx     (abc-bridge/get-audio-context)
+        gen     (:generation @guitar-state)
+        ids     (atom [])]
     (when-let [^js s (:synth @guitar-state)]
       (doseq [[bar-idx chord-name] (map-indexed vector chords)]
         (when-let [voicing (get chord-voicings (or chord-name "G"))]
           (doseq [{:keys [time type]} pattern]
-            (let [when-s (+ start-at (* bar-idx bar-s) (* time bar-s))
-                  notes  (if (= type :bass) [(:bass voicing)] (:chord voicing))]
-              (doseq [note notes]
-                (try
-                  (.triggerAttackRelease s note dur-s when-s)
-                  (catch :default _)))))))))
-  ;; Cancel = silence immediately via gain ramp (pre-scheduled Web Audio events
-  ;; can't be individually cancelled, so we mute the output instead)
-  (fn []
-    (when-let [^js gain (:gain @guitar-state)]
-      (.. gain -gain (rampTo 0 0.02)))))
+            (let [;; Wall-clock ms delay until this strum:
+                  ;;   (start-at - now) seconds + bar offset + sub-bar offset
+                  bar-offset-ms (+ (* bar-idx bar-ms) (* time bar-ms))
+                  start-delay-ms (* 1000.0 (- start-at (.-currentTime ctx)))
+                  delay-ms (max 0 (+ start-delay-ms bar-offset-ms))
+                  notes    (if (= type :bass) [(:bass voicing)] (:chord voicing))
+                  id (js/setTimeout
+                      (fn []
+                        (when (and (= gen (:generation @guitar-state))
+                                   (:synth @guitar-state))
+                          (doseq [note notes]
+                            (try
+                              (.triggerAttackRelease s note dur-s)
+                              (catch :default _)))))
+                      delay-ms)]
+              (swap! ids conj id))))))
+    (swap! guitar-state assoc :timeouts @ids)))
 
 (defn stop!
-  "Stop guitar playback by silencing the gain node."
+  "Cancel pending strums + silence currently-sounding notes. Increments
+   the generation counter so any setTimeout already in flight aborts when
+   it fires. Safe to call repeatedly."
   []
-  (when-let [cancel (:scheduled @guitar-state)]
-    (cancel))
-  (swap! guitar-state assoc :scheduled nil))
+  (doseq [id (:timeouts @guitar-state)]
+    (js/clearTimeout id))
+  (when-let [^js synth (:synth @guitar-state)]
+    (try (.releaseAll synth) (catch :default _)))
+  (swap! guitar-state (fn [s]
+                        (-> s
+                            (update :generation inc)
+                            (assoc :timeouts [])))))
 
 (defn play!
-  "Start guitar accompaniment, scheduling notes on the Web Audio clock.
+  "Start guitar accompaniment.
    ms-per-bar comes from beat/beats-for-tune so tempo offset is respected.
    start-at is AudioContext.currentTime (seconds) when bar 0 should begin.
    If start-at has already passed (e.g. samples still loading on first use),
@@ -170,14 +204,11 @@
   (.start Tone)
   (-> (init-synth!)
       (.then (fn [_synth]
-               ;; Restore gain (stop! may have silenced it)
                (when-let [^js gain (:gain @guitar-state)]
                  (.. gain -gain (rampTo (if (:muted? @guitar-state) 0 0.6) 0.01)))
-               ;; Re-anchor if samples took too long to load
-               (let [ctx  (abc-bridge/get-audio-context)
-                     now  (.-currentTime ctx)
-                     t0   (if (> start-at now) start-at (+ now 0.05))
-                     cancel (schedule-notes! chords tune-type ms-per-bar t0)]
-                 (swap! guitar-state assoc :scheduled cancel))))
+               (let [ctx (abc-bridge/get-audio-context)
+                     now (.-currentTime ctx)
+                     t0  (if (> start-at now) start-at (+ now 0.05))]
+                 (schedule-notes! chords tune-type ms-per-bar t0))))
       (.catch (fn [e]
                 (js/console.warn "Guitar playback failed:" e)))))
