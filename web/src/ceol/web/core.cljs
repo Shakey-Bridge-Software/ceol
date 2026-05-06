@@ -1,32 +1,23 @@
 (ns ceol.web.core
-  "Entry point, Replicant dispatch, action handlers, keyboard shortcuts, and init.
-   Delegates localStorage I/O to persist.cljs and rendering to render.cljs.
-   Complex playback and session orchestration live in handlers/playback.cljs
-   and handlers/session.cljs respectively."
+  "Entry point, Replicant dispatch, keyboard shortcuts, and init.
+   dispatch-action! is a thin router: most actions delegate to handlers/*
+   namespaces (tune, editor, set, playback, session). Inline cases are
+   the trivial one-liners (filter, tab, tempo) that don't earn extraction.
+   localStorage I/O lives in persist.cljs; rendering in render.cljs."
   (:require [replicant.dom :as r]
             [ceol.web.state :as state]
             [ceol.web.views :as views]
-            [ceol.web.abc-bridge :as abc-bridge]
-            [ceol.web.chords :as chords]
             [ceol.web.guitar :as guitar]
             [ceol.web.metronome :as metro]
             [ceol.web.beat-engine :as beat]
-            [ceol.abc :as abc]
             [ceol.web.persist :as persist]
             [ceol.web.render :as render]
             [ceol.web.handlers.playback :as playback]
             [ceol.web.handlers.session :as session]
+            [ceol.web.handlers.tune :as tune]
+            [ceol.web.handlers.editor :as editor]
+            [ceol.web.handlers.set :as set-h]
             [clojure.walk :as walk]))
-
-(defn inject-chords-if-needed
-  "If the ABC body doesn't already have chord annotations, suggest and inject them."
-  [abc-body tune]
-  (if (re-find #"\"[A-G]" abc-body)
-    ;; Already has chords
-    abc-body
-    ;; Suggest and inject
-    (let [chord-names (chords/suggest-chords abc-body (:key tune) (:mode-name tune))]
-      (chords/inject-chords abc-body chord-names))))
 
 (defn resolve-event-placeholders [dispatch-data actions]
   (let [js-event (:replicant/js-event dispatch-data)]
@@ -104,324 +95,72 @@
 
 (defn dispatch-action! [action args]
   (case action
-    :filter/set
-    (let [[filter-type] args]
-      (swap! state/app-state assoc :filter filter-type))
+    :filter/set        (swap! state/app-state assoc :filter (first args))
+    :tab/set           (swap! state/app-state assoc :tab (first args))
+    :abc/render        nil
 
-    :tab/set
-    (let [[tab] args]
-      (swap! state/app-state assoc :tab tab))
+    ;; Tune
+    :tune/select          (tune/select! args)
+    :tune/add             (tune/add! args)
+    :tune/update-field    (tune/update-field! args)
+    :tune/update-key-mode (tune/update-key-mode! args)
+    :tune/delete          (tune/delete! args)
+    :tune/add-to-set      (tune/add-to-set! args)
 
-    :tune/select
-    (let [[tune-id] args]
-      (let [s @state/app-state
-            raw-abc (get (:abc-data s) tune-id)
-            existing-edit (get (:abc-edits s) tune-id)]
-        (when (and (string? raw-abc) (not existing-edit))
-          (try
-            (let [tune (state/tune-by-id s tune-id)
-                  annotated (inject-chords-if-needed raw-abc tune)]
-              (swap! state/app-state assoc-in [:abc-edits tune-id]
-                     (if (string? annotated) annotated raw-abc)))
-            (catch :default e
-              (js/console.warn "Chord injection failed for tune" tune-id e)
-              (swap! state/app-state assoc-in [:abc-edits tune-id] raw-abc)))))
-      (swap! state/app-state assoc :selected-tune-id tune-id
-             :set-playing? false :set-tune-index 0))
+    ;; Editor + inline fields
+    :editor/toggle  (editor/toggle! args)
+    :editor/update  (editor/update! args)
+    :editor/keydown (editor/keydown! args)
+    :field/edit     (editor/field-edit! args)
+    :field/cancel   (editor/field-cancel! args)
+    :field/keydown  (editor/field-keydown! args)
 
-    :abc/render nil
-
-    :editor/toggle
-    (let [opening? (not (:editor-open? @state/app-state))]
-      (swap! state/app-state assoc :editor-open? opening?)
-      (when opening?
-        (js/requestAnimationFrame
-         (fn []
-           (when-let [el (js/document.querySelector ".editor-textarea")]
-             (.focus el))))))
-
-    :editor/update
-    (let [[tune-id new-val] args]
-      (when (string? new-val)
-        (swap! state/app-state assoc-in [:abc-edits tune-id] new-val)
-        (persist/schedule-save!)))
-
-    :editor/keydown
-    (let [[key] args]
-      (when (= key "Escape")
-        (when-let [el (js/document.querySelector ".editor-textarea")]
-          (.blur el))))
-
-    :tune/add-to-set
-    (let [[tune-id] args
-          s    @state/app-state
-          sets (:sets s)]
-      (cond
-        (empty? sets)
-        (js/console.warn "No sets — create one first")
-
-        (= 1 (count sets))
-        (let [set-id (key (first sets))]
-          (swap! state/app-state update-in [:sets set-id :tune-ids]
-                 (fn [ids] (if (some #{tune-id} ids) ids (conj (or ids []) tune-id))))
-          (persist/save-sets!))
-
-        (:active-set-id s)
-        (let [set-id (:active-set-id s)]
-          (swap! state/app-state update-in [:sets set-id :tune-ids]
-                 (fn [ids] (if (some #{tune-id} ids) ids (conj (or ids []) tune-id))))
-          (persist/save-sets!))
-
-        :else
-        (js/console.warn "Multiple sets — select one first")))
-
-    :tune/add
-    (let [new-id (state/next-tune-id @state/app-state)
-          new-tune {:id new-id :name "New Tune" :type :polka :time-sig "2/4"
-                    :key "G" :mode-name "Ionian"}]
-      (swap! state/app-state
-             (fn [s]
-               (let [custom (assoc (:custom-tunes s) new-id new-tune)
-                     merged (state/merge-tunes state/base-tunes custom)]
-                 (merge s {:custom-tunes custom} merged
-                        {:selected-tune-id new-id :editing-field :name}))))
-      (persist/save-custom-tunes!))
-
-    :tune/update-field
-    (let [[tune-id field value] args]
-      (persist/update-tune-field! tune-id field value)
-      (swap! state/app-state assoc :editing-field nil))
-
-    :tune/update-key-mode
-    (let [[tune-id key-name mode-name] args]
-      (persist/update-tune-field! tune-id :key key-name)
-      (persist/update-tune-field! tune-id :mode-name mode-name)
-      (swap! state/app-state assoc :editing-field nil))
-
-    :tune/delete
-    (let [[tune-id] args]
-      (when (state/custom-tune? tune-id)
-        (swap! state/app-state
-               (fn [s]
-                 (let [custom (dissoc (:custom-tunes s) tune-id)
-                       merged (state/merge-tunes state/base-tunes custom)]
-                   (merge s {:custom-tunes custom} merged {:selected-tune-id nil}))))
-        (persist/save-custom-tunes!)))
-
-    :field/edit
-    (let [[field] args]
-      (swap! state/app-state assoc :editing-field field))
-
-    :field/cancel
-    (swap! state/app-state assoc :editing-field nil)
-
-    :field/keydown
-    (let [[key] args]
-      (case key
-        "Enter" (when-let [el (js/document.querySelector ".inline-edit-title")]
-                  (.blur el))
-        "Escape" (swap! state/app-state assoc :editing-field nil)
-        nil))
-
-    :playback/play
-    (playback/play!)
-
-    :playback/stop
-    (playback/stop!)
-
-    :guitar/toggle
-    (let [new-val (not (:guitar? @state/app-state))]
-      (swap! state/app-state assoc :guitar? new-val)
-      (guitar/set-muted! (not new-val)))
-
-    :section/set
-    (let [[section] args]
-      (swap! state/app-state assoc :section section))
-
-    :loop/toggle
-    (swap! state/app-state update :loop? not)
-
+    ;; Playback
+    :playback/play  (playback/play!)
+    :playback/stop  (playback/stop!)
+    :guitar/toggle  (let [new-val (not (:guitar? @state/app-state))]
+                      (swap! state/app-state assoc :guitar? new-val)
+                      (guitar/set-muted! (not new-val)))
+    :section/set    (swap! state/app-state assoc :section (first args))
+    :loop/toggle    (swap! state/app-state update :loop? not)
     :metronome/toggle
     (let [new-val (not (:metronome? @state/app-state))]
       (swap! state/app-state assoc :metronome? new-val :current-beat nil)
       (if new-val
-        ;; Start standalone metronome
         (let [s @state/app-state
               tune (state/selected-tune s)
               params (beat/beats-for-tune tune (:tempo-offset s))]
           (metro/start-clicking! params))
-        ;; Stop metronome
         (metro/stop!)))
+    :count-in/toggle (swap! state/app-state update :count-in? not)
+    :tempo/up        (swap! state/app-state update :tempo-offset #(min 40 (+ (or % 0) 5)))
+    :tempo/down      (swap! state/app-state update :tempo-offset #(max -40 (- (or % 0) 5)))
+    :tempo/reset     (swap! state/app-state assoc :tempo-offset 0)
 
-    :count-in/toggle
-    (swap! state/app-state update :count-in? not)
+    ;; Sets
+    :set/start-create     (set-h/start-create! args)
+    :set/name-keydown     (set-h/name-keydown! args)
+    :set/typeahead        (set-h/typeahead! args)
+    :set/tune-keydown     (set-h/tune-keydown! args)
+    :set/pick-tune        (set-h/pick-tune! args)
+    :set/uncreate-tune    (set-h/uncreate-tune! args)
+    :set/toggle           (set-h/toggle! args)
+    :set/select-tune      (set-h/select-tune! args)
+    :set/add-tune         (set-h/add-tune! args)
+    :set/remove-tune      (set-h/remove-tune! args)
+    :set/start-adding     (set-h/start-adding! args)
+    :set/add-tune-keydown (set-h/add-tune-keydown! args)
+    :set/delete           (set-h/delete! args)
 
-    :tempo/up
-    (swap! state/app-state update :tempo-offset #(min 40 (+ (or % 0) 5)))
-
-    :tempo/down
-    (swap! state/app-state update :tempo-offset #(max -40 (- (or % 0) 5)))
-
-    :tempo/reset
-    (swap! state/app-state assoc :tempo-offset 0)
-
-    ;; --- Set actions ---
-
-    :set/start-create
-    (swap! state/app-state assoc :creating-set? true :creating-set-name nil
-           :creating-set-tunes [] :typeahead-query "" :typeahead-index 0)
-
-    :set/name-keydown
-    (let [[key value] args]
-      (case key
-        "Enter" (when (and (string? value) (seq (.trim value)))
-                  (swap! state/app-state assoc :creating-set-name (.trim value)))
-        "Escape" (swap! state/app-state assoc :creating-set? false)
-        nil))
-
-    :set/typeahead
-    (let [[query] args]
-      (swap! state/app-state assoc :typeahead-query (or query "") :typeahead-index 0))
-
-    :set/tune-keydown
-    (let [[key] args
-          s @state/app-state
-          query (:typeahead-query s)
-          results (state/search-tunes s query 5)
-          idx (:typeahead-index s)]
-      (case key
-        "Enter"
-        (if (seq (.trim (or query "")))
-          ;; Pick highlighted result
-          (when-let [tune (get results idx)]
-            (let [tune-id (:id tune)
-                  existing (:creating-set-tunes s)]
-              (when-not (some #{tune-id} existing)
-                (swap! state/app-state update :creating-set-tunes conj tune-id))
-              (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0)))
-          ;; Empty enter = done
-          (let [name (:creating-set-name s)
-                tune-ids (:creating-set-tunes s)]
-            (when (and name (seq tune-ids))
-              (let [set-id (state/next-set-id s)
-                    new-set {:id set-id :name name :tune-ids tune-ids}]
-                (swap! state/app-state
-                       (fn [s]
-                         (assoc s :sets (assoc (:sets s) set-id new-set)
-                                :creating-set? false
-                                :active-set-id set-id
-                                :selected-tune-id (first tune-ids))))
-                (persist/save-sets!)))))
-
-        "Escape"
-        (swap! state/app-state assoc :creating-set? false)
-
-        "ArrowDown"
-        (swap! state/app-state update :typeahead-index
-               #(min (dec (count results)) (inc %)))
-
-        "ArrowUp"
-        (swap! state/app-state update :typeahead-index
-               #(max 0 (dec %)))
-        nil))
-
-    :set/pick-tune
-    (let [[tune-id] args
-          s @state/app-state
-          existing (:creating-set-tunes s)]
-      (when-not (some #{tune-id} existing)
-        (swap! state/app-state update :creating-set-tunes conj tune-id))
-      (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
-
-    :set/uncreate-tune
-    (let [[tune-id] args]
-      (swap! state/app-state update :creating-set-tunes
-             (fn [ids] (vec (remove #{tune-id} ids)))))
-
-    :set/toggle
-    (let [[set-id] args
-          s @state/app-state]
-      (if (= set-id (:active-set-id s))
-        (swap! state/app-state assoc :active-set-id nil)
-        (let [s-data (get (:sets s) set-id)
-              first-tune-id (first (:tune-ids s-data))]
-          (swap! state/app-state assoc :active-set-id set-id
-                 :selected-tune-id first-tune-id))))
-
-    :set/select-tune
-    (let [[_set-id tune-id] args]
-      (swap! state/app-state assoc :selected-tune-id tune-id))
-
-    :set/add-tune
-    (let [[set-id tune-id] args]
-      (swap! state/app-state update-in [:sets set-id :tune-ids]
-             (fn [ids]
-               (if (some #{tune-id} ids) ids (conj (or ids []) tune-id))))
-      (persist/save-sets!))
-
-    :set/remove-tune
-    (let [[set-id tune-id] args]
-      (swap! state/app-state update-in [:sets set-id :tune-ids]
-             (fn [ids] (vec (remove #{tune-id} ids))))
-      (persist/save-sets!))
-
-    :set/start-adding
-    (let [[set-id] args]
-      (swap! state/app-state assoc :adding-to-set set-id :typeahead-query "" :typeahead-index 0))
-
-    :set/add-tune-keydown
-    (let [[set-id key] args
-          s @state/app-state
-          query (:typeahead-query s)
-          results (state/search-tunes s query 5)
-          idx (:typeahead-index s)]
-      (case key
-        "Enter"
-        (if (seq (.trim (or query "")))
-          (when-let [tune (get results idx)]
-            (swap! state/app-state update-in [:sets set-id :tune-ids]
-                   (fn [ids]
-                     (let [tid (:id tune)]
-                       (if (some #{tid} ids) ids (conj (or ids []) tid)))))
-            (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0)
-            (persist/save-sets!))
-          ;; Empty enter = done adding
-          (swap! state/app-state assoc :adding-to-set nil))
-
-        "Escape"
-        (swap! state/app-state assoc :adding-to-set nil)
-
-        "ArrowDown"
-        (swap! state/app-state update :typeahead-index #(min (dec (count results)) (inc %)))
-
-        "ArrowUp"
-        (swap! state/app-state update :typeahead-index #(max 0 (dec %)))
-
-        nil))
-
-    :set/delete
-    (let [[set-id] args]
-      (swap! state/app-state (fn [s]
-                               (-> s
-                                   (update :sets dissoc set-id)
-                                   (cond-> (= set-id (:active-set-id s))
-                                     (assoc :active-set-id nil)))))
-      (persist/save-sets!))
-
-    ;; --- Learned + Session ---
-
+    ;; Learned + Session
     :learned/toggle
     (let [[tune-id] args]
       (swap! state/app-state update :learned-tune-ids
              (fn [ids] (if (contains? ids tune-id) (disj ids tune-id) (conj ids tune-id))))
       (persist/save-learned!))
 
-    :session/start
-    (session/session-start!)
-
-    :session/play-current
-    (session/session-play-current!)
-
+    :session/start        (session/session-start!)
+    :session/play-current (session/session-play-current!)
     :session/stop
     (do (playback/stop!)
         (swap! state/app-state assoc :session-mode? false :session-pausing? false))
