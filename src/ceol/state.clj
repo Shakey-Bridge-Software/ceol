@@ -8,6 +8,7 @@
             [ceol.tunes :as tunes]
             [ceol.data :as data]
             [ceol.audio :as audio]
+            [ceol.abc :as abc]
             [ceol.notation :as notation]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -173,7 +174,7 @@
   (let [local-abc (data/load-local-abc)
         body (get local-abc (:id tune))]
     (if body
-      (let [abc (audio/build-abc-string tune body nil)
+      (let [abc (abc/build-abc-string tune body nil)
             changed? (not= abc (:abc tune))
             _ (when changed? (delete-midi-variants! (:id tune)))
             updates (cond-> {:abc abc :abc-status :ready :local-abc? true}
