@@ -18,7 +18,6 @@
             [ceol.web.handlers.session :as session]
             [clojure.walk :as walk]))
 
-
 (defn inject-chords-if-needed
   "If the ABC body doesn't already have chord annotations, suggest and inject them."
   [abc-body tune]
@@ -28,7 +27,6 @@
     ;; Suggest and inject
     (let [chord-names (chords/suggest-chords abc-body (:key tune) (:mode-name tune))]
       (chords/inject-chords abc-body chord-names))))
-
 
 (defn resolve-event-placeholders [dispatch-data actions]
   (let [js-event (:replicant/js-event dispatch-data)]
@@ -43,11 +41,10 @@
          x))
      actions)))
 
-
 ;; ---------------------------------------------------------------------------
 ;; Action dispatch
 ;;
-;; Actions are vectors dispatched via Replicant's :on handlers or handle-keydown.
+;; Actions are vectors dispatched via Replicant's :on handlers or on-keydown.
 ;; Each entry below: action keyword, expected args, one-line description.
 ;;
 ;; Tune
@@ -105,7 +102,7 @@
 ;;   :session/stop        []                          end session
 ;; ---------------------------------------------------------------------------
 
-(defn handle-action! [action args]
+(defn dispatch-action! [action args]
   (case action
     :filter/set
     (let [[filter-type] args]
@@ -434,50 +431,48 @@
 (defn execute! [dispatch-data actions]
   (let [actions (resolve-event-placeholders dispatch-data actions)]
     (doseq [[action & args] actions]
-      (handle-action! action args))))
-
-
+      (dispatch-action! action args))))
 
 (defn- input-focused? []
   (let [tag (some-> js/document .-activeElement .-tagName str)]
     (contains? #{"INPUT" "TEXTAREA" "SELECT"} tag)))
 
-(defn- handle-keydown [e]
+(defn- on-keydown [e]
   (when-not (input-focused?)
     (let [key (.-key e)]
       (case key
         " "       (do (.preventDefault e) (playback/play!))
-        "l"       (handle-action! :loop/toggle nil)
-        "g"       (handle-action! :guitar/toggle nil)
-        "e"       (handle-action! :editor/toggle nil)
-        "m"       (handle-action! :metronome/toggle nil)
-        "c"       (handle-action! :count-in/toggle nil)
+        "l"       (dispatch-action! :loop/toggle nil)
+        "g"       (dispatch-action! :guitar/toggle nil)
+        "e"       (dispatch-action! :editor/toggle nil)
+        "m"       (dispatch-action! :metronome/toggle nil)
+        "c"       (dispatch-action! :count-in/toggle nil)
         "k"       (when-let [id (:selected-tune-id @state/app-state)]
-                    (handle-action! :learned/toggle [id]))
-        "="       (handle-action! :tempo/up nil)
-        "-"       (handle-action! :tempo/down nil)
-        "0"       (handle-action! :tempo/reset nil)
-        "1"       (handle-action! :section/set [:a])
-        "2"       (handle-action! :section/set [:b])
-        "3"       (handle-action! :section/set [nil])
+                    (dispatch-action! :learned/toggle [id]))
+        "="       (dispatch-action! :tempo/up nil)
+        "-"       (dispatch-action! :tempo/down nil)
+        "0"       (dispatch-action! :tempo/reset nil)
+        "1"       (dispatch-action! :section/set [:a])
+        "2"       (dispatch-action! :section/set [:b])
+        "3"       (dispatch-action! :section/set [nil])
         "ArrowUp" (do (.preventDefault e)
                       (let [s @state/app-state
                             tunes (state/filtered-tunes s)
                             idx (.indexOf (mapv :id tunes) (:selected-tune-id s))
                             new-idx (max 0 (dec idx))]
                         (when (seq tunes)
-                          (handle-action! :tune/select [(:id (nth tunes new-idx))]))))
+                          (dispatch-action! :tune/select [(:id (nth tunes new-idx))]))))
         "ArrowDown" (do (.preventDefault e)
                         (let [s @state/app-state
                               tunes (state/filtered-tunes s)
                               idx (.indexOf (mapv :id tunes) (:selected-tune-id s))
                               new-idx (min (dec (count tunes)) (inc idx))]
                           (when (seq tunes)
-                            (handle-action! :tune/select [(:id (nth tunes new-idx))]))))
+                            (dispatch-action! :tune/select [(:id (nth tunes new-idx))]))))
         nil))))
 
 (defonce _keydown-listener
-  (.addEventListener js/document "keydown" handle-keydown))
+  (.addEventListener js/document "keydown" on-keydown))
 
 (defn init! []
   (r/set-dispatch! execute!)

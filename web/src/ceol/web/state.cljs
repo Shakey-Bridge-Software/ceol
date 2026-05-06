@@ -2,7 +2,7 @@
   "App state atom, query functions, and pure domain logic.
    The single source of truth for all UI state. Query functions are pure
    and take the state map as their first argument. Side-effectful mutations
-   live in core.cljs via handle-action!."
+   live in core.cljs via dispatch-action!."
   (:require [ceol.tunes :as tunes]
             [clojure.string :as str]))
 
