@@ -10,7 +10,34 @@
             [charm.core :as charm]
             [cheshire.core]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [malli.core :as m]
+            [malli.error :as me]))
+
+;; ---------------------------------------------------------------------------
+;; thesession.org API schemas
+;;
+;; Open maps — the API returns many extra fields we ignore. We only require
+;; the fields we actually consume. Validated at the fetch boundary so that
+;; downstream code can rely on shape without nil-checks scattered through it.
+;; ---------------------------------------------------------------------------
+
+(def ApiSetting
+  [:map
+   [:key {:optional true} [:maybe :string]]
+   [:abc {:optional true} [:maybe :string]]])
+
+(def ApiTune
+  [:map
+   [:id :int]
+   [:name :string]
+   [:settings {:optional true} [:vector ApiSetting]]])
+
+(def ApiSearchResults
+  [:map
+   [:tunes [:vector [:map
+                     [:id :int]
+                     [:name :string]]]]])
 
 ;; --- thesession.org API ---
 
@@ -31,6 +58,19 @@
         (str/replace #"phrygian$" "phr")
         (str/replace #"locrian$" "loc"))))
 
+(defn- validated-response
+  "Validate an API response against schema. On mismatch, log to stderr and
+   return nil so callers see the same shape as a network failure."
+  [label schema body]
+  (cond
+    (nil? body) nil
+    (m/validate schema body) body
+    :else
+    (do (binding [*out* *err*]
+          (println (str "audio: " label " schema mismatch: "
+                        (me/humanize (m/explain schema body)))))
+        nil)))
+
 (defn- search-session [tune-name]
   (let [url (str "https://thesession.org/tunes/search?q="
                  (java.net.URLEncoder/encode tune-name "UTF-8")
@@ -38,14 +78,16 @@
         resp (http/get url {:headers {"Accept" "application/json"}
                             :timeout 10000})]
     (when (= 200 (:status resp))
-      (parse-json (:body resp)))))
+      (validated-response "search-session" ApiSearchResults
+                          (parse-json (:body resp))))))
 
 (defn- get-session-tune [session-id]
   (let [url (str "https://thesession.org/tunes/" session-id "?format=json&orderby=popular")
         resp (http/get url {:headers {"Accept" "application/json"}
                             :timeout 10000})]
     (when (= 200 (:status resp))
-      (parse-json (:body resp)))))
+      (validated-response "get-session-tune" ApiTune
+                          (parse-json (:body resp))))))
 
 (defn- best-match
   "Pick the best match from search results by comparing name and key.
@@ -214,7 +256,6 @@
        "K:C\n"
        "%%MIDI program 115\n"
        (countin-body time-sig) "\n"))
-
 
 (defn- extract-bpm
   "Extract integer BPM from a Q: string like \"Q:3/8=70\"."

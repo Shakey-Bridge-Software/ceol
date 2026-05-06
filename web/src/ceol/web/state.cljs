@@ -6,6 +6,31 @@
   (:require [ceol.tunes :as tunes]
             [clojure.string :as str]))
 
+;; ---------------------------------------------------------------------------
+;; Web-only schemas
+;;
+;; Set and SessionQueueItem describe data persisted to localStorage, so they
+;; are validated at the persist boundary on load (see persist.cljs). Tune
+;; lives in ceol.tunes and is shared with the TUI.
+;; ---------------------------------------------------------------------------
+
+(def Set
+  [:map {:closed true}
+   [:id :string]
+   [:name :string]
+   [:tune-ids [:vector :int]]])
+
+(def SessionQueueItem
+  [:multi {:dispatch :type}
+   [:tune [:map {:closed true}
+           [:type [:= :tune]]
+           [:tune-id :int]]]
+   [:set  [:map {:closed true}
+           [:type [:= :set]]
+           [:set-id :string]
+           [:name :string]
+           [:tune-ids [:vector :int]]]]])
+
 (def base-tunes
   (mapv #(select-keys % [:id :name :type :time-sig :key :mode-name :session-id])
         tunes/catalog))

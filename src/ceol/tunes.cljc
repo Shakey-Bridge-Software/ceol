@@ -4,6 +4,28 @@
    key, mode-name, session-id. Runtime state (abc, midi status) is added
    by data/hydrate-tunes in the TUI and is never part of catalog data.")
 
+;; ---------------------------------------------------------------------------
+;; Tune schema
+;;
+;; Open map covering both base catalog entries and user-added custom tunes.
+;; Required fields are present in every tune. Optional fields appear on a
+;; subset (e.g. :session-id missing on user-created tunes; :jpg-path only
+;; on the comhaltas catalog). Runtime keys (:abc, :abc-status, :midi-path)
+;; are added by hydration and are not validated here — they belong to the
+;; runtime state, not the tune entity itself.
+;; ---------------------------------------------------------------------------
+
+(def Tune
+  [:map
+   [:id :int]
+   [:name :string]
+   [:type [:enum :polka :jig :reel :hornpipe :slip-jig :slide :other]]
+   [:time-sig :string]
+   [:key :string]
+   [:mode-name :string]
+   [:session-id {:optional true} [:maybe :int]]
+   [:jpg-path {:optional true} :string]])
+
 (def catalog
   [{:id 1  :name "Maggie in the Woods (p8)"            :type :polka    :time-sig "2/4" :key "G" :mode-name "Ionian"
     :jpg-path "comhaltas/setlist/1-Maggie-in-the-Woods.jpg"
@@ -148,7 +170,6 @@
   (if (= type :all)
     tunes
     (filterv #(= type (:type %)) tunes)))
-
 
 (defn resolve-setlist
   "Given a setlist map and the full tunes vector, return ordered tunes:

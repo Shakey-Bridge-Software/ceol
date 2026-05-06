@@ -2,9 +2,35 @@
   "localStorage persistence and remote data loading.
    All save!/load! functions read/write directly to app-state and localStorage.
    update-tune-field! is here because it couples state mutation to save.
-   No rendering logic, no audio logic."
+   No rendering logic, no audio logic.
+   Loaded data is validated against the schemas in ceol.web.state and
+   ceol.tunes; invalid data is logged and discarded rather than silently
+   corrupting state."
   (:require [ceol.web.state :as state]
-            [cljs.reader :as reader]))
+            [ceol.tunes :as tunes]
+            [cljs.reader :as reader]
+            [malli.core :as m]
+            [malli.error :as me]))
+
+(defn- read-validated
+  "Parse EDN from raw and validate against schema.
+   On parse failure or schema mismatch, log a console.warn and return nil.
+   Used at the localStorage boundary to prevent corrupt persisted state
+   from silently propagating into the app."
+  [storage-key raw schema]
+  (let [parsed (try (reader/read-string raw)
+                    (catch :default e
+                      (js/console.warn
+                       (str "persist: failed to parse EDN for " storage-key) e)
+                      nil))]
+    (cond
+      (nil? parsed) nil
+      (m/validate schema parsed) parsed
+      :else
+      (do (js/console.warn
+           (str "persist: schema mismatch for " storage-key)
+           (clj->js (me/humanize (m/explain schema parsed))))
+          nil))))
 
 ;; --- ABC edits ---
 
@@ -24,13 +50,14 @@
                            (pr-str edits)))))
            1000)))
 
+(def AbcEdits [:map-of :int :string])
+
 (defn load-saved-edits!
   "Load abc-edits from localStorage, merging defaults for any missing tune IDs."
   []
-  (let [local-raw    (.getItem js/localStorage "ceol-abc-edits")
-        local-edits  (when local-raw
-                       (try (reader/read-string local-raw)
-                            (catch :default _ nil)))]
+  (let [local-raw   (.getItem js/localStorage "ceol-abc-edits")
+        local-edits (when local-raw
+                      (read-validated "ceol-abc-edits" local-raw AbcEdits))]
     (-> (js/fetch "/data/default-abc-edits.edn")
         (.then #(.text %))
         (.then (fn [text]
@@ -50,14 +77,14 @@
   (.setItem js/localStorage "ceol-learned-tunes"
             (pr-str (:learned-tune-ids @state/app-state))))
 
+(def LearnedTuneIds [:set :int])
+
 (defn load-learned!
   "Load learned tune IDs from localStorage."
   []
   (when-let [raw (.getItem js/localStorage "ceol-learned-tunes")]
-    (try
-      (let [ids (reader/read-string raw)]
-        (swap! state/app-state assoc :learned-tune-ids (set ids)))
-      (catch :default _ nil))))
+    (when-let [ids (read-validated "ceol-learned-tunes" raw LearnedTuneIds)]
+      (swap! state/app-state assoc :learned-tune-ids ids))))
 
 ;; --- Sets ---
 
@@ -66,18 +93,18 @@
   []
   (.setItem js/localStorage "ceol-sets" (pr-str (:sets @state/app-state))))
 
+(def SetsByID [:map-of :string state/Set])
+
 (defn load-sets!
   "Load sets from localStorage, falling back to default-sets.edn."
   []
   (if-let [raw (.getItem js/localStorage "ceol-sets")]
-    (try
-      (let [sets (reader/read-string raw)]
-        (swap! state/app-state assoc :sets sets))
-      (catch :default _ nil))
+    (when-let [sets (read-validated "ceol-sets" raw SetsByID)]
+      (swap! state/app-state assoc :sets sets))
     (-> (js/fetch "/data/default-sets.edn")
         (.then #(.text %))
         (.then (fn [text]
-                 (let [sets (reader/read-string text)]
+                 (when-let [sets (read-validated "default-sets.edn" text SetsByID)]
                    (swap! state/app-state assoc :sets sets))))
         (.catch (fn [e] (js/console.error "Failed to load default sets:" e))))))
 
@@ -89,16 +116,16 @@
   (let [custom (:custom-tunes @state/app-state)]
     (.setItem js/localStorage "ceol-custom-tunes" (pr-str custom))))
 
+(def CustomTunes [:map-of :int tunes/Tune])
+
 (defn load-custom-tunes!
   "Load custom tunes from localStorage and merge into state."
   []
   (when-let [raw (.getItem js/localStorage "ceol-custom-tunes")]
-    (try
-      (let [custom (reader/read-string raw)]
-        (swap! state/app-state (fn [s]
-                                 (merge s {:custom-tunes custom}
-                                        (state/merge-tunes state/base-tunes custom)))))
-      (catch :default _ nil))))
+    (when-let [custom (read-validated "ceol-custom-tunes" raw CustomTunes)]
+      (swap! state/app-state (fn [s]
+                               (merge s {:custom-tunes custom}
+                                      (state/merge-tunes state/base-tunes custom)))))))
 
 (defn- tune-by-id-from-base [tune-id]
   (first (filter #(= tune-id (:id %)) state/base-tunes)))
@@ -118,13 +145,15 @@
 
 ;; --- ABC data ---
 
+(def AbcData [:map-of :int :string])
+
 (defn load-abc-data!
   "Fetch local-abc.edn and merge into app state."
   []
   (-> (js/fetch "/data/local-abc.edn")
       (.then #(.text %))
       (.then (fn [text]
-               (let [data (reader/read-string text)]
+               (when-let [data (read-validated "local-abc.edn" text AbcData)]
                  (swap! state/app-state assoc :abc-data data))))
       (.catch (fn [e]
                 (js/console.error "Failed to load ABC data:" e)))))
