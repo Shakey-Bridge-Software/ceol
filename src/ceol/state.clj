@@ -35,6 +35,13 @@
       (zero? (:exit result)))
     (catch Exception _ false)))
 
+(defn- safe-parse-abc
+  "Parse ABC, returning nil on any parse error. Used for cached/edited ABC
+   that may be malformed — staff display tolerates absence."
+  [abc-str]
+  (try (notation/parse-abc abc-str)
+       (catch Exception _ nil)))
+
 ;; ---------------------------------------------------------------------------
 ;; TUI state shape
 ;;
@@ -430,7 +437,7 @@
       (if (= tune-id (:notation-tune-id state))
         state
         (let [parsed (when (and tune (:abc tune))
-                       (try (notation/parse-abc (:abc tune)) (catch Exception _ nil)))]
+                       (safe-parse-abc (:abc tune)))]
           (if parsed
             (assoc state :notation (:timeline parsed) :current-note-idx nil
                    :notation-tune-id tune-id)
@@ -549,7 +556,7 @@
           tune (when tune-id (tunes/tune-by-id (:tunes state) tune-id))
           ;; Parse notation for staff display if we have ABC
           parsed (when (and (:show-staff state) tune (:abc tune))
-                   (try (notation/parse-abc (:abc tune)) (catch Exception _ nil)))
+                   (safe-parse-abc (:abc tune)))
           state' (cond-> (assoc state :play-proc proc)
                    parsed (assoc :notation (:timeline parsed)
                                  :play-start-ms (System/currentTimeMillis)
@@ -703,7 +710,7 @@
                      (tunes/tune-by-id (:tunes state) (:playing state))
                      (selected-tune state))
               parsed (when (and new-show tune (:abc tune))
-                       (try (notation/parse-abc (:abc tune)) (catch Exception _ nil)))
+                       (safe-parse-abc (:abc tune)))
               state' (cond-> (assoc state :show-staff new-show)
                        ;; Toggling ON while playing — start tracking
                        (and new-show parsed (:playing state))
