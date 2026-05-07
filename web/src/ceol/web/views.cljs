@@ -371,6 +371,22 @@
          :on {:input [[:editor/update tune-id :event/target.value]]
               :keydown [[:editor/keydown :event/key]]}}]])))
 
+(defn notes-panel [state]
+  (let [tune (state/selected-tune state)
+        tune-id (:id tune)
+        notes (when tune (get-in state [:tune-notes tune-id] ""))]
+    (when (and tune (:notes-open? state))
+      [:div.notes-panel
+       [:div.notes-header
+        [:span.notes-label "NOTES"]
+        [:button.notes-close {:on {:click [[:notes/toggle]]}} "×"]]
+       [:textarea.notes-textarea
+        {:value (or notes "")
+         :placeholder "Practice notes — BPM, ornaments, progress..."
+         :spellcheck "false"
+         :on {:input [[:notes/update tune-id :event/target.value]]
+              :keydown [[:notes/keydown :event/key]]}}]])))
+
 (defn playback-status [state]
   (when (:playing? state)
     (cond
@@ -427,6 +443,9 @@
       [:button.control-btn {:class (when (:metronome? state) "active")
                             :on {:click [[:metronome/toggle]]}}
        "Metro"]
+      [:button.control-btn {:class (when (:notes-open? state) "active")
+                            :on {:click [[:notes/toggle]]}}
+       "Notes"]
       [:button.guitar-btn {:class (when (:guitar? state) "active")
                            :on {:click [[:guitar/toggle]]}}
        (if (:guitar? state) "\uD83C\uDFB8 Guitar" "Guitar")]]]))
@@ -445,6 +464,7 @@
          [:div.split-grip "\u2261"]
          [:div.split-line]]
         (abc-editor state)])
+     (notes-panel state)
      [:div.divider]
      (when-not session?
        (playback-bar state))]))

@@ -96,6 +96,11 @@
 ;; Backup / restore
 ;;   :backup/export       []                          download EDN of all user data
 ;;   :backup/import       []                          file picker → validate → merge
+;;
+;; Notes
+;;   :notes/toggle        []                          show/hide notes drawer
+;;   :notes/update        [tune-id text]              edit notes for tune (debounced save)
+;;   :notes/keydown       [key]                       Escape blurs textarea
 ;; ---------------------------------------------------------------------------
 
 (defn dispatch-action! [action args]
@@ -179,6 +184,14 @@
     :backup/export (backup/export!)
     :backup/import (backup/import!)
 
+    ;; Notes
+    :notes/toggle (swap! state/app-state update :notes-open? not)
+    :notes/update (let [[tune-id text] args]
+                    (persist/update-tune-notes! tune-id text))
+    :notes/keydown (let [[key] args]
+                     (when (= key "Escape")
+                       (some-> js/document .-activeElement .blur)))
+
     (js/console.warn "Unknown action:" action args)))
 
 (defn execute! [dispatch-data actions]
@@ -200,6 +213,7 @@
         "e"       (dispatch-action! :editor/toggle nil)
         "m"       (dispatch-action! :metronome/toggle nil)
         "c"       (dispatch-action! :count-in/toggle nil)
+        "n"       (dispatch-action! :notes/toggle nil)
         "k"       (when-let [id (:selected-tune-id @state/app-state)]
                     (dispatch-action! :learned/toggle [id]))
         "="       (dispatch-action! :tempo/up nil)
@@ -235,4 +249,5 @@
   (persist/load-learned!)
   (persist/load-abc-data!)
   (persist/load-saved-edits!)
+  (persist/load-notes!)
   (r/render render/el (views/app @state/app-state)))

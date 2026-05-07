@@ -72,6 +72,10 @@
 ;;   :tab               :tunes | :sets | :session
 ;;   :editor-open?      bool
 ;;   :editing-field     :name | nil       which header field is in inline-edit mode
+;;   :notes-open?       bool              notes drawer visibility (per-tune notes)
+;;
+;; Tune notes
+;;   :tune-notes        {id → string}     practice notes per tune, persisted to localStorage
 ;;
 ;; Playback
 ;;   :playing?          bool              melody is currently playing
@@ -123,6 +127,8 @@
           :filter          :all
           :tab             :tunes
           :editor-open?    false
+          :notes-open?     false
+          :tune-notes      {}
           :guitar?         false
           :editing-field   nil
           :playing?        false

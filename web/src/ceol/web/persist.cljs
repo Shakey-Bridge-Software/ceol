@@ -143,6 +143,39 @@
              (merge s {:custom-tunes custom} merged))))
   (save-custom-tunes!))
 
+;; --- Tune notes ---
+
+(defonce notes-save-timer (atom nil))
+
+(def TuneNotes [:map-of :int :string])
+
+(defn schedule-save-notes!
+  "Save tune-notes to localStorage after 500 ms debounce."
+  []
+  (when-let [t @notes-save-timer]
+    (js/clearTimeout t))
+  (reset! notes-save-timer
+          (js/setTimeout
+           (fn []
+             (let [notes (:tune-notes @state/app-state)]
+               (.setItem js/localStorage "ceol-tune-notes" (pr-str notes))))
+           500)))
+
+(defn load-notes!
+  "Load tune notes from localStorage."
+  []
+  (when-let [raw (.getItem js/localStorage "ceol-tune-notes")]
+    (when-let [notes (read-validated "ceol-tune-notes" raw TuneNotes)]
+      (swap! state/app-state assoc :tune-notes notes))))
+
+(defn update-tune-notes!
+  "Update notes for a tune and schedule a debounced save. Empty strings
+   are stored as-is so the user can clear notes without the row vanishing
+   between keystrokes; load-notes! treats empty strings the same as absent."
+  [tune-id text]
+  (swap! state/app-state assoc-in [:tune-notes tune-id] text)
+  (schedule-save-notes!))
+
 ;; --- ABC data ---
 
 (def AbcData [:map-of :int :string])

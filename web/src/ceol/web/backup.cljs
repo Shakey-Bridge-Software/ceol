@@ -16,7 +16,8 @@
      [:abc-edits        {:optional true} persist/AbcEdits]
      [:custom-tunes     {:optional true} persist/CustomTunes]
      [:sets             {:optional true} persist/SetsByID]
-     [:learned-tune-ids {:optional true} persist/LearnedTuneIds]]]])
+     [:learned-tune-ids {:optional true} persist/LearnedTuneIds]
+     [:tune-notes       {:optional true} persist/TuneNotes]]]])
 
 (defn- now-iso []
   (.toISOString (js/Date.)))
@@ -33,7 +34,8 @@
   {:ceol/version 1
    :exported-at  (now-iso)
    :data         (select-keys state [:abc-edits :custom-tunes
-                                     :sets :learned-tune-ids])})
+                                     :sets :learned-tune-ids
+                                     :tune-notes])})
 
 (defn- trigger-download! [filename text]
   (let [blob (js/Blob. #js [text] #js {:type "application/edn"})
@@ -62,12 +64,13 @@
    custom-tunes merge with existing state (incoming wins per key); sets
    and learned-tune-ids replace wholesale because they are collections
    the user manages as a whole."
-  [s {:keys [abc-edits custom-tunes sets learned-tune-ids]}]
+  [s {:keys [abc-edits custom-tunes sets learned-tune-ids tune-notes]}]
   (cond-> s
     abc-edits        (update :abc-edits merge abc-edits)
     custom-tunes     (merge-custom-tunes custom-tunes)
     sets             (assoc :sets sets)
-    learned-tune-ids (assoc :learned-tune-ids learned-tune-ids)))
+    learned-tune-ids (assoc :learned-tune-ids learned-tune-ids)
+    tune-notes       (update :tune-notes merge tune-notes)))
 
 (defn apply-backup!
   "Merge a validated backup into app-state and persist each section."
@@ -76,7 +79,8 @@
   (when (:abc-edits data) (persist/schedule-save!))
   (when (:custom-tunes data) (persist/save-custom-tunes!))
   (when (:sets data) (persist/save-sets!))
-  (when (:learned-tune-ids data) (persist/save-learned!)))
+  (when (:learned-tune-ids data) (persist/save-learned!))
+  (when (:tune-notes data) (persist/schedule-save-notes!)))
 
 (defn- read-file-text [file on-text]
   (let [reader (js/FileReader.)]

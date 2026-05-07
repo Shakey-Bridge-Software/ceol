@@ -638,3 +638,54 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* Notes drawer */
+.notes-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-sheet);
+  border-top: 1px solid var(--border);
+  padding: 12px 32px 14px;
+  gap: 8px;
+  height: 200px;
+  flex-shrink: 0;
+}
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.notes-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-secondary);
+  letter-spacing: 2px;
+  font-weight: 500;
+}
+.notes-close {
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 18px;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.notes-close:hover { background: var(--border); color: var(--fg); }
+.notes-textarea {
+  flex: 1;
+  background: #FFFFFF;
+  border: 1px solid #E5E4E0;
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  resize: none;
+  outline: none;
+}
+.notes-textarea:focus { border-color: var(--accent); }
+.notes-textarea::placeholder { color: var(--fg-dim); }
