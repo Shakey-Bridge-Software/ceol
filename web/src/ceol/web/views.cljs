@@ -245,7 +245,7 @@
      [:div.sidebar-header
       [:div.app-title-row
        [:div.app-name "ceol"]
-       [:div.app-version "v0.2.0"]]
+       [:div.app-version "v0.3.0"]]
       [:div.app-tagline "PRACTICE COMPANION"]]
      [:div.tab-bar
       [:button.tab {:class (when (= :tunes (:tab state)) "active")
