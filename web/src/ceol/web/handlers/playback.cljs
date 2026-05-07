@@ -47,12 +47,16 @@
 (declare play!)
 
 (defn restart-if-playing!
-  "If currently playing, stop and start again so that a state change
-   affecting playback (section, tempo, count-in) takes effect immediately."
+  "If currently playing, stop and start again so a state change affecting
+   playback (section, tempo, count-in) takes effect immediately. Waits for
+   the in-flight sheet music render before play! so prepare! reads the
+   updated visual; without this, the first restart after a section change
+   would reuse the previously-rendered section."
   []
   (when (:playing? @state/app-state)
     (stop!)
-    (play!)))
+    (-> (render/wait-for-render!)
+        (.then (fn [_] (play!))))))
 
 (defn play!
   "Toggle play/stop. If already playing, stops. Otherwise starts playback
