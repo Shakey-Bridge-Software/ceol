@@ -22,6 +22,19 @@
 (defn- now-iso []
   (.toISOString (js/Date.)))
 
+(defonce ^:private status-timer (atom nil))
+
+(defn set-status!
+  "Show a transient banner above the sidebar footer. Cleared after 3s."
+  [kind message]
+  (swap! state/app-state assoc :backup-status {:kind kind :message message})
+  (when-let [t @status-timer] (js/clearTimeout t))
+  (reset! status-timer
+          (js/setTimeout
+           (fn []
+             (swap! state/app-state assoc :backup-status nil))
+           3000)))
+
 (defn- backup-filename []
   (str "ceol-backup-"
        (.replace (subs (now-iso) 0 19) #":" "-")
@@ -37,7 +50,7 @@
                                      :sets :learned-tune-ids
                                      :tune-notes])})
 
-(defn- trigger-download! [filename text]
+(defn- anchor-download! [filename text]
   (let [blob (js/Blob. #js [text] #js {:type "application/edn"})
         url  (.createObjectURL js/URL blob)
         a    (.createElement js/document "a")]
@@ -48,11 +61,44 @@
     (.removeChild js/document.body a)
     (.revokeObjectURL js/URL url)))
 
+(defn- save-file-picker-supported? []
+  (some? (.-showSaveFilePicker js/window)))
+
+(defn- save-via-picker! [filename text]
+  (-> (.showSaveFilePicker
+       js/window
+       #js {:suggestedName filename
+            :types #js [#js {:description "ceol backup (EDN)"
+                             :accept #js {"application/edn" #js [".edn"]}}]})
+      (.then (fn [^js handle]
+               (-> (.createWritable handle)
+                   (.then (fn [^js writable]
+                            (-> (.write writable text)
+                                (.then (fn [_] (.close writable)))))))))
+      (.then (fn [_] (set-status! :success "Backup saved")))
+      (.catch (fn [^js e]
+                ;; AbortError = user cancelled; stay silent.
+                (when (not= "AbortError" (.-name e))
+                  (js/console.warn "backup: export failed" e)
+                  (set-status! :error "Backup failed"))))))
+
 (defn export!
-  "Serialise current state to EDN and trigger a browser download."
+  "Serialise current state to EDN. Uses showSaveFilePicker where supported
+   so we get a real save/cancel signal; falls back to a plain anchor
+   download elsewhere — which can't observe the system save dialog, so
+   the message is the honest \"Backup ready\"."
   []
-  (let [backup (build-backup @state/app-state)]
-    (trigger-download! (backup-filename) (pr-str backup))))
+  (try
+    (let [backup (build-backup @state/app-state)
+          text   (pr-str backup)
+          name*  (backup-filename)]
+      (if (save-file-picker-supported?)
+        (save-via-picker! name* text)
+        (do (anchor-download! name* text)
+            (set-status! :success "Backup ready"))))
+    (catch :default e
+      (js/console.warn "backup: export failed" e)
+      (set-status! :error "Backup failed"))))
 
 (defn- merge-custom-tunes [s incoming]
   (let [merged (merge (:custom-tunes s) incoming)]
@@ -86,7 +132,8 @@
   (let [reader (js/FileReader.)]
     (set! (.-onload reader) (fn [e] (on-text (.. e -target -result))))
     (set! (.-onerror reader) (fn [_]
-                               (js/console.warn "backup: failed to read file")))
+                               (js/console.warn "backup: failed to read file")
+                               (set-status! :error "Could not read file")))
     (.readAsText reader file)))
 
 (defn import-text!
@@ -110,6 +157,8 @@
                file
                (fn [text]
                  (if (import-text! text)
-                   (js/console.log "backup: import successful")
-                   (js/console.warn "backup: import failed; state unchanged")))))))
+                   (do (js/console.log "backup: import successful")
+                       (set-status! :success "Backup restored"))
+                   (do (js/console.warn "backup: import failed; state unchanged")
+                       (set-status! :error "Restore failed: invalid file"))))))))
     (.click input)))

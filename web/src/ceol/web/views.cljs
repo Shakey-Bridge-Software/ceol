@@ -266,6 +266,10 @@
          [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]]
         [:div.tune-list
          (map (fn [t] (tune-row t selected-id learned-ids)) tunes)]])
+     (when-let [status (:backup-status state)]
+       [:div.backup-status {:class (str "kind-" (name (:kind status)))}
+        [:span.backup-status-icon (if (= :success (:kind status)) "✓" "!")]
+        [:span.backup-status-msg (:message status)]])
      [:div.sidebar-footer
       [:button.sidebar-footer-btn
        {:on {:click [[:backup/export]]}

@@ -53,6 +53,7 @@ body {
   padding: 24px 16px;
   gap: 20px;
   overflow: hidden;
+  position: relative;
 }
 
 .sidebar-header { display: flex; flex-direction: column; gap: 4px; }
@@ -637,6 +638,34 @@ body {
 .sidebar-footer-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Backup status banner — floats above sidebar footer */
+.backup-status {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 60px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  animation: backup-status-fade 3s ease forwards;
+  z-index: 10;
+}
+.backup-status.kind-success { background: #1F3A2A; border: 1px solid #3B6B4F; color: #C7E6D2; }
+.backup-status.kind-error   { background: #3A1F22; border: 1px solid #7A3A40; color: #F0C8CD; }
+.backup-status-icon { font-weight: 500; }
+.backup-status.kind-success .backup-status-icon { color: #7FCFA0; }
+.backup-status.kind-error   .backup-status-icon { color: #E89099; }
+@keyframes backup-status-fade {
+  0%   { opacity: 0; transform: translateY(4px); }
+  10%  { opacity: 1; transform: translateY(0); }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* Notes drawer */

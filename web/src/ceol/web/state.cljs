@@ -77,6 +77,10 @@
 ;; Tune notes
 ;;   :tune-notes        {id → string}     practice notes per tune, persisted to localStorage
 ;;
+;; Backup status
+;;   :backup-status     {:kind :success/:error :message str} | nil
+;;                                        transient banner above sidebar footer; auto-clears after 3s
+;;
 ;; Playback
 ;;   :playing?          bool              melody is currently playing
 ;;   :playing-section   :a | :b | nil     section that was active when play started
