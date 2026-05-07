@@ -614,3 +614,27 @@ body {
 .tune-list::-webkit-scrollbar { width: 4px; }
 .tune-list::-webkit-scrollbar-track { background: transparent; }
 .tune-list::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 2px; }
+
+/* Sidebar footer (backup/restore) */
+.sidebar-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-dark);
+}
+.sidebar-footer-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--border-dark);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+}
+.sidebar-footer-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
