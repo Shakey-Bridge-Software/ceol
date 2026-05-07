@@ -263,7 +263,16 @@
           (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
          [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]]
         [:div.tune-list
-         (map (fn [t] (tune-row t selected-id learned-ids)) tunes)]])]))
+         (map (fn [t] (tune-row t selected-id learned-ids)) tunes)]])
+     [:div.sidebar-footer
+      [:button.sidebar-footer-btn
+       {:on {:click [[:backup/export]]}
+        :title "Download all your tunes, sets, and edits as an EDN file"}
+       "Backup"]
+      [:button.sidebar-footer-btn
+       {:on {:click [[:backup/import]]}
+        :title "Restore from a previously downloaded backup file"}
+       "Restore"]]]))
 
 (defn tune-header [tune state]
   (when tune

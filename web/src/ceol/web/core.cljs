@@ -11,6 +11,7 @@
             [ceol.web.metronome :as metro]
             [ceol.web.beat-engine :as beat]
             [ceol.web.persist :as persist]
+            [ceol.web.backup :as backup]
             [ceol.web.render :as render]
             [ceol.web.handlers.playback :as playback]
             [ceol.web.handlers.session :as session]
@@ -91,6 +92,10 @@
 ;;   :session/start       []                          build queue and start session
 ;;   :session/play-current []                         play current session item (internal)
 ;;   :session/stop        []                          end session
+;;
+;; Backup / restore
+;;   :backup/export       []                          download EDN of all user data
+;;   :backup/import       []                          file picker → validate → merge
 ;; ---------------------------------------------------------------------------
 
 (defn dispatch-action! [action args]
@@ -164,6 +169,10 @@
     :session/stop
     (do (playback/stop!)
         (swap! state/app-state assoc :session-mode? false :session-pausing? false))
+
+    ;; Backup
+    :backup/export (backup/export!)
+    :backup/import (backup/import!)
 
     (js/console.warn "Unknown action:" action args)))
 

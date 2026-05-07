@@ -12,7 +12,7 @@
             [malli.core :as m]
             [malli.error :as me]))
 
-(defn- read-validated
+(defn read-validated
   "Parse EDN from raw and validate against schema.
    On parse failure or schema mismatch, log a console.warn and return nil.
    Used at the localStorage boundary to prevent corrupt persisted state
