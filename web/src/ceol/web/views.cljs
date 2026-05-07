@@ -243,8 +243,10 @@
         tunes (state/filtered-tunes state)]
     [:div.sidebar
      [:div.sidebar-header
-      [:div.app-name "ceol"]
-      [:div.app-tagline "IRISH TRADITIONAL MUSIC"]]
+      [:div.app-title-row
+       [:div.app-name "ceol"]
+       [:div.app-version "v0.2.0"]]
+      [:div.app-tagline "PRACTICE COMPANION"]]
      [:div.tab-bar
       [:button.tab {:class (when (= :tunes (:tab state)) "active")
                     :on {:click [[:tab/set :tunes]]}} "Tunes"]

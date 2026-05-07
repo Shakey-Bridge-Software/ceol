@@ -56,7 +56,9 @@ body {
 }
 
 .sidebar-header { display: flex; flex-direction: column; gap: 4px; }
+.app-title-row { display: flex; align-items: baseline; gap: 8px; }
 .app-name { font-family: var(--font-heading); font-size: 28px; font-weight: 300; color: var(--fg-inverse); letter-spacing: 1px; }
+.app-version { font-family: var(--font-mono); font-size: 10px; color: var(--fg-secondary); letter-spacing: 1px; }
 .app-tagline { font-family: var(--font-mono); font-size: 10px; color: var(--fg-secondary); letter-spacing: 2px; }
 
 /* Tab bar */
