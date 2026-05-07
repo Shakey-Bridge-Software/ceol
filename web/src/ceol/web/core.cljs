@@ -121,7 +121,8 @@
     :guitar/toggle  (let [new-val (not (:guitar? @state/app-state))]
                       (swap! state/app-state assoc :guitar? new-val)
                       (guitar/set-muted! (not new-val)))
-    :section/set    (swap! state/app-state assoc :section (first args))
+    :section/set    (do (swap! state/app-state assoc :section (first args))
+                        (playback/restart-if-playing!))
     :loop/toggle    (swap! state/app-state update :loop? not)
     :metronome/toggle
     (let [new-val (not (:metronome? @state/app-state))]
@@ -132,10 +133,14 @@
               params (beat/beats-for-tune tune (:tempo-offset s))]
           (metro/start-clicking! params))
         (metro/stop!)))
-    :count-in/toggle (swap! state/app-state update :count-in? not)
-    :tempo/up        (swap! state/app-state update :tempo-offset #(min 40 (+ (or % 0) 5)))
-    :tempo/down      (swap! state/app-state update :tempo-offset #(max -40 (- (or % 0) 5)))
-    :tempo/reset     (swap! state/app-state assoc :tempo-offset 0)
+    :count-in/toggle (do (swap! state/app-state update :count-in? not)
+                         (playback/restart-if-playing!))
+    :tempo/up        (do (swap! state/app-state update :tempo-offset #(min 40 (+ (or % 0) 5)))
+                         (playback/restart-if-playing!))
+    :tempo/down      (do (swap! state/app-state update :tempo-offset #(max -40 (- (or % 0) 5)))
+                         (playback/restart-if-playing!))
+    :tempo/reset     (do (swap! state/app-state assoc :tempo-offset 0)
+                         (playback/restart-if-playing!))
 
     ;; Sets
     :set/start-create     (set-h/start-create! args)

@@ -44,6 +44,16 @@
   (swap! state/app-state assoc :playing? false :playing-section nil
          :set-playing? false :set-tune-index 0 :current-beat nil))
 
+(declare play!)
+
+(defn restart-if-playing!
+  "If currently playing, stop and start again so that a state change
+   affecting playback (section, tempo, count-in) takes effect immediately."
+  []
+  (when (:playing? @state/app-state)
+    (stop!)
+    (play!)))
+
 (defn play!
   "Toggle play/stop. If already playing, stops. Otherwise starts playback
    for the selected tune, honouring count-in, section, loop, and set context."
