@@ -447,7 +447,7 @@
        "Count-in"]
       [:button.control-btn {:class (when (:metronome? state) "active")
                             :on {:click [[:metronome/toggle]]}}
-       "Metro"]
+       "Metronome"]
       [:button.control-btn {:class (when (:notes-open? state) "active")
                             :on {:click [[:notes/toggle]]}}
        "Notes"]
