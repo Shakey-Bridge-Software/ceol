@@ -5,14 +5,21 @@
   (:require [ceol.web.state :as state]
             [ceol.web.persist :as persist]))
 
+(defn- focus-editor-soon! []
+  (js/requestAnimationFrame
+   (fn []
+     (when-let [el (js/document.querySelector ".editor-textarea")]
+       (.focus el)))))
+
 (defn toggle! [_args]
   (let [opening? (not (:editor-open? @state/app-state))]
     (swap! state/app-state assoc :editor-open? opening?)
-    (when opening?
-      (js/requestAnimationFrame
-       (fn []
-         (when-let [el (js/document.querySelector ".editor-textarea")]
-           (.focus el)))))))
+    (when opening? (focus-editor-soon!))))
+
+(defn open! [_args]
+  (when-not (:editor-open? @state/app-state)
+    (swap! state/app-state assoc :editor-open? true)
+    (focus-editor-soon!)))
 
 (defn update! [[tune-id new-val]]
   (when (string? new-val)

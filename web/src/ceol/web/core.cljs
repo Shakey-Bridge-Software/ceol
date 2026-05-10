@@ -119,6 +119,9 @@
 
     ;; Editor + inline fields
     :editor/toggle  (editor/toggle! args)
+    :editor/open    (editor/open! args)
+    :menu/open      (swap! state/app-state assoc :context-menu-tune-id (first args))
+    :menu/close     (swap! state/app-state assoc :context-menu-tune-id nil)
     :editor/update  (editor/update! args)
     :editor/keydown (editor/keydown! args)
     :field/edit     (editor/field-edit! args)
@@ -195,9 +198,13 @@
     (js/console.warn "Unknown action:" action args)))
 
 (defn execute! [dispatch-data actions]
-  (let [actions (resolve-event-placeholders dispatch-data actions)]
+  (let [js-event (:replicant/js-event dispatch-data)
+        actions (resolve-event-placeholders dispatch-data actions)]
     (doseq [[action & args] actions]
-      (dispatch-action! action args))))
+      (case action
+        :event/stop    (some-> js-event .stopPropagation)
+        :event/prevent (some-> js-event .preventDefault)
+        (dispatch-action! action args)))))
 
 (defn- input-focused? []
   (let [tag (some-> js/document .-activeElement .-tagName str)]

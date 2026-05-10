@@ -38,18 +38,44 @@
     :on {:click [[:filter/set type-key]]}}
    (get tune-type-labels type-key)])
 
-(defn tune-row [tune selected-id learned-ids]
-  (let [active? (= (:id tune) selected-id)
-        learned? (contains? (or learned-ids #{}) (:id tune))]
-    [:div.tune-row {:class (when active? "active")
-                    :on {:click [[:tune/select (:id tune)]]}}
-     [:div.tune-dot {:class (when active? "active")}]
-     [:div.tune-info
-      [:div.tune-name (:name tune)]
-      [:div.tune-meta
-       (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]
-     (when learned?
-       [:span.learned-indicator "\u2713"])]))
+(defn tune-context-menu [tune-id custom?]
+  [:div.tune-context-menu {:on {:click [[:event/stop]]}}
+   [:button.cm-item {:on {:click [[:menu/close] [:learned/toggle tune-id]]}}
+    [:span.cm-icon "○"] "Mark as Learned"]
+   [:div.cm-divider]
+   [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:tune/add-to-set tune-id]]}}
+    [:span.cm-icon "≡"] "Add to Set…"]
+   [:div.cm-divider]
+   [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:playback/play]]}}
+    [:span.cm-icon "▶"] "Play"]
+   [:div.cm-divider]
+   [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}}
+    [:span.cm-icon "✎"] "Edit"]
+   (when custom?
+     (list [:div.cm-divider]
+           [:button.cm-item.cm-item-danger
+            {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
+            [:span.cm-icon "✕"] "Delete"]))])
+
+(defn tune-row [tune state]
+  (let [active? (= (:id tune) (:selected-tune-id state))
+        learned? (state/learned? state (:id tune))
+        menu-open? (= (:context-menu-tune-id state) (:id tune))
+        custom? (state/custom-tune? (:id tune))]
+    [:div.tune-row-wrap
+     [:div.tune-row {:class (str (when active? "active")
+                                 (when learned? " learned"))
+                     :on {:click [[:tune/select (:id tune)]]
+                          :contextmenu [[:event/prevent] [:menu/open (:id tune)]]}}
+      [:div.tune-info
+       [:div.tune-name (:name tune)]
+       [:div.tune-meta
+        (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]
+      [:button.tune-row-menu-btn
+       {:on {:click [[:event/stop] [:menu/open (:id tune)]]}}
+       "\u22ee"]]
+     (when menu-open?
+       (tune-context-menu (:id tune) custom?))]))
 
 ;; --- Sets tab components ---
 
@@ -265,7 +291,7 @@
           (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
          [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]]
         [:div.tune-list
-         (map (fn [t] (tune-row t selected-id learned-ids)) tunes)]])
+         (map (fn [t] (tune-row t state)) tunes)]])
      (when-let [status (:backup-status state)]
        [:div.backup-status {:class (str "kind-" (name (:kind status)))}
         [:span.backup-status-icon (if (= :success (:kind status)) "✓" "!")]
