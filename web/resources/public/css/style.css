@@ -393,6 +393,7 @@ body {
   border-bottom: 1px solid transparent;
 }
 .tune-title:hover { border-bottom-color: var(--border); }
+.tune-title.edit-mode { border-bottom-color: var(--border); }
 .inline-edit-title {
   font-family: var(--font-heading);
   font-size: 24px;
@@ -411,6 +412,7 @@ body {
   border-bottom: 1px solid transparent;
 }
 .meta-field.clickable:hover { border-bottom-color: var(--fg-secondary); }
+.tune-title-meta.edit-mode .meta-field.clickable { border-bottom-color: var(--fg-secondary); }
 .meta-sep { cursor: default; }
 .delete-tune {
   border: none;
@@ -480,6 +482,28 @@ body {
 }
 .edit-toggle.active {
   background: var(--accent);
+}
+
+/* EDITING TUNE strip (shows above tune-header when editor open) */
+.editing-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 32px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+.editing-strip-icon { font-size: 13px; }
+.editing-strip-spacer { flex: 1; }
+.editing-strip-help {
+  font-weight: 400;
+  letter-spacing: 1px;
+  opacity: 0.85;
+  font-size: 10px;
 }
 
 /* Editor split */

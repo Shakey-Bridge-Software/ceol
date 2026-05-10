@@ -299,10 +299,11 @@
             :auto-focus true
             :on {:blur [[:tune/update-field tune-id :name :event/target.value]]
                  :keydown [[:field/keydown :event/key]]}}]
-          [:div.tune-title {:on {:click [[:field/edit :name]]}}
+          [:div.tune-title {:class (when editor-open? "edit-mode")
+                            :on {:click [[:field/edit :name]]}}
            (:name tune)])
         ;; Editable metadata
-        [:div.tune-title-meta
+        [:div.tune-title-meta {:class (when editor-open? "edit-mode")}
          ;; Type — click to cycle
          [:span.meta-field.clickable
           {:on {:click [[:tune/update-field tune-id :type
@@ -336,7 +337,7 @@
                                    :on {:click [[:section/set nil]]}} "All"]])
           [:button.edit-toggle {:class (when editor-open? "active")
                                 :on {:click [[:editor/toggle]]}}
-           "Edit"]
+           (if editor-open? "✓ Done" "✎ Edit")]
           (let [is-learned? (state/learned? state tune-id)]
             [:button.learned-toggle {:class (when is-learned? "active")
                                      :on {:click [[:learned/toggle tune-id]]}}
@@ -454,10 +455,18 @@
                            :on {:click [[:guitar/toggle]]}}
        (if (:guitar? state) "\uD83C\uDFB8 Guitar" "Guitar")]]]))
 
+(defn editing-strip []
+  [:div.editing-strip
+   [:span.editing-strip-icon "✎"]
+   [:span.editing-strip-label "EDITING TUNE"]
+   [:span.editing-strip-spacer]
+   [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]])
+
 (defn main-area [state]
   (let [editor-open? (and (:editor-open? state) (not (:session-mode? state)))
         session? (:session-mode? state)]
     [:div.main-area
+     (when editor-open? (editing-strip))
      (tune-header (state/selected-tune state) state)
      [:div.divider]
      (sheet-music state)
