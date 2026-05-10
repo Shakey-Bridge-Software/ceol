@@ -488,10 +488,52 @@
    [:span.editing-strip-spacer]
    [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]])
 
-(defn main-area [state]
+(defn set-detail-tune-row [state set-id idx tune]
+  (let [learned? (state/learned? state (:id tune))]
+    [:div.set-detail-tune-row
+     [:span.set-detail-grip "\u283f"]
+     [:span.set-detail-num (str (inc idx))]
+     [:div.set-detail-tune-info
+      {:on {:click [[:set/select-tune set-id (:id tune)]]}}
+      [:div.set-detail-tune-name (:name tune)]
+      [:div.set-detail-tune-meta
+       (str (name (:type tune)) " \u00b7 " (:key tune) " \u00b7 " (:time-sig tune))]]
+     (when learned?
+       [:span.set-detail-check "\u2713"])
+     [:button.set-detail-remove
+      {:on {:click [[:set/remove-tune set-id (:id tune)]]}}
+      "\u00d7"]]))
+
+(defn set-detail-view [state]
+  (when-let [s (state/active-set state)]
+    (let [tunes (state/set-tunes state s)
+          set-id (:id s)
+          n (count (:tune-ids s))
+          all-learned? (and (pos? n) (every? #(state/learned? state %) (:tune-ids s)))]
+      [:div.set-detail
+       [:div.set-detail-header
+        [:div.set-detail-title-block
+         [:div.set-detail-title (:name s)]
+         [:div.set-detail-meta
+          (str n " tune" (when (not= 1 n) "s")
+               (when all-learned? " \u00b7 all learned"))]]
+        [:div.set-detail-actions
+         [:button.set-detail-play
+          {:on {:click [[:set/select-tune set-id (first (:tune-ids s))]
+                        [:playback/play]]}}
+          "\u25b6 Play set"]
+         [:button.set-detail-more "\u22ee"]]]
+       [:div.divider]
+       [:div.set-detail-list-label "TUNES"]
+       [:div.set-detail-list
+        (map-indexed (fn [i t]
+                       (when t (set-detail-tune-row state set-id i t)))
+                     tunes)]])))
+
+(defn tune-main-view [state]
   (let [editor-open? (and (:editor-open? state) (not (:session-mode? state)))
         session? (:session-mode? state)]
-    [:div.main-area
+    [:div.tune-main
      (when editor-open? (editing-strip))
      (tune-header (state/selected-tune state) state)
      [:div.divider]
@@ -507,6 +549,12 @@
      [:div.divider]
      (when-not session?
        (playback-bar state))]))
+
+(defn main-area [state]
+  [:div.main-area
+   (case (:main-view state)
+     :set (set-detail-view state)
+     (tune-main-view state))])
 
 (defn app [state]
   [:div.app-layout

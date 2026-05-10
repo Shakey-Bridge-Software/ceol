@@ -31,7 +31,8 @@
           (swap! state/app-state assoc-in [:abc-edits tune-id] raw-abc)))))
   (swap! state/app-state assoc :selected-tune-id tune-id
          :set-playing? false :set-tune-index 0
-         :context-menu-tune-id nil))
+         :context-menu-tune-id nil
+         :main-view :tune))
 
 (defn add! [_args]
   (let [new-id (state/next-tune-id @state/app-state)

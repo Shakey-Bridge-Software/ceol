@@ -86,14 +86,15 @@
 (defn toggle! [[set-id]]
   (let [s @state/app-state]
     (if (= set-id (:active-set-id s))
-      (swap! state/app-state assoc :active-set-id nil)
+      (swap! state/app-state assoc :active-set-id nil :main-view :tune)
       (let [s-data (get (:sets s) set-id)
             first-tune-id (first (:tune-ids s-data))]
         (swap! state/app-state assoc :active-set-id set-id
-               :selected-tune-id first-tune-id)))))
+               :selected-tune-id first-tune-id
+               :main-view :set)))))
 
 (defn select-tune! [[_set-id tune-id]]
-  (swap! state/app-state assoc :selected-tune-id tune-id))
+  (swap! state/app-state assoc :selected-tune-id tune-id :main-view :tune))
 
 (defn add-tune! [[set-id tune-id]]
   (swap! state/app-state update-in [:sets set-id :tune-ids]
