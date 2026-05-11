@@ -997,3 +997,32 @@ body {
 
 /* Hide mobile top bar on desktop */
 @media (min-width: 721px) { .mobile-top-bar { display: none !important; } }
+
+/* Mobile list view (≤720px) */
+.mobile-list-view { display: none; }
+
+@media (max-width: 720px) {
+  .mobile-list-view {
+    display: flex; flex-direction: column;
+    flex: 1; min-height: 0;
+    background: var(--dark); color: var(--fg-inverse);
+    padding: 12px 0 80px;
+    overflow-y: auto;
+  }
+  .mobile-filters {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 8px 16px 16px;
+  }
+  .mobile-tune-list { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
+
+  /* Floating action button */
+  .mobile-fab {
+    position: fixed; right: 20px; bottom: 24px; z-index: 25;
+    width: 56px; height: 56px; border-radius: 28px;
+    background: var(--accent); color: #fff; border: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    font-size: 28px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mobile-fab-icon { line-height: 1; }
+}

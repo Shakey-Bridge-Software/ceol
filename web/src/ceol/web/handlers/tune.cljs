@@ -32,7 +32,8 @@
   (swap! state/app-state assoc :selected-tune-id tune-id
          :set-playing? false :set-tune-index 0
          :context-menu-tune-id nil
-         :main-view :tune))
+         :main-view :tune
+         :mobile-view :detail))
 
 (defn add! [_args]
   (let [new-id (state/next-tune-id @state/app-state)

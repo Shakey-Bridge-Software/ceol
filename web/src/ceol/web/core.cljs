@@ -126,6 +126,13 @@
     :settings/close (swap! state/app-state assoc :main-view :tune)
     :drawer/toggle  (swap! state/app-state update :drawer-open? not)
     :drawer/close   (swap! state/app-state assoc :drawer-open? false)
+    :mobile/back
+    (swap! state/app-state
+           (fn [s]
+             (cond
+               (not= :tune (:main-view s))     (assoc s :main-view :tune)
+               (= :detail (:mobile-view s))    (assoc s :mobile-view :list)
+               :else s)))
     :data/clear-confirm
     (when (js/confirm "Clear all data? This removes every custom tune, set, edit, and learned mark. Cannot be undone.")
       (try

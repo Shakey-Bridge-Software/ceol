@@ -582,24 +582,45 @@
      (when-not session?
        (playback-bar state))]))
 
+(defn mobile-list-view [state]
+  (let [tunes (state/filtered-tunes state)
+        current-filter (:filter state)]
+    [:div.mobile-list-view
+     (case (:tab state)
+       :sets (sets-tab state)
+       :session (session-tab state)
+       (list
+        [:div.mobile-filters
+         (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
+        [:div.mobile-tune-list
+         (map (fn [t] (tune-row t state)) tunes)]))
+     [:button.mobile-fab {:on {:click [[:tune/add]]}}
+      [:span.mobile-fab-icon "+"]]]))
+
 (defn main-area [state]
-  [:div.main-area
-   (case (:main-view state)
-     :set (set-detail-view state)
-     :settings (settings-view state)
-     (tune-main-view state))])
+  (let [mobile-list? (and (= :list (:mobile-view state))
+                          (= :tune (:main-view state)))]
+    [:div.main-area
+     (cond
+       (= :settings (:main-view state)) (settings-view state)
+       (= :set (:main-view state))      (set-detail-view state)
+       mobile-list?                     (mobile-list-view state)
+       :else                            (tune-main-view state))]))
 
 (defn mobile-top-bar [state]
-  (let [view (:main-view state)
+  (let [main-view (:main-view state)
+        mobile-view (:mobile-view state)
         tune (state/selected-tune state)
-        title (case view
+        in-detail? (and (= :tune main-view) (= :detail mobile-view))
+        title (case main-view
                 :set      (or (:name (state/active-set state)) "Set")
                 :settings "Settings"
-                (if tune (:name tune) "ceol"))]
+                (if in-detail? (:name tune) "ceol"))
+        show-back? (or in-detail? (not= :tune main-view))]
     [:div.mobile-top-bar
-     (if (not= :tune view)
+     (if show-back?
        [:button.mobile-back
-        {:on {:click [[:settings/close]]}}
+        {:on {:click [[:mobile/back]]}}
         "‹"]
        [:button.mobile-menu
         {:on {:click [[:drawer/toggle]]}}
