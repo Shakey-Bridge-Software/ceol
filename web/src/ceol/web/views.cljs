@@ -589,7 +589,49 @@
      :settings (settings-view state)
      (tune-main-view state))])
 
+(defn mobile-top-bar [state]
+  (let [view (:main-view state)
+        tune (state/selected-tune state)
+        title (case view
+                :set      (or (:name (state/active-set state)) "Set")
+                :settings "Settings"
+                (if tune (:name tune) "ceol"))]
+    [:div.mobile-top-bar
+     (if (not= :tune view)
+       [:button.mobile-back
+        {:on {:click [[:settings/close]]}}
+        "‹"]
+       [:button.mobile-menu
+        {:on {:click [[:drawer/toggle]]}}
+        "☰"])
+     [:div.mobile-title title]
+     [:span.mobile-top-bar-spacer]]))
+
+(defn mobile-drawer [state]
+  (when (:drawer-open? state)
+    [:div.mobile-drawer-backdrop
+     {:on {:click [[:drawer/close]]}}
+     [:div.mobile-drawer
+      {:on {:click [[:event/stop]]}}
+      [:div.mobile-drawer-handle]
+      [:div.mobile-drawer-tabs
+       [:button.mobile-drawer-tab
+        {:class (when (= :tunes (:tab state)) "active")
+         :on {:click [[:drawer/close] [:tab/set :tunes]]}} "Tunes"]
+       [:button.mobile-drawer-tab
+        {:class (when (= :sets (:tab state)) "active")
+         :on {:click [[:drawer/close] [:tab/set :sets]]}} "Sets"]
+       [:button.mobile-drawer-tab
+        {:class (when (= :session (:tab state)) "active")
+         :on {:click [[:drawer/close] [:tab/set :session]]}} "Session"]]
+      [:div.mobile-drawer-divider]
+      [:button.mobile-drawer-item
+       {:on {:click [[:drawer/close] [:settings/open]]}}
+       [:span.cm-icon "⚙"] "Settings"]]]))
+
 (defn app [state]
-  [:div.app-layout
+  [:div.app-layout {:class (when (:drawer-open? state) "drawer-open")}
    (sidebar state)
-   (main-area state)])
+   (mobile-top-bar state)
+   (main-area state)
+   (mobile-drawer state)])

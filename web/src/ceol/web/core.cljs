@@ -122,8 +122,10 @@
     :editor/open    (editor/open! args)
     :menu/open      (swap! state/app-state assoc :context-menu-tune-id (first args))
     :menu/close     (swap! state/app-state assoc :context-menu-tune-id nil)
-    :settings/open  (swap! state/app-state assoc :main-view :settings)
+    :settings/open  (swap! state/app-state assoc :main-view :settings :drawer-open? false)
     :settings/close (swap! state/app-state assoc :main-view :tune)
+    :drawer/toggle  (swap! state/app-state update :drawer-open? not)
+    :drawer/close   (swap! state/app-state assoc :drawer-open? false)
     :data/clear-confirm
     (when (js/confirm "Clear all data? This removes every custom tune, set, edit, and learned mark. Cannot be undone.")
       (try
