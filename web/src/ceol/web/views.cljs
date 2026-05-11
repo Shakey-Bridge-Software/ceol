@@ -701,6 +701,19 @@
          [:button.modal-destructive
           {:on {:click [[:delete/confirm tune-id]]}} "Delete"]]]])))
 
+(defn onboarding-coachmark [state]
+  (when (and (not (:onboarded? state))
+             (seq (state/filtered-tunes state)))
+    [:div.coachmark-overlay
+     {:on {:click [[:onboarding/dismiss]]}}
+     [:div.coachmark-card {:on {:click [[:event/stop]]}}
+      [:div.coachmark-title "Welcome to ceol"]
+      [:div.coachmark-body
+       "Tap a tune to play. Swipe left on a row for quick actions, or tap ⋮ to open the menu."]
+      [:button.coachmark-ok
+       {:on {:click [[:onboarding/dismiss]]}}
+       "Got it"]]]))
+
 (defn app [state]
   [:div.app-layout {:class (when (:drawer-open? state) "drawer-open")}
    (sidebar state)
@@ -708,4 +721,5 @@
    (main-area state)
    (mobile-drawer state)
    (mobile-action-sheet state)
-   (delete-confirm-modal state)])
+   (delete-confirm-modal state)
+   (onboarding-coachmark state)])

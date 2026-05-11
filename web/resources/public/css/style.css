@@ -1122,6 +1122,48 @@ body {
   .control-btn, .tempo-btn, .guitar-btn { padding: 5px 10px; font-size: 11px; }
 }
 
+/* Onboarding coachmark (shown once) */
+.coachmark-overlay { display: none; }
+
+@media (max-width: 720px) {
+  .coachmark-overlay {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(0,0,0,0.7);
+    padding: 24px;
+    animation: fade-in 0.2s;
+  }
+  .coachmark-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 320px; width: 100%;
+    display: flex; flex-direction: column; gap: 12px;
+    text-align: center;
+  }
+  .coachmark-title { font-family: var(--font-heading); font-size: 20px; }
+  .coachmark-body { font-family: var(--font-heading); font-size: 14px; color: var(--fg-secondary); line-height: 1.4; }
+  .coachmark-ok {
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px;
+    font-family: var(--font-heading); font-size: 14px;
+    cursor: pointer;
+  }
+}
+
+/* Mobile landscape — wider sheet, thinner playback bar */
+@media (max-width: 720px) and (orientation: landscape) {
+  .mobile-top-bar { height: 44px; }
+  .tune-main { padding-bottom: 60px; }
+  .playback-bar { padding: 6px 10px; }
+  .play-btn { padding: 6px 12px; font-size: 12px; }
+  .control-btn, .tempo-btn, .guitar-btn { padding: 4px 8px; font-size: 11px; }
+  .sheet-area { padding: 8px 24px; }
+  .editing-strip { display: none; }
+}
+
 /* Mobile session + settings layouts */
 @media (max-width: 720px) {
   .session-content {

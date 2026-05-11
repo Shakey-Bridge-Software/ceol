@@ -127,6 +127,10 @@
     :settings/close (swap! state/app-state assoc :main-view :tune)
     :drawer/toggle  (swap! state/app-state update :drawer-open? not)
     :drawer/close   (swap! state/app-state assoc :drawer-open? false)
+    :onboarding/dismiss
+    (do (swap! state/app-state assoc :onboarded? true)
+        (try (.setItem js/localStorage "ceol-onboarded" "1")
+             (catch :default _)))
     :swipe/clear
     (swap! state/app-state assoc :swipe-peek-tune-id nil)
 
@@ -280,6 +284,8 @@
 (defn init! []
   (r/set-dispatch! execute!)
   (gesture/attach!)
+  (when (.getItem js/localStorage "ceol-onboarded")
+    (swap! state/app-state assoc :onboarded? true))
   (render/setup-render-watch!)
   (persist/load-custom-tunes!)
   (persist/load-sets!)
