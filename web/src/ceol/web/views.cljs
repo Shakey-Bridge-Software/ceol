@@ -231,17 +231,9 @@
         nil)]
      [:div.session-next
       [:div.session-next-label "NEXT"]
-      [:div.session-next-val
-       (let [result (state/advance-session queue idx (:session-set-index state) false)
-             next-item (when (= :next-item (:action result))
-                         (nth queue (:session-index result) nil))]
-         (if next-item
-           (case (:type next-item)
-             :set  (:name next-item)
-             :tune (let [t (state/tune-by-id state (:tune-id next-item))]
-                     (:name t))
-             "?")
-           "—"))]]
+      [:div.session-next-val.session-next-teaser
+       (let [last? (= (inc idx) total)]
+         (if last? "—" "?"))]]
      (when (seq (:session-played state))
        [:div.session-history
         [:div.session-history-label "PLAYED"]

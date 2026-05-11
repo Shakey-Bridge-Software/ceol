@@ -524,6 +524,13 @@ body {
   background: var(--accent);
 }
 
+.session-next-teaser {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  color: #555;
+  font-weight: 300;
+}
+
 /* Set detail (main-view = :set) */
 .set-detail { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .set-detail-header {
