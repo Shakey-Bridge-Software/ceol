@@ -289,14 +289,10 @@
         [:span.backup-status-icon (if (= :success (:kind status)) "✓" "!")]
         [:span.backup-status-msg (:message status)]])
      [:div.sidebar-footer
-      [:button.sidebar-footer-btn
-       {:on {:click [[:backup/export]]}
-        :title "Download all your tunes, sets, and edits as an EDN file"}
-       "Backup"]
-      [:button.sidebar-footer-btn
-       {:on {:click [[:backup/import]]}
-        :title "Restore from a previously downloaded backup file"}
-       "Restore"]]]))
+      [:button.sidebar-footer-btn.sidebar-settings-btn
+       {:class (when (= :settings (:main-view state)) "active")
+        :on {:click [[:settings/open]]}}
+       [:span.settings-gear "⚙"] "Settings"]]]))
 
 (defn tune-header [tune state]
   (when tune
@@ -522,6 +518,49 @@
                        (when t (set-detail-tune-row state set-id i t)))
                      tunes)]])))
 
+(defn settings-view [_state]
+  [:div.settings-view
+   [:div.settings-header
+    [:div.settings-title "Settings"]
+    [:button.settings-back
+     {:on {:click [[:settings/close]]}}
+     "‹ Back to tunes"]]
+   [:div.settings-body
+    [:div.settings-card
+     [:div.settings-card-label "BACKUP"]
+     [:div.settings-row
+      [:div.settings-row-text "Export backup as .edn"]
+      [:button.settings-action
+       {:on {:click [[:backup/export]]}}
+       "Export"]]
+     [:div.settings-row
+      [:div.settings-row-text "Import backup from .edn"]
+      [:button.settings-action.settings-action-secondary
+       {:on {:click [[:backup/import]]}}
+       "Choose file"]]]
+    [:div.settings-card
+     [:div.settings-card-label "ABOUT"]
+     [:div.settings-row
+      [:div.settings-row-text "Version"]
+      [:div.settings-row-value "v0.3.0"]]
+     [:div.settings-row
+      [:div.settings-row-text "Source code"]
+      [:a.settings-row-link
+       {:href "https://github.com/anthropics/ceol" :target "_blank"}
+       "github ↗"]]
+     [:div.settings-row
+      [:div.settings-row-text "Report an issue"]
+      [:a.settings-row-link
+       {:href "https://github.com/anthropics/ceol/issues" :target "_blank"}
+       "open ↗"]]]
+    [:div.settings-card
+     [:div.settings-card-label "DATA"]
+     [:div.settings-row
+      [:div.settings-row-text "Clear all data (tunes, sets, edits, learned)"]
+      [:button.settings-action.settings-action-danger
+       {:on {:click [[:data/clear-confirm]]}}
+       "Clear all data"]]]]])
+
 (defn tune-main-view [state]
   (let [editor-open? (and (:editor-open? state) (not (:session-mode? state)))
         session? (:session-mode? state)]
@@ -546,6 +585,7 @@
   [:div.main-area
    (case (:main-view state)
      :set (set-detail-view state)
+     :settings (settings-view state)
      (tune-main-view state))])
 
 (defn app [state]

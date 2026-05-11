@@ -524,6 +524,62 @@ body {
   background: var(--accent);
 }
 
+/* Settings view (main-view = :settings) */
+.settings-view { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
+.settings-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 24px 32px; gap: 16px;
+}
+.settings-title { font-family: var(--font-heading); font-size: 28px; font-weight: 400; }
+.settings-back {
+  background: transparent; border: 1px solid var(--border);
+  padding: 8px 14px; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--fg-secondary); cursor: pointer;
+}
+.settings-back:hover { border-color: var(--fg-secondary); color: var(--fg); }
+.settings-body { padding: 0 32px 32px; display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.settings-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.settings-card-label {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 2px; color: var(--fg-secondary);
+  margin-bottom: 4px;
+}
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; gap: 16px;
+  border-top: 1px solid var(--border);
+}
+.settings-row:first-of-type { border-top: none; }
+.settings-row-text { font-family: var(--font-heading); font-size: 14px; }
+.settings-row-value { font-family: var(--font-mono); font-size: 12px; color: var(--fg-secondary); }
+.settings-row-link {
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--accent); text-decoration: none;
+}
+.settings-row-link:hover { text-decoration: underline; }
+.settings-action {
+  background: var(--accent); color: #fff;
+  border: none; padding: 8px 16px; border-radius: 4px;
+  font-family: var(--font-heading); font-size: 13px;
+  cursor: pointer;
+}
+.settings-action-secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+.settings-action-danger { background: transparent; color: #D9534F; border: 1px solid #D9534F; }
+.settings-action-danger:hover { background: #D9534F; color: #fff; }
+
+.sidebar-settings-btn {
+  display: flex !important; align-items: center; justify-content: center; gap: 6px;
+}
+.sidebar-settings-btn.active { background: var(--dark-hover); color: var(--fg-inverse); }
+.settings-gear { font-size: 14px; }
+
 .session-next-teaser {
   font-family: var(--font-heading);
   font-size: 28px;

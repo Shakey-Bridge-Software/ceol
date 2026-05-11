@@ -122,6 +122,14 @@
     :editor/open    (editor/open! args)
     :menu/open      (swap! state/app-state assoc :context-menu-tune-id (first args))
     :menu/close     (swap! state/app-state assoc :context-menu-tune-id nil)
+    :settings/open  (swap! state/app-state assoc :main-view :settings)
+    :settings/close (swap! state/app-state assoc :main-view :tune)
+    :data/clear-confirm
+    (when (js/confirm "Clear all data? This removes every custom tune, set, edit, and learned mark. Cannot be undone.")
+      (try
+        (some-> js/window .-localStorage .clear)
+        (.reload (.-location js/window))
+        (catch :default e (js/console.warn "clear failed" e))))
     :editor/update  (editor/update! args)
     :editor/keydown (editor/keydown! args)
     :field/edit     (editor/field-edit! args)
