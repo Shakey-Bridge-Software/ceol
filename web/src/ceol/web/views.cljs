@@ -628,6 +628,35 @@
      [:div.mobile-title title]
      [:span.mobile-top-bar-spacer]]))
 
+(defn mobile-action-sheet [state]
+  (when-let [tune-id (:context-menu-tune-id state)]
+    (let [custom? (state/custom-tune? tune-id)
+          tune (state/tune-by-id state tune-id)]
+      [:div.mobile-action-sheet-backdrop
+       {:on {:click [[:menu/close]]}}
+       [:div.mobile-action-sheet
+        {:on {:click [[:event/stop]]}}
+        [:div.mobile-drawer-handle]
+        [:div.mobile-action-sheet-title (:name tune)]
+        [:button.mobile-action-item
+         {:on {:click [[:menu/close] [:learned/toggle tune-id]]}}
+         [:span.cm-icon "○"] "Mark as Learned"]
+        [:button.mobile-action-item
+         {:on {:click [[:menu/close] [:tune/select tune-id] [:tune/add-to-set tune-id]]}}
+         [:span.cm-icon "≡"] "Add to Set…"]
+        [:button.mobile-action-item
+         {:on {:click [[:menu/close] [:tune/select tune-id] [:playback/play]]}}
+         [:span.cm-icon "▶"] "Play"]
+        [:button.mobile-action-item
+         {:on {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}}
+         [:span.cm-icon "✎"] "Edit"]
+        (when custom?
+          [:button.mobile-action-item.mobile-action-danger
+           {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
+           [:span.cm-icon "✕"] "Delete"])
+        [:button.mobile-action-cancel
+         {:on {:click [[:menu/close]]}} "Cancel"]]])))
+
 (defn mobile-drawer [state]
   (when (:drawer-open? state)
     [:div.mobile-drawer-backdrop
@@ -655,4 +684,5 @@
    (sidebar state)
    (mobile-top-bar state)
    (main-area state)
-   (mobile-drawer state)])
+   (mobile-drawer state)
+   (mobile-action-sheet state)])
