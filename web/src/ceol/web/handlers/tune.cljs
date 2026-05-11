@@ -36,14 +36,18 @@
 
 (defn add! [_args]
   (let [new-id (state/next-tune-id @state/app-state)
-        new-tune {:id new-id :name "New Tune" :type :polka :time-sig "2/4"
+        new-tune {:id new-id :name "Untitled tune" :type :polka :time-sig "2/4"
                   :key "G" :mode-name "Ionian"}]
     (swap! state/app-state
            (fn [s]
              (let [custom (assoc (:custom-tunes s) new-id new-tune)
                    merged (state/merge-tunes state/base-tunes custom)]
                (merge s {:custom-tunes custom} merged
-                      {:selected-tune-id new-id :editing-field :name}))))
+                      {:selected-tune-id new-id
+                       :editing-field :name
+                       :main-view :tune
+                       :editor-open? true
+                       :tab :tunes}))))
     (persist/save-custom-tunes!)))
 
 (defn update-field! [[tune-id field value]]

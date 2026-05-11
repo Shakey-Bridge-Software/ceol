@@ -280,8 +280,9 @@
        [:div.tunes-content
         [:div.filters-row
          [:div.filters
-          (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
-         [:button.add-tune-btn {:on {:click [[:tune/add]]}} "+"]]
+          (map (fn [t] (filter-chip current-filter t)) tune-type-order)]]
+        [:button.new-tune-btn {:on {:click [[:tune/add]]}}
+         [:span.new-tune-icon "+"] "New tune"]
         [:div.tune-list
          (map (fn [t] (tune-row t state)) tunes)]])
      (when-let [status (:backup-status state)]
