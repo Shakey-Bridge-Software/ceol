@@ -61,11 +61,20 @@
   (let [active? (= (:id tune) (:selected-tune-id state))
         learned? (state/learned? state (:id tune))
         menu-open? (= (:context-menu-tune-id state) (:id tune))
+        peek? (= (:swipe-peek-tune-id state) (:id tune))
         custom? (state/custom-tune? (:id tune))]
-    [:div.tune-row-wrap
+    [:div.tune-row-wrap {:class (when peek? "peek")}
+     [:div.tune-row-peek-actions
+      [:button.tune-row-peek-edit
+       {:on {:click [[:swipe/clear] [:tune/select (:id tune)] [:editor/open]]}}
+       "Edit"]
+      [:button.tune-row-peek-delete
+       {:on {:click [[:swipe/clear] [:menu/open (:id tune)]]}}
+       "More"]]
      [:div.tune-row {:class (str (when active? "active")
                                  (when learned? " learned"))
-                     :on {:click [[:tune/select (:id tune)]]
+                     :data-tune-id (:id tune)
+                     :on {:click [[:swipe/clear] [:tune/select (:id tune)]]
                           :contextmenu [[:event/prevent] [:menu/open (:id tune)]]}}
       [:div.tune-info
        [:div.tune-name (:name tune)]
@@ -679,10 +688,24 @@
        {:on {:click [[:drawer/close] [:settings/open]]}}
        [:span.cm-icon "⚙"] "Settings"]]]))
 
+(defn delete-confirm-modal [state]
+  (when-let [tune-id (:delete-confirm-tune-id state)]
+    (let [tune (state/tune-by-id state tune-id)]
+      [:div.modal-backdrop {:on {:click [[:delete/cancel]]}}
+       [:div.modal {:on {:click [[:event/stop]]}}
+        [:div.modal-title "Delete tune?"]
+        [:div.modal-body
+         (str "“" (:name tune) "” will be removed permanently. Cannot be undone.")]
+        [:div.modal-actions
+         [:button.modal-cancel {:on {:click [[:delete/cancel]]}} "Cancel"]
+         [:button.modal-destructive
+          {:on {:click [[:delete/confirm tune-id]]}} "Delete"]]]])))
+
 (defn app [state]
   [:div.app-layout {:class (when (:drawer-open? state) "drawer-open")}
    (sidebar state)
    (mobile-top-bar state)
    (main-area state)
    (mobile-drawer state)
-   (mobile-action-sheet state)])
+   (mobile-action-sheet state)
+   (delete-confirm-modal state)])

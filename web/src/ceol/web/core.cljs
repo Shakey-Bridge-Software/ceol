@@ -18,6 +18,7 @@
             [ceol.web.handlers.tune :as tune]
             [ceol.web.handlers.editor :as editor]
             [ceol.web.handlers.set :as set-h]
+            [ceol.web.gesture :as gesture]
             [clojure.walk :as walk]))
 
 (defn resolve-event-placeholders [dispatch-data actions]
@@ -126,6 +127,17 @@
     :settings/close (swap! state/app-state assoc :main-view :tune)
     :drawer/toggle  (swap! state/app-state update :drawer-open? not)
     :drawer/close   (swap! state/app-state assoc :drawer-open? false)
+    :swipe/clear
+    (swap! state/app-state assoc :swipe-peek-tune-id nil)
+
+    :delete/cancel
+    (swap! state/app-state assoc :delete-confirm-tune-id nil)
+
+    :delete/confirm
+    (let [[tune-id] args]
+      (swap! state/app-state assoc :delete-confirm-tune-id nil)
+      (tune/delete! [tune-id]))
+
     :mobile/back
     (swap! state/app-state
            (fn [s]
@@ -267,6 +279,7 @@
 
 (defn init! []
   (r/set-dispatch! execute!)
+  (gesture/attach!)
   (render/setup-render-watch!)
   (persist/load-custom-tunes!)
   (persist/load-sets!)
