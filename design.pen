@@ -8541,7 +8541,8 @@
                   "width": "fill_container",
                   "content": "Boys of Bluehill",
                   "fontFamily": "Newsreader",
-                  "fontSize": 15
+                  "fontSize": 15,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "text",
@@ -11184,7 +11185,8 @@
                       "width": "fill_container",
                       "content": "The Kerry Polka",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -11231,7 +11233,8 @@
                       "width": "fill_container",
                       "content": "The Ocean Jig",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -11285,7 +11288,8 @@
                       "width": "fill_container",
                       "content": "Cooley's Reel",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -11332,7 +11336,8 @@
                       "width": "fill_container",
                       "content": "Boys of Bluehill",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -11379,7 +11384,8 @@
                       "width": "fill_container",
                       "content": "Fig for a Kiss",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -11426,7 +11432,8 @@
                       "width": "fill_container",
                       "content": "The Foggy Dew",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -12003,7 +12010,8 @@
                       "width": "fill_container",
                       "content": "The Kerry Polka",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -12050,7 +12058,8 @@
                       "width": "fill_container",
                       "content": "The Ocean Jig",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -12104,7 +12113,8 @@
                       "width": "fill_container",
                       "content": "Cooley's Reel",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -12151,7 +12161,8 @@
                       "width": "fill_container",
                       "content": "Boys of Bluehill",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -12198,7 +12209,8 @@
                       "width": "fill_container",
                       "content": "Fig for a Kiss",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -12245,7 +12257,8 @@
                       "width": "fill_container",
                       "content": "The Foggy Dew",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -14620,7 +14633,8 @@
                       "width": "fill_container",
                       "content": "The Kerry Polka",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -14667,7 +14681,8 @@
                       "width": "fill_container",
                       "content": "The Ocean Jig",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -14721,7 +14736,8 @@
                       "width": "fill_container",
                       "content": "Cooley's Reel",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -14768,7 +14784,8 @@
                       "width": "fill_container",
                       "content": "Boys of Bluehill",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -14815,7 +14832,8 @@
                       "width": "fill_container",
                       "content": "Fig for a Kiss",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -14862,7 +14880,8 @@
                       "width": "fill_container",
                       "content": "The Foggy Dew",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -15439,7 +15458,8 @@
                       "width": "fill_container",
                       "content": "The Kerry Polka",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -15486,7 +15506,8 @@
                       "width": "fill_container",
                       "content": "The Ocean Jig",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -15540,7 +15561,8 @@
                       "width": "fill_container",
                       "content": "Cooley's Reel",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -15587,7 +15609,8 @@
                       "width": "fill_container",
                       "content": "Boys of Bluehill",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -15634,7 +15657,8 @@
                       "width": "fill_container",
                       "content": "Fig for a Kiss",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -15681,7 +15705,8 @@
                       "width": "fill_container",
                       "content": "The Foggy Dew",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -17417,7 +17442,8 @@
                       "width": "fill_container",
                       "content": "The Kerry Polka",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -17464,7 +17490,8 @@
                       "width": "fill_container",
                       "content": "The Ocean Jig",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -17518,7 +17545,8 @@
                       "width": "fill_container",
                       "content": "Cooley's Reel",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -17565,7 +17593,8 @@
                       "width": "fill_container",
                       "content": "Boys of Bluehill",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -17612,7 +17641,8 @@
                       "width": "fill_container",
                       "content": "Fig for a Kiss",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -17659,7 +17689,8 @@
                       "width": "fill_container",
                       "content": "The Foggy Dew",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -18889,7 +18920,8 @@
                       "width": "fill_container",
                       "content": "The Kerry Polka",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -18936,7 +18968,8 @@
                       "width": "fill_container",
                       "content": "The Ocean Jig",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -18990,7 +19023,8 @@
                       "width": "fill_container",
                       "content": "Cooley's Reel",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -19037,7 +19071,8 @@
                       "width": "fill_container",
                       "content": "Boys of Bluehill",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -19084,7 +19119,8 @@
                       "width": "fill_container",
                       "content": "Fig for a Kiss",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -19131,7 +19167,8 @@
                       "width": "fill_container",
                       "content": "The Foggy Dew",
                       "fontFamily": "Newsreader",
-                      "fontSize": 16
+                      "fontSize": 16,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -21293,6 +21330,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "Z9D1q",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -21345,6 +21391,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "5HWI0",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -21390,6 +21445,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "BJB3N",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -21442,6 +21506,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "Cqubl",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -21487,6 +21560,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "Uae7Y",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -21532,6 +21614,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "XgEWC",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -21577,6 +21668,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "YytSm",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 }
@@ -23520,6 +23620,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "5mUC1",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -23572,6 +23681,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "tAWdu",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -23617,6 +23735,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "GHXQV",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -23669,6 +23796,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "5M5AA",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -23714,6 +23850,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "cUf2l",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -23759,6 +23904,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "edisD",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -23804,6 +23958,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "aIpCU",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 }
@@ -25721,6 +25884,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "0qXN0",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -25773,6 +25945,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "Pj7oU",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -25818,6 +25999,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "TPoGk",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -25870,6 +26060,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "TLl5a",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -25915,6 +26114,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "gflZP",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -25960,6 +26168,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "9eHZu",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -26005,6 +26222,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "wZn4n",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 }
@@ -28054,6 +28280,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "ixY0I",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -28106,6 +28341,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "sd17d",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -28151,6 +28395,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "IhtIj",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -28203,6 +28456,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "Vt0I4",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -28248,6 +28510,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "aPhWI",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -28293,6 +28564,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "zTirw",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -28338,6 +28618,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "2Akpq",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 }
@@ -30157,7 +30446,7 @@
                   "name": "cx1add",
                   "width": 14,
                   "height": 14,
-                  "iconFontName": "plus",
+                  "iconFontName": "ellipsis-vertical",
                   "iconFontFamily": "lucide",
                   "fill": "#555555"
                 }
@@ -30219,7 +30508,7 @@
                   "name": "cx2add",
                   "width": 14,
                   "height": 14,
-                  "iconFontName": "plus",
+                  "iconFontName": "ellipsis-vertical",
                   "iconFontFamily": "lucide",
                   "fill": "#555555"
                 }
@@ -30275,7 +30564,7 @@
                   "name": "cx3add",
                   "width": 14,
                   "height": 14,
-                  "iconFontName": "plus",
+                  "iconFontName": "ellipsis-vertical",
                   "iconFontFamily": "lucide",
                   "fill": "#555555"
                 }
@@ -30337,7 +30626,7 @@
                   "name": "cx4add",
                   "width": 14,
                   "height": 14,
-                  "iconFontName": "plus",
+                  "iconFontName": "ellipsis-vertical",
                   "iconFontFamily": "lucide",
                   "fill": "#555555"
                 }
@@ -30392,7 +30681,7 @@
                   "name": "cx5add",
                   "width": 14,
                   "height": 14,
-                  "iconFontName": "plus",
+                  "iconFontName": "ellipsis-vertical",
                   "iconFontFamily": "lucide",
                   "fill": "#555555"
                 }
@@ -33345,6 +33634,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "LQTPH",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -33397,6 +33695,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "5nYZ7",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -33442,6 +33749,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "GB3J4",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -33494,6 +33810,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "gKmPN",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -33539,6 +33864,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "dC2bA",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -33584,6 +33918,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "rpcKO",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -33629,6 +33972,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "ewFBg",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 }
@@ -38854,6 +39206,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "C2gTT",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -38906,6 +39267,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "4gJvT",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -38951,6 +39321,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "ZXcXd",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -39003,6 +39382,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "2oq2S",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -39048,6 +39436,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "0AVKI",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -39093,6 +39490,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "Gi8b5",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 },
@@ -39138,6 +39544,15 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "TH2mi",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "ellipsis-vertical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#555555"
                     }
                   ]
                 }
@@ -40664,6 +41079,34 @@
           ]
         }
       ]
+    },
+    {
+      "type": "rectangle",
+      "id": "jKlHR",
+      "x": -1630,
+      "y": 13160,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-19 at 16.36.49.png",
+        "mode": "fill"
+      },
+      "width": 390,
+      "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "0eIlt",
+      "x": -1089,
+      "y": 13160,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-19 at 16.37.48.png",
+        "mode": "fill"
+      },
+      "width": 390,
+      "height": 844
     }
   ]
 }
