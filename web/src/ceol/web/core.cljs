@@ -97,8 +97,6 @@
 ;; Mobile UI
 ;;   :menu/open           [tune-id]                   open tune action menu / mobile action-sheet
 ;;   :menu/close          []                          close it
-;;   :drawer/toggle       []                          toggle bottom-sheet nav drawer
-;;   :drawer/close        []                          close drawer
 ;;   :controls/toggle     []                          toggle "NOW PLAYING" controls sheet (mobile)
 ;;   :controls/close      []                          close controls sheet
 ;;   :settings/open       []                          show settings panel (main-view)
@@ -139,10 +137,8 @@
     :editor/open    (editor/open! args)
     :menu/open      (swap! state/app-state assoc :context-menu-tune-id (first args))
     :menu/close     (swap! state/app-state assoc :context-menu-tune-id nil)
-    :settings/open  (swap! state/app-state assoc :main-view :settings :drawer-open? false)
+    :settings/open  (swap! state/app-state assoc :main-view :settings)
     :settings/close (swap! state/app-state assoc :main-view :tune)
-    :drawer/toggle  (swap! state/app-state update :drawer-open? not)
-    :drawer/close   (swap! state/app-state assoc :drawer-open? false)
     :controls/toggle (swap! state/app-state update :controls-sheet-open? not)
     :controls/close  (swap! state/app-state assoc :controls-sheet-open? false)
     :onboarding/dismiss

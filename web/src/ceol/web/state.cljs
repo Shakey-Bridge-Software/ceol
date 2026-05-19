@@ -77,7 +77,6 @@
 ;; Mobile UI (only meaningful at ≤720px; harmless on desktop)
 ;;   :main-view             :tune | :set | :settings   which main panel is showing
 ;;   :mobile-view           :list | :detail | :tune    push-nav level on the phone layout
-;;   :drawer-open?          bool          bottom-sheet nav drawer (tabs + settings) open
 ;;   :controls-sheet-open?  bool          "NOW PLAYING" controls bottom sheet open (mobile playback)
 ;;   :context-menu-tune-id  id | nil      tune whose action menu / mobile action-sheet is open
 ;;   :swipe-peek-tune-id    id | nil      tune row currently peeked open by left-swipe
@@ -146,7 +145,6 @@
           ;; Mobile UI
           :main-view            :tune
           :mobile-view          :list
-          :drawer-open?         false
           :controls-sheet-open? false
           :context-menu-tune-id nil
           :swipe-peek-tune-id   nil

@@ -680,7 +680,7 @@
        [:div.mobile-list-logo-block
         [:span.mobile-list-logo "ceol"]
         [:span.mobile-list-version "v0.3.0"]]
-       [:button.mobile-list-menu {:on {:click [[:drawer/toggle]]}} "☰"]]
+       [:button.mobile-list-menu {:on {:click [[:settings/open]]}} "⚙"]]
       [:div.mobile-list-tagline "PRACTICE COMPANION"]]
      [:div.mobile-list-tabs
       [:div.mobile-tabs-inner
@@ -727,9 +727,7 @@
        [:button.mobile-back
         {:on {:click [[:mobile/back]]}}
         "‹"]
-       [:button.mobile-menu
-        {:on {:click [[:drawer/toggle]]}}
-        "☰"])
+       [:span.mobile-top-bar-spacer])
      [:div.mobile-title title]
      (if (and in-detail? tune)
        [:button.mobile-top-menu
@@ -765,28 +763,6 @@
            [:span.cm-icon "✕"] "Delete"])
         [:button.mobile-action-cancel
          {:on {:click [[:menu/close]]}} "Cancel"]]])))
-
-(defn mobile-drawer [state]
-  (when (:drawer-open? state)
-    [:div.mobile-drawer-backdrop
-     {:on {:click [[:drawer/close]]}}
-     [:div.mobile-drawer
-      {:on {:click [[:event/stop]]}}
-      [:div.mobile-drawer-handle]
-      [:div.mobile-drawer-tabs
-       [:button.mobile-drawer-tab
-        {:class (when (= :tunes (:tab state)) "active")
-         :on {:click [[:drawer/close] [:tab/set :tunes]]}} "Tunes"]
-       [:button.mobile-drawer-tab
-        {:class (when (= :sets (:tab state)) "active")
-         :on {:click [[:drawer/close] [:tab/set :sets]]}} "Sets"]
-       [:button.mobile-drawer-tab
-        {:class (when (= :session (:tab state)) "active")
-         :on {:click [[:drawer/close] [:tab/set :session]]}} "Session"]]
-      [:div.mobile-drawer-divider]
-      [:button.mobile-drawer-item
-       {:on {:click [[:drawer/close] [:settings/open]]}}
-       [:span.cm-icon "⚙"] "Settings"]]]))
 
 (defn delete-confirm-modal [state]
   (when-let [tune-id (:delete-confirm-tune-id state)]
@@ -824,13 +800,11 @@
 (defn app [state]
   [:div.app-layout
    {:class (cond-> []
-             (:drawer-open? state) (conj "drawer-open")
              (and (= :tune (:main-view state)) (= :list (:mobile-view state)))
              (conj "show-mobile-list"))}
    (sidebar state)
    (mobile-top-bar state)
    (main-area state)
-   (mobile-drawer state)
    (mobile-action-sheet state)
    (controls-sheet state)
    (delete-confirm-modal state)
