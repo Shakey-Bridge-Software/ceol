@@ -94,6 +94,22 @@
 ;;   :session/play-current []                         play current session item (internal)
 ;;   :session/stop        []                          end session
 ;;
+;; Mobile UI
+;;   :menu/open           [tune-id]                   open tune action menu / mobile action-sheet
+;;   :menu/close          []                          close it
+;;   :drawer/toggle       []                          toggle bottom-sheet nav drawer
+;;   :drawer/close        []                          close drawer
+;;   :controls/toggle     []                          toggle "NOW PLAYING" controls sheet (mobile)
+;;   :controls/close      []                          close controls sheet
+;;   :settings/open       []                          show settings panel (main-view)
+;;   :settings/close      []                          back to tune panel
+;;   :mobile/back         []                          pop one nav level (detail→list, set/settings→tune)
+;;   :swipe/clear         []                          clear swipe-peek on a tune row
+;;   :delete/cancel       []                          dismiss delete-confirm modal
+;;   :delete/confirm      [tune-id]                   confirm + delete
+;;   :onboarding/dismiss  []                          dismiss first-launch coachmark (persists)
+;;   :data/clear-confirm  []                          confirm-then-wipe all localStorage
+;;
 ;; Backup / restore
 ;;   :backup/export       []                          download EDN of all user data
 ;;   :backup/import       []                          file picker → validate → merge
@@ -127,6 +143,8 @@
     :settings/close (swap! state/app-state assoc :main-view :tune)
     :drawer/toggle  (swap! state/app-state update :drawer-open? not)
     :drawer/close   (swap! state/app-state assoc :drawer-open? false)
+    :controls/toggle (swap! state/app-state update :controls-sheet-open? not)
+    :controls/close  (swap! state/app-state assoc :controls-sheet-open? false)
     :onboarding/dismiss
     (do (swap! state/app-state assoc :onboarded? true)
         (try (.setItem js/localStorage "ceol-onboarded" "1")

@@ -72,7 +72,17 @@
 ;;   :tab               :tunes | :sets | :session
 ;;   :editor-open?      bool
 ;;   :editing-field     :name | nil       which header field is in inline-edit mode
-;;   :notes-open?       bool              notes drawer visibility (per-tune notes)
+;;   :notes-open?       bool              notes drawer visibility (per-tune notes); on mobile a bottom sheet
+;;
+;; Mobile UI (only meaningful at ≤720px; harmless on desktop)
+;;   :main-view             :tune | :set | :settings   which main panel is showing
+;;   :mobile-view           :list | :detail | :tune    push-nav level on the phone layout
+;;   :drawer-open?          bool          bottom-sheet nav drawer (tabs + settings) open
+;;   :controls-sheet-open?  bool          "NOW PLAYING" controls bottom sheet open (mobile playback)
+;;   :context-menu-tune-id  id | nil      tune whose action menu / mobile action-sheet is open
+;;   :swipe-peek-tune-id    id | nil      tune row currently peeked open by left-swipe
+;;   :delete-confirm-tune-id id | nil     tune pending delete-confirm modal
+;;   :onboarded?            bool          first-launch coachmark dismissed (persisted)
 ;;
 ;; Tune notes
 ;;   :tune-notes        {id → string}     practice notes per tune, persisted to localStorage
@@ -133,6 +143,15 @@
           :editor-open?    false
           :notes-open?     false
           :tune-notes      {}
+          ;; Mobile UI
+          :main-view            :tune
+          :mobile-view          :list
+          :drawer-open?         false
+          :controls-sheet-open? false
+          :context-menu-tune-id nil
+          :swipe-peek-tune-id   nil
+          :delete-confirm-tune-id nil
+          :onboarded?           false
           :guitar?         false
           :editing-field   nil
           :playing?        false

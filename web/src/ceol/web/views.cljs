@@ -484,7 +484,82 @@
    [:span.editing-strip-icon "✎"]
    [:span.editing-strip-label "EDITING TUNE"]
    [:span.editing-strip-spacer]
-   [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]])
+   [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]
+   [:button.editing-strip-done {:on {:click [[:editor/toggle]]}} "Done"]])
+
+;; --- Mobile playback: slim bottom bar + "NOW PLAYING" controls sheet ---
+
+(defn- bpm-for [state tune]
+  (let [tempo-str (when tune (abc/tempo-for-type (:type tune) (:time-sig tune)))
+        base (when tempo-str (js/parseInt (second (re-find #"=(\d+)" tempo-str)) 10))
+        offset (or (:tempo-offset state) 0)]
+    {:base base :bpm (when base (max 40 (+ base offset))) :offset offset}))
+
+(defn mobile-playback-bar [state]
+  (let [tune (state/selected-tune state)
+        {:keys [bpm offset]} (bpm-for state tune)
+        playing? (:playing? state)]
+    [:div.mobile-playback-bar
+     [:div.mpb-tempo
+      [:button.mpb-tempo-btn {:on {:click [[:tempo/down]]}} "−"]
+      [:span.mpb-bpm {:class (when (not= 0 offset) "modified")
+                      :on {:dblclick [[:tempo/reset]]}}
+       (str (or bpm "120")) [:span.mpb-bpm-unit "BPM"]]
+      [:button.mpb-tempo-btn {:on {:click [[:tempo/up]]}} "+"]]
+     [:button.mpb-play {:class (when playing? "playing")
+                        :on {:click [[:playback/play]]}}
+      (if playing? "■" "▶")]
+     [:button.mpb-icon {:class (when (:notes-open? state) "active")
+                        :on {:click [[:notes/toggle]]}}
+      "📝"]
+     [:button.mpb-icon {:class (when (:controls-sheet-open? state) "active")
+                        :on {:click [[:controls/toggle]]}}
+      "⚙"]]))
+
+(defn controls-sheet [state]
+  (when (:controls-sheet-open? state)
+    (let [tune (state/selected-tune state)
+          section (:section state)
+          {:keys [base bpm offset]} (bpm-for state tune)
+          playing? (:playing? state)]
+      [:div.controls-sheet-backdrop {:on {:click [[:controls/close]]}}
+       [:div.controls-sheet {:on {:click [[:event/stop]]}}
+        [:div.mobile-drawer-handle]
+        [:div.controls-sheet-head
+         [:span.controls-sheet-label "NOW PLAYING"]
+         [:button.controls-sheet-close {:on {:click [[:controls/close]]}} "×"]]
+        (when tune
+          [:div.controls-sheet-title-block
+           [:div.controls-sheet-title (:name tune)]
+           [:div.controls-sheet-meta
+            (str (name (:type tune)) " · " (:time-sig tune) " · "
+                 (key-mode-label (:key tune) (:mode-name tune)))]])
+        [:div.controls-sheet-parts
+         [:button.cs-part {:class (when (= :a section) "active") :on {:click [[:section/set :a]]}} "A part"]
+         [:button.cs-part {:class (when (= :b section) "active") :on {:click [[:section/set :b]]}} "B part"]
+         [:button.cs-part {:class (when (nil? section) "active") :on {:click [[:section/set nil]]}} "All"]]
+        [:div.controls-sheet-tempo
+         [:span.cs-tempo-label "TEMPO"]
+         [:div.cs-tempo-row
+          [:button.cs-tempo-btn {:on {:click [[:tempo/down]]}} "−"]
+          [:div.cs-tempo-val (str (or bpm "120")) [:span.cs-tempo-unit "BPM"]]
+          [:button.cs-tempo-btn {:on {:click [[:tempo/up]]}} "+"]]
+         [:button.cs-tempo-reset {:class (when (zero? offset) "hidden")
+                                  :on {:click [[:tempo/reset]]}}
+          (str "Reset to default (" (or base "—") ")")]]
+        [:div.controls-sheet-grid
+         [:button.cs-toggle {:class (when (:loop? state) "active") :on {:click [[:loop/toggle]]}}
+          [:span.cs-toggle-icon "↻"] [:span "Loop"]]
+         [:button.cs-toggle {:class (when (:guitar? state) "active") :on {:click [[:guitar/toggle]]}}
+          [:span.cs-toggle-icon "🎸"] [:span "Guitar"]]
+         [:button.cs-toggle {:class (when (:count-in? state) "active") :on {:click [[:count-in/toggle]]}}
+          [:span.cs-toggle-icon "⏱"] [:span "Count-in"]]
+         [:button.cs-toggle {:class (when (:metronome? state) "active") :on {:click [[:metronome/toggle]]}}
+          [:span.cs-toggle-icon "♪"] [:span "Metronome"]]]
+        [:button.controls-sheet-play {:class (when playing? "playing")
+                                      :on {:click [[:playback/play]]}}
+         [:span.cs-play-icon (if playing? "■" "▶")]
+         (if playing? "STOP" "PLAY")]]])))
 
 (defn set-detail-tune-row [state set-id idx tune]
   (let [learned? (state/learned? state (:id tune))]
@@ -589,7 +664,11 @@
      (notes-panel state)
      [:div.divider]
      (when-not session?
-       (playback-bar state))]))
+       (list
+        ;; Desktop bar — hidden ≤720px (see style.css)
+        (playback-bar state)
+        ;; Mobile slim bar — hidden >720px
+        (mobile-playback-bar state)))]))
 
 (defn mobile-list-view [state]
   (let [tunes (state/filtered-tunes state)
@@ -607,14 +686,15 @@
       [:span.mobile-fab-icon "+"]]]))
 
 (defn main-area [state]
-  (let [mobile-list? (and (= :list (:mobile-view state))
-                          (= :tune (:main-view state)))]
-    [:div.main-area
-     (cond
-       (= :settings (:main-view state)) (settings-view state)
-       (= :set (:main-view state))      (set-detail-view state)
-       mobile-list?                     (mobile-list-view state)
-       :else                            (tune-main-view state))]))
+  [:div.main-area
+   (case (:main-view state)
+     :settings (settings-view state)
+     :set      (set-detail-view state)
+     ;; :tune (default) — render both layouts; CSS shows tune-main on desktop
+     ;; (and on mobile detail), mobile-list when the phone is in list mode
+     ;; (.app-layout.show-mobile-list, see app + style.css).
+     (list (tune-main-view state)
+           (mobile-list-view state)))])
 
 (defn mobile-top-bar [state]
   (let [main-view (:main-view state)
@@ -635,7 +715,11 @@
         {:on {:click [[:drawer/toggle]]}}
         "☰"])
      [:div.mobile-title title]
-     [:span.mobile-top-bar-spacer]]))
+     (if (and in-detail? tune)
+       [:button.mobile-top-menu
+        {:on {:click [[:menu/open (:id tune)]]}}
+        "⋮"]
+       [:span.mobile-top-bar-spacer])]))
 
 (defn mobile-action-sheet [state]
   (when-let [tune-id (:context-menu-tune-id state)]
@@ -715,11 +799,16 @@
        "Got it"]]]))
 
 (defn app [state]
-  [:div.app-layout {:class (when (:drawer-open? state) "drawer-open")}
+  [:div.app-layout
+   {:class (cond-> []
+             (:drawer-open? state) (conj "drawer-open")
+             (and (= :tune (:main-view state)) (= :list (:mobile-view state)))
+             (conj "show-mobile-list"))}
    (sidebar state)
    (mobile-top-bar state)
    (main-area state)
    (mobile-drawer state)
    (mobile-action-sheet state)
+   (controls-sheet state)
    (delete-confirm-modal state)
    (onboarding-coachmark state)])

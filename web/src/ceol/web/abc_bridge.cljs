@@ -23,11 +23,15 @@
   (when (and element abc-str)
     (set! (.-innerHTML element) "")
     (let [container (js/document.querySelector ".sheet-area")
-          available (if container (- (.-clientWidth container) 80) 800)
-          staff-w (min 950 (max 400 available))
+          cw       (if container (.-clientWidth container) 880)
+          narrow?  (< cw 560)
+          ;; .sheet-area padding: 16px each side on mobile, 40px on desktop
+          pad      (if narrow? 24 80)
+          staff-w  (min 950 (max 240 (- cw pad)))
           visual (ABCJS/renderAbc element abc-str
                                   (clj->js (merge {:staffwidth staff-w
-                                                   :scale 1.1
+                                                   :scale (if narrow? 0.85 1.1)
+                                                   :responsive "resize"
                                                    :add_classes true}
                                                   opts)))
           v (first visual)]
