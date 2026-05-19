@@ -79,7 +79,7 @@
       [:div.tune-info
        [:div.tune-name (:name tune)]
        [:div.tune-meta
-        (str (name (:type tune)) " · " (:key tune) " " (:mode-name tune) " · " (:time-sig tune))]]
+        (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · " (key-mode-label (:key tune) (:mode-name tune)))]]
       [:button.tune-row-menu-btn
        {:on {:click [[:event/stop] [:menu/open (:id tune)]]}}
        "\u22ee"]]
@@ -532,7 +532,7 @@
           [:div.controls-sheet-title-block
            [:div.controls-sheet-title (:name tune)]
            [:div.controls-sheet-meta
-            (str (name (:type tune)) " · " (:time-sig tune) " · "
+            (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · "
                  (key-mode-label (:key tune) (:mode-name tune)))]])
         [:div.controls-sheet-parts
          [:button.cs-part {:class (when (= :a section) "active") :on {:click [[:section/set :a]]}} "A part"]
@@ -570,7 +570,7 @@
       {:on {:click [[:set/select-tune set-id (:id tune)]]}}
       [:div.set-detail-tune-name (:name tune)]
       [:div.set-detail-tune-meta
-       (str (name (:type tune)) " \u00b7 " (:key tune) " \u00b7 " (:time-sig tune))]]
+       (str (get tune-type-labels (:type tune)) " \u00b7 " (:time-sig tune) " \u00b7 " (key-mode-label (:key tune) (:mode-name tune)))]]
      (when learned?
        [:span.set-detail-check "\u2713"])
      [:button.set-detail-remove
@@ -672,9 +672,25 @@
 
 (defn mobile-list-view [state]
   (let [tunes (state/filtered-tunes state)
-        current-filter (:filter state)]
+        current-filter (:filter state)
+        current-tab (:tab state)]
     [:div.mobile-list-view
-     (case (:tab state)
+     [:div.mobile-list-header
+      [:div.mobile-list-title-row
+       [:div.mobile-list-logo-block
+        [:span.mobile-list-logo "ceol"]
+        [:span.mobile-list-version "v0.3.0"]]
+       [:button.mobile-list-menu {:on {:click [[:drawer/toggle]]}} "☰"]]
+      [:div.mobile-list-tagline "PRACTICE COMPANION"]]
+     [:div.mobile-list-tabs
+      [:div.mobile-tabs-inner
+       [:button.mobile-tab {:class (when (= :tunes current-tab) "active")
+                            :on {:click [[:tab/set :tunes]]}} "Tunes"]
+       [:button.mobile-tab {:class (when (= :sets current-tab) "active")
+                            :on {:click [[:tab/set :sets]]}} "Sets"]
+       [:button.mobile-tab {:class (when (= :session current-tab) "active")
+                            :on {:click [[:tab/set :session]]}} "Session"]]]
+     (case current-tab
        :sets (sets-tab state)
        :session (session-tab state)
        (list
@@ -790,13 +806,20 @@
              (seq (state/filtered-tunes state)))
     [:div.coachmark-overlay
      {:on {:click [[:onboarding/dismiss]]}}
-     [:div.coachmark-card {:on {:click [[:event/stop]]}}
-      [:div.coachmark-title "Welcome to ceol"]
-      [:div.coachmark-body
-       "Tap a tune to play. Swipe left on a row for quick actions, or tap ⋮ to open the menu."]
-      [:button.coachmark-ok
-       {:on {:click [[:onboarding/dismiss]]}}
-       "Got it"]]]))
+     [:div.coachmark-app-header
+      [:div.coachmark-logo "ceol"]
+      [:div.coachmark-tagline "PRACTICE COMPANION"]]
+     [:div.coachmark-hint-area
+      [:div.coachmark-peek-row
+       [:div.coachmark-learned-action
+        [:span.coachmark-learned-icon "✓"]
+        "Learned"]
+       [:div.coachmark-tune-cell
+        [:div.coachmark-tune-name "The Kerry Polka"]
+        [:div.coachmark-tune-meta "Polka · 2/4 · G major"]]]]
+     [:div.coachmark-cap1 "SWIPE RIGHT TO MARK AS LEARNED"]
+     [:div.coachmark-cap2 "swipe left for Edit / Delete"]
+     [:button.coachmark-ok {:on {:click [[:onboarding/dismiss]]}} "Got it"]]))
 
 (defn app [state]
   [:div.app-layout
