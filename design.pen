@@ -41107,6 +41107,48 @@
       },
       "width": 388,
       "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "KhmVT",
+      "x": -1524,
+      "y": 14110,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 11.38.33.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "3X7jx",
+      "x": -2023,
+      "y": 14110,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 11.39.15.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "RZPXN",
+      "x": -2517,
+      "y": 14110,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 11.39.45.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
     }
   ]
 }

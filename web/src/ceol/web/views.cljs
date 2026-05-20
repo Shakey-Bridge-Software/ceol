@@ -69,8 +69,8 @@
        {:on {:click [[:swipe/clear] [:tune/select (:id tune)] [:editor/open]]}}
        "Edit"]
       [:button.tune-row-peek-delete
-       {:on {:click [[:swipe/clear] [:menu/open (:id tune)]]}}
-       "More"]]
+       {:on {:click [[:swipe/clear] [:tune/delete (:id tune)]]}}
+       "Delete"]]
      [:div.tune-row {:class (str (when active? "active")
                                  (when learned? " learned"))
                      :data-tune-id (:id tune)
@@ -401,20 +401,23 @@
               :keydown [[:editor/keydown :event/key]]}}]])))
 
 (defn notes-panel [state]
-  (let [tune (state/selected-tune state)
-        tune-id (:id tune)
-        notes (when tune (get-in state [:tune-notes tune-id] ""))]
-    (when (and tune (:notes-open? state))
-      [:div.notes-panel
-       [:div.notes-header
-        [:span.notes-label "NOTES"]
-        [:button.notes-close {:on {:click [[:notes/toggle]]}} "×"]]
-       [:textarea.notes-textarea
-        {:value (or notes "")
-         :placeholder "Practice notes — BPM, ornaments, progress..."
-         :spellcheck "false"
-         :on {:input [[:notes/update tune-id :event/target.value]]
-              :keydown [[:notes/keydown :event/key]]}}]])))
+  ;; Always rendered when a tune is selected so the CSS transition runs in
+  ;; both directions. .open class toggles slide up / slide down.
+  (let [tune (state/selected-tune state)]
+    (when tune
+      (let [tune-id (:id tune)
+            notes (get-in state [:tune-notes tune-id] "")
+            open? (:notes-open? state)]
+        [:div.notes-panel {:class (when open? "open")}
+         [:div.notes-header
+          [:span.notes-label "NOTES"]
+          [:button.notes-close {:on {:click [[:notes/toggle]]}} "×"]]
+         [:textarea.notes-textarea
+          {:value (or notes "")
+           :placeholder "Practice notes — BPM, ornaments, progress..."
+           :spellcheck "false"
+           :on {:input [[:notes/update tune-id :event/target.value]]
+                :keydown [[:notes/keydown :event/key]]}}]]))))
 
 (defn playback-status [state]
   (when (:playing? state)
@@ -508,32 +511,63 @@
       [:button.mpb-tempo-btn {:on {:click [[:tempo/up]]}} "+"]]
      [:button.mpb-play {:class (when playing? "playing")
                         :on {:click [[:playback/play]]}}
-      (if playing? "■" "▶")]
-     [:button.mpb-icon {:class (when (:notes-open? state) "active")
-                        :on {:click [[:notes/toggle]]}}
-      "📝"]
-     [:button.mpb-icon {:class (when (:controls-sheet-open? state) "active")
-                        :on {:click [[:controls/toggle]]}}
-      "⚙"]]))
+      [:span.mpb-play-icon (if playing? "■" "▶")]]
+     [:div.mpb-actions
+      [:button.mpb-icon {:class (when (:notes-open? state) "active")
+                         :on {:click [[:notes/toggle]]}}
+       [:svg {:width 20 :height 20 :viewBox "0 0 24 24" :fill "none"
+              :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+        [:path {:d "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"}]
+        [:polyline {:points "14 2 14 8 20 8"}]
+        [:line {:x1 8 :y1 13 :x2 16 :y2 13}]
+        [:line {:x1 8 :y1 17 :x2 16 :y2 17}]
+        [:line {:x1 8 :y1 9 :x2 10 :y2 9}]]]
+      [:button.mpb-icon {:class (when (:controls-sheet-open? state) "active")
+                         :on {:click [[:controls/toggle]]}}
+       [:svg {:width 20 :height 20 :viewBox "0 0 24 24" :fill "none"
+              :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+        [:line {:x1 21 :y1 4 :x2 14 :y2 4}]
+        [:line {:x1 10 :y1 4 :x2 3 :y2 4}]
+        [:line {:x1 21 :y1 12 :x2 12 :y2 12}]
+        [:line {:x1 8 :y1 12 :x2 3 :y2 12}]
+        [:line {:x1 21 :y1 20 :x2 16 :y2 20}]
+        [:line {:x1 12 :y1 20 :x2 3 :y2 20}]
+        [:line {:x1 14 :y1 2 :x2 14 :y2 6}]
+        [:line {:x1 8 :y1 10 :x2 8 :y2 14}]
+        [:line {:x1 16 :y1 18 :x2 16 :y2 22}]]]]]))
 
 (defn controls-sheet [state]
-  (when (:controls-sheet-open? state)
-    (let [tune (state/selected-tune state)
-          section (:section state)
-          {:keys [base bpm offset]} (bpm-for state tune)
-          playing? (:playing? state)]
-      [:div.controls-sheet-backdrop {:on {:click [[:controls/close]]}}
-       [:div.controls-sheet {:on {:click [[:event/stop]]}}
+  ;; Always rendered so the CSS transition runs in both directions.
+  ;; .open on the backdrop fades it in and slides the sheet up.
+  (let [tune (state/selected-tune state)
+        section (:section state)
+        {:keys [base bpm offset]} (bpm-for state tune)
+        playing? (:playing? state)
+        open? (:controls-sheet-open? state)]
+    [:div.controls-sheet-backdrop {:class (when open? "open")
+                                   :on {:click [[:controls/close]]}}
+     [:div.controls-sheet {:on {:click [[:event/stop]]}}
         [:div.mobile-drawer-handle]
         [:div.controls-sheet-head
          [:span.controls-sheet-label "NOW PLAYING"]
          [:button.controls-sheet-close {:on {:click [[:controls/close]]}} "×"]]
         (when tune
-          [:div.controls-sheet-title-block
-           [:div.controls-sheet-title (:name tune)]
-           [:div.controls-sheet-meta
-            (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · "
-                 (key-mode-label (:key tune) (:mode-name tune)))]])
+          (let [tune-id (:id tune)
+                learned? (state/learned? state tune-id)]
+            [:div.controls-sheet-title-row
+             [:div.controls-sheet-title-block
+              [:div.controls-sheet-title (:name tune)]
+              [:div.controls-sheet-meta
+               (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · "
+                    (key-mode-label (:key tune) (:mode-name tune)))]]
+             [:button.cs-learned-icon
+              {:class (when learned? "active")
+               :title (if learned? "Mark as not learned" "Mark as learned")
+               :on {:click [[:learned/toggle tune-id]]}}
+              [:svg {:width 22 :height 22 :viewBox "0 0 24 24" :fill "none"
+                     :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+               [:path {:d "M22 11.08V12a10 10 0 1 1-5.93-9.14"}]
+               [:polyline {:points "22 4 12 14.01 9 11.01"}]]]]))
         [:div.controls-sheet-parts
          [:button.cs-part {:class (when (= :a section) "active") :on {:click [[:section/set :a]]}} "A part"]
          [:button.cs-part {:class (when (= :b section) "active") :on {:click [[:section/set :b]]}} "B part"]
@@ -549,17 +583,52 @@
           (str "Reset to default (" (or base "—") ")")]]
         [:div.controls-sheet-grid
          [:button.cs-toggle {:class (when (:loop? state) "active") :on {:click [[:loop/toggle]]}}
-          [:span.cs-toggle-icon "↻"] [:span "Loop"]]
+          [:span.cs-toggle-icon
+           [:svg {:width 22 :height 22 :viewBox "0 0 24 24" :fill "none"
+                  :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+            [:polyline {:points "17 1 21 5 17 9"}]
+            [:path {:d "M3 11V9a4 4 0 0 1 4-4h14"}]
+            [:polyline {:points "7 23 3 19 7 15"}]
+            [:path {:d "M21 13v2a4 4 0 0 1-4 4H3"}]]]
+          [:span "Loop"]]
          [:button.cs-toggle {:class (when (:guitar? state) "active") :on {:click [[:guitar/toggle]]}}
-          [:span.cs-toggle-icon "🎸"] [:span "Guitar"]]
+          [:span.cs-toggle-icon
+           [:svg {:width 22 :height 22 :viewBox "0 0 24 24" :fill "none"
+                  :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+            [:path {:d "m11.9 12.1 4.514-4.514"}]
+            [:path {:d "M20.1 2.3a1 1 0 0 0-1.4 0l-1.114 1.114A2 2 0 0 0 17 4.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 17.828 7h1.344a2 2 0 0 0 1.414-.586L21.7 5.3a1 1 0 0 0 0-1.4z"}]
+            [:path {:d "m6 16 2 2"}]
+            [:path {:d "M8.2 9.9C8.7 8.8 9.8 8 11 8c2.8 0 5 2.2 5 5 0 1.2-.8 2.3-1.9 2.8l-.9.4A2 2 0 0 0 12 18a4 4 0 0 1-4 4c-3.3 0-6-2.7-6-6a4 4 0 0 1 4-4 2 2 0 0 0 1.8-1.2z"}]]]
+          [:span "Guitar"]]
          [:button.cs-toggle {:class (when (:count-in? state) "active") :on {:click [[:count-in/toggle]]}}
           [:span.cs-toggle-icon "⏱"] [:span "Count-in"]]
          [:button.cs-toggle {:class (when (:metronome? state) "active") :on {:click [[:metronome/toggle]]}}
           [:span.cs-toggle-icon "♪"] [:span "Metronome"]]]
-        [:button.controls-sheet-play {:class (when playing? "playing")
-                                      :on {:click [[:playback/play]]}}
-         [:span.cs-play-icon (if playing? "■" "▶")]
-         (if playing? "STOP" "PLAY")]]])))
+        (when tune
+          (let [tune-id (:id tune)]
+            [:div.controls-sheet-grid
+             [:button.cs-toggle {:on {:click [[:controls/close] [:editor/open]]}}
+              [:span.cs-toggle-icon
+               [:svg {:width 22 :height 22 :viewBox "0 0 24 24" :fill "none"
+                      :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+                [:path {:d "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"}]]]
+              [:span "Edit"]]
+             [:button.cs-toggle {:on {:click [[:controls/close] [:tune/add-to-set tune-id]]}}
+              [:span.cs-toggle-icon
+               [:svg {:width 22 :height 22 :viewBox "0 0 24 24" :fill "none"
+                      :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+                [:line {:x1 8 :y1 6 :x2 21 :y2 6}]
+                [:line {:x1 8 :y1 12 :x2 21 :y2 12}]
+                [:line {:x1 8 :y1 18 :x2 15 :y2 18}]
+                [:polyline {:points "18 16 18 22 12 22"}]
+                [:line {:x1 3 :y1 6 :x2 3.01 :y2 6}]
+                [:line {:x1 3 :y1 12 :x2 3.01 :y2 12}]
+                [:line {:x1 3 :y1 18 :x2 3.01 :y2 18}]]]
+              [:span "Add to Set"]]]))
+     [:button.controls-sheet-play {:class (when playing? "playing")
+                                   :on {:click [[:playback/play]]}}
+      [:span.cs-play-icon (if playing? "■" "▶")]
+      (if playing? "STOP" "PLAY")]]]))
 
 (defn set-detail-tune-row [state set-id idx tune]
   (let [learned? (state/learned? state (:id tune))]
@@ -716,53 +785,34 @@
   (let [main-view (:main-view state)
         mobile-view (:mobile-view state)
         tune (state/selected-tune state)
+        section (:section state)
         in-detail? (and (= :tune main-view) (= :detail mobile-view))
         title (case main-view
                 :set      (or (:name (state/active-set state)) "Set")
                 :settings "Settings"
                 (if in-detail? (:name tune) "ceol"))
         show-back? (or in-detail? (not= :tune main-view))]
-    [:div.mobile-top-bar
+    [:div.mobile-top-bar {:class (when (and in-detail? tune) "with-detail")}
      (if show-back?
-       [:button.mobile-back
-        {:on {:click [[:mobile/back]]}}
-        "‹"]
+       [:button.mobile-back {:on {:click [[:mobile/back]]}} "‹"]
        [:span.mobile-top-bar-spacer])
-     [:div.mobile-title title]
      (if (and in-detail? tune)
-       [:button.mobile-top-menu
-        {:on {:click [[:menu/open (:id tune)]]}}
-        "⋮"]
+       [:div.mobile-title-block
+        [:div.mobile-title title]
+        [:div.mobile-title-meta
+         (str (get tune-type-labels (:type tune)) " · "
+              (:time-sig tune) " · "
+              (key-mode-label (:key tune) (:mode-name tune)))]]
+       [:div.mobile-title title])
+     (if (and in-detail? tune (not (:session-mode? state)))
+       [:div.mobile-top-section-btns
+        [:button.mts-btn {:class (when (= :a section) "active")
+                          :on {:click [[:section/set :a]]}} "A"]
+        [:button.mts-btn {:class (when (= :b section) "active")
+                          :on {:click [[:section/set :b]]}} "B"]
+        [:button.mts-btn {:class (when (nil? section) "active")
+                          :on {:click [[:section/set nil]]}} "All"]]
        [:span.mobile-top-bar-spacer])]))
-
-(defn mobile-action-sheet [state]
-  (when-let [tune-id (:context-menu-tune-id state)]
-    (let [custom? (state/custom-tune? tune-id)
-          tune (state/tune-by-id state tune-id)]
-      [:div.mobile-action-sheet-backdrop
-       {:on {:click [[:menu/close]]}}
-       [:div.mobile-action-sheet
-        {:on {:click [[:event/stop]]}}
-        [:div.mobile-drawer-handle]
-        [:div.mobile-action-sheet-title (:name tune)]
-        [:button.mobile-action-item
-         {:on {:click [[:menu/close] [:learned/toggle tune-id]]}}
-         [:span.cm-icon "○"] "Mark as Learned"]
-        [:button.mobile-action-item
-         {:on {:click [[:menu/close] [:tune/select tune-id] [:tune/add-to-set tune-id]]}}
-         [:span.cm-icon "≡"] "Add to Set…"]
-        [:button.mobile-action-item
-         {:on {:click [[:menu/close] [:tune/select tune-id] [:playback/play]]}}
-         [:span.cm-icon "▶"] "Play"]
-        [:button.mobile-action-item
-         {:on {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}}
-         [:span.cm-icon "✎"] "Edit"]
-        (when custom?
-          [:button.mobile-action-item.mobile-action-danger
-           {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
-           [:span.cm-icon "✕"] "Delete"])
-        [:button.mobile-action-cancel
-         {:on {:click [[:menu/close]]}} "Cancel"]]])))
 
 (defn delete-confirm-modal [state]
   (when-let [tune-id (:delete-confirm-tune-id state)]
@@ -805,7 +855,6 @@
    (sidebar state)
    (mobile-top-bar state)
    (main-area state)
-   (mobile-action-sheet state)
    (controls-sheet state)
    (delete-confirm-modal state)
    (onboarding-coachmark state)])
