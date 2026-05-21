@@ -1,12 +1,15 @@
 (ns ceol.web.gesture
-  "Touch gesture handling for mobile. Hand-rolled left-swipe on tune rows.
+  "Touch gesture handling for mobile. Hand-rolled swipe on tune rows.
    The gesture works directly on DOM elements (no per-frame app-state churn)
-   and only dispatches into Replicant on touchend with a final outcome
-   (:peek, :delete, or :clear)."
-  (:require [ceol.web.state :as state]))
+   and only commits to app-state on touchend with a final outcome.
+   Left swipe  → peek (Edit/Delete) at peek-threshold, delete-confirm at
+   delete-threshold. Right swipe → toggle learned at learn-threshold."
+  (:require [ceol.web.state :as state]
+            [ceol.web.persist :as persist]))
 
 (def ^:private peek-threshold 60)
 (def ^:private delete-threshold 140)
+(def ^:private learn-threshold 120)
 
 ;; Mutable closure shared across listeners. Only touched here.
 (defonce ^:private g (atom nil))
@@ -26,6 +29,10 @@
     (set! (.. row-el -style -transform) "")
     (set! (.. row-el -style -transition) "transform 0.2s")
     (.remove (.-classList row-el) "swiping")
+    (when-let [wrap (.-parentElement row-el)]
+      (let [wcl (.-classList wrap)]
+        (.remove wcl "swipe-left")
+        (.remove wcl "swipe-right")))
     (js/setTimeout
      (fn [] (when row-el (set! (.. row-el -style -transition) ""))) 220)))
 
@@ -52,21 +59,38 @@
       (when (= :horizontal locked*)
         (.preventDefault e)
         (.add (.-classList row) "swiping")
+        (when-let [wrap (.-parentElement row)]
+          (let [wcl (.-classList wrap)]
+            (if (pos? dx)
+              (do (.add wcl "swipe-right") (.remove wcl "swipe-left"))
+              (do (.add wcl "swipe-left")  (.remove wcl "swipe-right")))))
         (set! (.. row -style -transform)
-              (str "translateX(" (min 0 dx) "px)"))))))
+              (str "translateX(" dx "px)"))))))
 
 (defn- on-touch-end [_e]
   (when-let [{:keys [row tune-id dx locked]} @g]
     (when (= :horizontal locked)
-      (let [moved (- (or dx 0))]
+      (let [d (or dx 0)
+            left (- d)]
         (cond
-          (>= moved delete-threshold)
+          ;; Left swipe past delete threshold → delete-confirm
+          (>= left delete-threshold)
           (do (reset-transform! row)
               (swap! state/app-state assoc :delete-confirm-tune-id tune-id))
 
-          (>= moved peek-threshold)
+          ;; Left swipe past peek threshold → settle at -120px revealing actions
+          (>= left peek-threshold)
           (do (set! (.. row -style -transform) "translateX(-120px)")
               (swap! state/app-state assoc :swipe-peek-tune-id tune-id))
+
+          ;; Right swipe past learn threshold → toggle learned and snap back
+          (>= d learn-threshold)
+          (do (reset-transform! row)
+              (swap! state/app-state update :learned-tune-ids
+                     (fn [ids] (if (contains? ids tune-id)
+                                 (disj ids tune-id)
+                                 (conj ids tune-id))))
+              (persist/save-learned!))
 
           :else
           (do (reset-transform! row)

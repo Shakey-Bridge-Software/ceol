@@ -41083,8 +41083,8 @@
     {
       "type": "rectangle",
       "id": "QCyKd",
-      "x": -1591.9283453882458,
-      "y": 13159.967344842467,
+      "x": 3778,
+      "y": 13148,
       "fill": {
         "type": "image",
         "enabled": true,
@@ -41096,36 +41096,8 @@
     },
     {
       "type": "rectangle",
-      "id": "D6r5g",
-      "x": -1144,
-      "y": 13160,
-      "fill": {
-        "type": "image",
-        "enabled": true,
-        "url": "Screenshot 2026-05-19 at 21.18.13.png",
-        "mode": "fill"
-      },
-      "width": 388,
-      "height": 844
-    },
-    {
-      "type": "rectangle",
-      "id": "KhmVT",
-      "x": -1524,
-      "y": 14110,
-      "fill": {
-        "type": "image",
-        "enabled": true,
-        "url": "Screenshot 2026-05-20 at 11.38.33.png",
-        "mode": "fill"
-      },
-      "width": 380,
-      "height": 844
-    },
-    {
-      "type": "rectangle",
       "id": "3X7jx",
-      "x": -2023,
+      "x": 4766,
       "y": 14110,
       "fill": {
         "type": "image",
@@ -41139,12 +41111,95 @@
     {
       "type": "rectangle",
       "id": "RZPXN",
-      "x": -2517,
+      "x": 4272,
       "y": 14110,
       "fill": {
         "type": "image",
         "enabled": true,
         "url": "Screenshot 2026-05-20 at 11.39.45.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "XkJL0",
+      "x": 5260,
+      "y": 14110,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 11.49.09.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "99qFv",
+      "x": 4272,
+      "y": 13148,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 11.51.17.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "bYH6r",
+      "x": 3778,
+      "y": 14110,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 11.51.17.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
+    },
+    {
+      "type": "text",
+      "id": "cCLxQ",
+      "x": 3778,
+      "y": 13000,
+      "name": "title",
+      "fill": "#333333",
+      "content": "App Screenshots",
+      "fontFamily": "IBM Plex Mono",
+      "fontSize": 18,
+      "fontWeight": "600",
+      "letterSpacing": 2
+    },
+    {
+      "type": "rectangle",
+      "id": "iinbL",
+      "x": 3780,
+      "y": 15060,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 11.51.17.png",
+        "mode": "fill"
+      },
+      "width": 380,
+      "height": 844
+    },
+    {
+      "type": "rectangle",
+      "id": "fVv2W",
+      "x": 4272,
+      "y": 15060,
+      "fill": {
+        "type": "image",
+        "enabled": true,
+        "url": "Screenshot 2026-05-20 at 12.23.31.png",
         "mode": "fill"
       },
       "width": 380,

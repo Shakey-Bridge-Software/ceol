@@ -3,14 +3,16 @@
    No side effects, no state mutation. Actions are dispatched via Replicant's
    r/set-dispatch! — components emit action vectors, never call functions."
   (:require [ceol.web.state :as state]
-            [ceol.abc :as abc]))
+            [ceol.abc :as abc]
+            [clojure.string :as str]))
 
 (def tune-type-labels
   {:all "All" :polka "Polka" :jig "Jig" :reel "Reel"
-   :hornpipe "Hornpipe" :slip-jig "Slip Jig" :slide "Slide" :other "Other"})
+   :hornpipe "Hornpipe" :slip-jig "Slip Jig" :slide "Slide"
+   :mazourka "Mazourka" :other "Other"})
 
-(def tune-type-order [:all :polka :jig :reel :hornpipe :slip-jig :slide :other])
-(def tune-types [:polka :jig :reel :hornpipe :slip-jig :slide :other])
+(def tune-type-order [:all :polka :jig :reel :hornpipe :slip-jig :slide :mazourka :other])
+(def tune-types [:polka :jig :reel :hornpipe :slip-jig :slide :mazourka :other])
 (def time-sigs ["2/4" "4/4" "6/8" "9/8" "12/8" "3/4"])
 
 (def key-mode-options
@@ -26,6 +28,16 @@
   (let [match (first (filter #(and (= (:key %) key-name) (= (:mode-name %) mode-name))
                              key-mode-options))]
     (or (:label match) (str key-name " " mode-name))))
+
+(defn- type-plural
+  "Lowercase plural for the filter empty-state heading. Special-case slip-jig
+  (two words) and other (don't pluralise 'others'; use 'tunes')."
+  [type-key]
+  (case type-key
+    :slip-jig "slip jigs"
+    :other "tunes"
+    :all "tunes"
+    (str (str/lower-case (get tune-type-labels type-key)) "s")))
 
 (defn- next-in-cycle [coll current]
   (let [idx (.indexOf coll current)
@@ -64,6 +76,9 @@
         peek? (= (:swipe-peek-tune-id state) (:id tune))
         custom? (state/custom-tune? (:id tune))]
     [:div.tune-row-wrap {:class (when peek? "peek")}
+     [:div.tune-row-learn-hint
+      [:span.tune-row-learn-check "✓"]
+      [:span.tune-row-learn-label (if learned? "Unlearn" "Learned")]]
      [:div.tune-row-peek-actions
       [:button.tune-row-peek-edit
        {:on {:click [[:swipe/clear] [:tune/select (:id tune)] [:editor/open]]}}
@@ -765,8 +780,17 @@
        (list
         [:div.mobile-filters
          (map (fn [t] (filter-chip current-filter t)) tune-type-order)]
-        [:div.mobile-tune-list
-         (map (fn [t] (tune-row t state)) tunes)]))
+        (if (empty? tunes)
+          [:div.mobile-empty-state
+           [:div.empty-icon
+            [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
+                   :stroke "currentColor" :stroke-width 2
+                   :stroke-linecap "round" :stroke-linejoin "round"}
+             [:polygon {:points "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"}]]]
+           [:div.empty-title (str "No " (type-plural current-filter) " yet")]
+           [:div.empty-subtitle "Try another filter or add a tune"]]
+          [:div.mobile-tune-list
+           (map (fn [t] (tune-row t state)) tunes)])))
      [:button.mobile-fab {:on {:click [[:tune/add]]}}
       [:span.mobile-fab-icon "+"]]]))
 
