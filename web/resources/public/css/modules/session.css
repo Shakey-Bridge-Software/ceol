@@ -1,0 +1,62 @@
+/* Section buttons wrapper */
+.section-btns { display: flex; gap: 8px; }
+
+/* Learned indicator */
+.learned-indicator { color: #2A6B3A; font-size: 11px; flex-shrink: 0; }
+
+/* Learned toggle */
+.learned-toggle {
+  padding: 5px 12px; border-radius: 4px; border: none;
+  background: var(--dark); color: var(--fg-inverse);
+  font-family: var(--font-body); font-size: 12px; font-weight: 500; cursor: pointer;
+  margin-left: 8px;
+}
+.learned-toggle.active { background: #2A6B3A; }
+
+/* Session tab */
+.session-content { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+.session-summary { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
+.session-actions { display: flex; flex-direction: column; gap: 12px; }
+.session-start {
+  width: 100%; padding: 12px; border: none; border-radius: 4px;
+  background: var(--accent); color: var(--fg-inverse);
+  font-family: var(--font-body); font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.session-start:disabled { opacity: 0.4; cursor: default; }
+.session-preview { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
+.session-preview-label { font-family: var(--font-mono); font-size: 9px; font-weight: 500; color: var(--fg-dim); letter-spacing: 1px; }
+.session-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; }
+.session-item-icon { color: var(--fg-dim); font-size: 12px; }
+.session-set .session-item-icon { color: var(--accent); }
+.session-set { background: var(--dark-hover); border-radius: 4px; padding: 8px 10px; }
+.session-item-info { display: flex; flex-direction: column; gap: 2px; }
+.session-item-name { color: #aaa; }
+.session-set .session-item-name { color: #ccc; font-weight: 500; }
+.session-item-meta { font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim); }
+.session-empty { color: var(--fg-dim); font-size: 12px; text-align: center; padding: 20px 0; }
+
+/* Session active */
+.session-active-header { display: flex; justify-content: space-between; align-items: center; }
+.session-active-label { font-family: var(--font-mono); font-size: 9px; font-weight: 500; color: var(--accent); letter-spacing: 1px; }
+.session-active-count { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--fg-inverse); }
+.session-progress-bar { width: 100%; height: 4px; border-radius: 2px; background: #333; }
+.session-progress-fill { height: 4px; border-radius: 2px; background: var(--accent); transition: width 0.3s; }
+.session-now-playing { padding: 12px; border-radius: 4px; background: var(--dark-hover); display: flex; flex-direction: column; gap: 6px; }
+.session-now-label { font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim); letter-spacing: 1px; }
+.session-now-info { display: flex; flex-direction: column; gap: 2px; }
+.session-now-name { font-size: 14px; font-weight: 500; color: var(--fg-inverse); }
+.session-now-meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
+.session-next { padding: 10px 12px; border-radius: 4px; border: 1px solid #333; display: flex; flex-direction: column; gap: 4px; }
+.session-next-label { font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim); letter-spacing: 1px; }
+.session-next-val { font-family: var(--font-heading); font-size: 24px; font-weight: 300; color: #444; }
+.session-history { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
+.session-history-label { font-family: var(--font-mono); font-size: 9px; color: #444; letter-spacing: 1px; }
+.session-history-item { display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 11px; color: var(--fg-dim); }
+.session-history-check { color: var(--fg-dim); }
+.session-end {
+  width: 100%; padding: 10px; border: 1px solid #555; border-radius: 4px;
+  background: transparent; color: var(--fg-muted);
+  font-family: var(--font-body); font-size: 12px; cursor: pointer;
+}
+.session-end:hover { border-color: #888; color: var(--fg-inverse); }
+.tab.session-live { background: var(--accent); }

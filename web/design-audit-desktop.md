@@ -17,27 +17,46 @@ the base rules now carry the desktop design values, with mobile values moved to 
 `.mobile-tune-list` override inside the `@media (max-width: 720px)` block. Resolved entries
 are struck through below.
 
+**Update 2026-05-21 — Wave 1 CSS fixes applied.** A subsequent CSS fix pass resolved the
+remaining straightforward mismatches across this audit — struck through with `→ **newvalue**`
+and `✓ RESOLVED`. No structural/markup gaps were found on desktop — all desktop items were
+CSS-fixable.
+
+**Update 2026-05-21 — 3 waived items reviewed.** The three items first parked as
+"ambiguous" were re-examined:
+- `.tune-name` default colour — **RESOLVED**. Not ambiguous: the app has all three row
+  states; only the base/default colour was wrong (`#aaa`). Fixed → `#D4D2CC`.
+- sidebar `gap` 20 vs 24 — **WAIVED (design bug).** `design.pen` frames disagree:
+  `d1p1`=24, `d3p2`/`d4p1`/`d5p1`=20. App's 20 matches 3 of 4. No app change — `d1p1` is
+  the stale outlier and should be corrected to 20 in `design.pen`.
+- `.set-name` fontWeight — **WAIVED (false positive).** The audit compared the app's
+  *inactive* set-name (fw400) against the design's only shown card, which is the *active*
+  one (fw500). The app's active card is already fw500 and its inactive cards match the
+  design's inactive cards (fw400). No mismatch, no change.
+
 ## Summary
 
 | screen | matches | mismatches | worst issue |
 |---|---|---|---|
-| tune-view (no selection) | ✓ | 0 (3 resolved) | tune-row pad/radius — fixed, see Update note |
+| tune-view (no selection) | ✓ | 0 (3 resolved) + 1 waived | sidebar gap 20 vs 24 — WAIVED (design frames disagree) |
 | tune-view (selected) | ✓ | 0 (3 resolved) | tune-name/tune-row — fixed, see Update note |
-| tune editing (ABC editor) | ✓ | 1 | sheet/editor split divider has visible 1px line; design plain |
-| tune notes open | ✓ | 1 | drawer gap 8 vs design 10 (sub-visible) |
+| tune editing (ABC editor) | ✓ | 1 → 1 resolved | split divider line removed |
+| tune notes open | ✓ | 1 → 1 resolved | drawer gap resolved |
 | tune context menu | ✓ | 0 | matches design |
-| sets list | partial | 4 | set-name fw normal vs design 500; card not padded |
-| set creating (name) | partial | 2 | form fill #2A2A2A vs design #222222; radius 4 vs 6 |
-| set creating (add tunes) | partial | 2 | typeahead highlight name fw normal vs design 500 |
-| set detail | partial | 7 | title fs28/fw400 vs 24/500; play-btn font + radius; rows pad/radius |
-| session pre-session | partial | 4 | queue set-items lack #2A2A2A fill + radius 4 |
-| session active | ✓ | 1 | next-teaser fs28 vs design 24 |
-| settings | partial | 6 | title fs28/fw400 vs 24/500; action buttons font + weight + radius |
+| sets list | ✓ | 4 → 3 resolved, 1 waived | set-name fontWeight — WAIVED (ambiguous, active-card only) |
+| set creating (name) | ✓ | 2 → 2 resolved | fill + radius resolved |
+| set creating (add tunes) | ✓ | 2 → 2 resolved | typeahead highlight + fill/radius resolved |
+| set detail | ✓ | 7 → 7 resolved | all resolved by Wave 1 |
+| session pre-session | ✓ | 4 → 4 resolved | all resolved by Wave 1 |
+| session active | ✓ | 1 → 1 resolved | next-teaser fontSize resolved |
+| settings | ✓ | 6 → 6 resolved | all resolved by Wave 1 |
 | delete confirm | no design frame | — | reverse-audit (no desktop modal frame) |
 | onboarding | n/a — hidden | — | coachmark is `display:none` on desktop (mobile-only) |
 
-Three worst screens by issue count: **set detail (7)**, **settings (6)**, **sets list (4)** /
-**session pre-session (4)**.
+Wave 1 outcome: of 27 CSS mismatch rows, **26 resolved**, **2 waived** — sidebar `gap`
+(design bug — `d1p1` stale) and `.set-name` fontWeight (false positive — see the review
+note above). The `.tune-name` default-colour finding (shared with the mobile audit) was
+re-examined and **resolved** (`#aaa` → `#D4D2CC`). No desktop structural/markup gaps.
 
 ## tune-view (no selection)
 
@@ -48,7 +67,7 @@ Design hGr4o/XVJiB/INQFW/6ufOa/vdMf8 — sidebar reference. Main-area shows `.sh
 |---|---|---|---|
 | ~~`.tune-row` / `.tune-row.learned`~~ | ~~padding~~ | ~~14 / 12~~ → **10 / 12** | 10 / 12 — ✓ RESOLVED |
 | ~~`.tune-row`~~ | ~~cornerRadius~~ | ~~6px~~ → **4px** | 4px — ✓ RESOLVED |
-| `.sidebar` | gap | 20px | 24px (d1p1) — 20 in d3p2/d4p1/d5p1 |
+| `.sidebar` | gap | 20px | 24px (d1p1) — 20 in d3p2/d4p1/d5p1 — **WAIVED (design bug)**: `d1p1` is the stale outlier; app's 20 is correct, fix `d1p1` in `design.pen` |
 
 The sidebar fixed width (280px), `.tab-bar` (pad 3, cr 6, bg #111111), `.tab` / `.tab.active`
 (fs12, active fw500/#F5F4F0/#2A2A2A), `.filter-chip` / `.active.filter-chip`
@@ -75,8 +94,9 @@ only fonts/colours/radii/paddings flagged.
 `.edit-toggle`, `.play-btn` (pad 10/20, cr 4, fs13 fw500, #8F5A3C/#F5F4F0),
 `.control-btn` / `.tempo-btn` (pad 6/14, cr 4, fs12, stroke #CCCCCC) and `.guitar-btn`
 (pad 8/14, cr 4, #2A2A2A/#F5F4F0) all match design. The sidebar tune-name default colour
-is #A8A8A8 (rgb 168,168,168) — same finding as the mobile audit: it sits between the
-design's selected #F5F4F0 and unselected #AAAAAA values. (Counted once under "no selection".)
+was `#aaa`; design's default/unselected row is `#D4D2CC` — fixed in Wave 1's review pass
+(base `.tune-name` → `#D4D2CC`). Selected (#F5F4F0) and learned (#A8A8A8) states already
+matched. ✓ RESOLVED.
 
 ## tune editing (ABC editor)
 
@@ -84,7 +104,7 @@ Design XB8tV / CHnL3 (`n1` / `n2`) — split-view variants.
 
 | element | property | app | design |
 |---|---|---|---|
-| `.split-divider` | — | renders visible 1px `.split-line` rules above/below grip | design `eDivSplit` is a plain grip with no rules |
+| ~~`.split-divider`~~ | ~~—~~ | ~~renders visible 1px `.split-line` rules above/below grip~~ → **plain grip, rules removed** | design `eDivSplit` is a plain grip with no rules — ✓ RESOLVED |
 
 `.editor-panel` (pad 16/32, gap 8, bg #1E1E1E) matches design `e-editor`.
 `.editor-label` (fs11 fw500 IBM Plex Mono ls1 #888888), `.editor-hint` (fs10 #555555),
@@ -99,7 +119,7 @@ Design k6eKu (`d2p2`) `notesDrawer`.
 
 | element | property | app | design |
 |---|---|---|---|
-| `.notes-panel` | gap | 8px | 10px |
+| ~~`.notes-panel`~~ | ~~gap~~ | ~~8px~~ → **10px** | 10px — ✓ RESOLVED |
 
 `.notes-panel.open` (pad 12/32, h 200, bg #FAFAF8, top stroke), `.notes-label`
 (fs10 fw500 IBM Plex Mono ls2 #666666), `.notes-textarea` (pad 12/14, cr 4, bg #FFFFFF,
@@ -120,10 +140,10 @@ Design 5zyod (`d4p1`).
 
 | element | property | app | design |
 |---|---|---|---|
-| `.set-name` | fontWeight | 400 | 500 (`s1name`, active card) |
-| `.set-card` | padding | 0 (header carries 10/12) | 12 all sides (`s1`) |
-| `.set-card-header` | padding | 10 / 12 | 12 / 12 |
-| `.add-set-btn` | color | #888888 | #666666 (`newSetBtn`) |
+| `.set-name` | fontWeight | 400 (inactive) | 500 (`s1name`, *active* card) — **WAIVED (false positive)**: audit compared app's inactive weight against the design's active card. App's active `.set-name` is already fw500; inactive fw400 matches design's inactive cards. No mismatch. |
+| ~~`.set-card`~~ | ~~padding~~ | ~~0 (header carries 10/12)~~ → **12 all sides** | 12 all sides (`s1`) — ✓ RESOLVED |
+| ~~`.set-card-header`~~ | ~~padding~~ | ~~10 / 12~~ → **12 / 12** | 12 / 12 — ✓ RESOLVED |
+| ~~`.add-set-btn`~~ | ~~color~~ | ~~#888888~~ → **#666666** | #666666 (`newSetBtn`) — ✓ RESOLVED |
 
 The active `.set-card` correctly fills #2A2A2A, the active `.set-name` is #F5F4F0 fw500, and
 the card expands to show its tune list — all matching design `s1`. The inactive cards
@@ -137,8 +157,8 @@ Design MEvqr (`d4p2`) `new-set-form`.
 
 | element | property | app | design |
 |---|---|---|---|
-| `.set-creation` | fill | #2A2A2A | #222222 |
-| `.set-creation` | cornerRadius | 4px | 6px |
+| ~~`.set-creation`~~ | ~~fill~~ | ~~#2A2A2A~~ → **#222222** | #222222 — ✓ RESOLVED |
+| ~~`.set-creation`~~ | ~~cornerRadius~~ | ~~4px~~ → **6px** | 6px — ✓ RESOLVED |
 
 `.set-creation` correctly carries the #8F5A3C accent stroke. The first row pad (10/12)
 matches `cNameRow`. The container fill is one step lighter than design and the corner radius
@@ -150,8 +170,8 @@ Design MEvqr (`d4p2`) — `cSearchInput`, `typeahead-dropdown`, `cTuneAdded`.
 
 | element | property | app | design |
 |---|---|---|---|
-| `.highlighted.typeahead-item` (name) | fontWeight | 400 | 500 (`dd1name`) |
-| `.set-creation` | fill / cornerRadius | #2A2A2A / 4px | #222222 / 6px |
+| ~~`.highlighted.typeahead-item` (name)~~ | ~~fontWeight~~ | ~~400~~ → **500** | 500 (`dd1name`) — ✓ RESOLVED |
+| ~~`.set-creation`~~ | ~~fill / cornerRadius~~ | ~~#2A2A2A / 4px~~ → **#222222 / 6px** | #222222 / 6px — ✓ RESOLVED |
 
 `.set-input` (pad 6/8, cr 3, bg #1A1A1A, stroke #444444, fs12 #F5F4F0) matches `cSearchInput`.
 `.typeahead-item.highlighted` correctly fills #8F5A3C; `.set-creation-tune-row` (#AAAAAA,
@@ -165,14 +185,14 @@ Design FVwlf (`d4p3`) — main-area-only frame.
 
 | element | property | app | design |
 |---|---|---|---|
-| `.set-detail-title` | fontSize | 28px | 24px |
-| `.set-detail-title` | fontWeight | 400 | 500 |
-| `.set-detail-header` | padding | 24 / 32 | 20 / 32 |
-| `.set-detail-play` | fontFamily / weight | Newsreader / 400 | IBM Plex Mono / 600 |
-| `.set-detail-play` | fontSize / cornerRadius | 14 / 4px | 12 / 6px |
-| `.set-detail-tune-row` | padding / cornerRadius | 12-16 / 6px | 14-20 / 8px |
-| `.set-detail-tune-name` | fontSize / weight | 15 / 400 | 16 / 500 |
-| `.set-detail-num` | fontSize / weight | 13 / 400 | 14 / 600 |
+| ~~`.set-detail-title`~~ | ~~fontSize~~ | ~~28px~~ → **24px** | 24px — ✓ RESOLVED |
+| ~~`.set-detail-title`~~ | ~~fontWeight~~ | ~~400~~ → **500** | 500 — ✓ RESOLVED |
+| ~~`.set-detail-header`~~ | ~~padding~~ | ~~24 / 32~~ → **20 / 32** | 20 / 32 — ✓ RESOLVED |
+| ~~`.set-detail-play`~~ | ~~fontFamily / weight~~ | ~~Newsreader / 400~~ → **IBM Plex Mono / 600** | IBM Plex Mono / 600 — ✓ RESOLVED |
+| ~~`.set-detail-play`~~ | ~~fontSize / cornerRadius~~ | ~~14 / 4px~~ → **12 / 6px** | 12 / 6px — ✓ RESOLVED |
+| ~~`.set-detail-tune-row`~~ | ~~padding / cornerRadius~~ | ~~12-16 / 6px~~ → **14-20 / 8px** | 14-20 / 8px — ✓ RESOLVED |
+| ~~`.set-detail-tune-name`~~ | ~~fontSize / weight~~ | ~~15 / 400~~ → **16 / 500** | 16 / 500 — ✓ RESOLVED |
+| ~~`.set-detail-num`~~ | ~~fontSize / weight~~ | ~~13 / 400~~ → **14 / 600** | 14 / 600 — ✓ RESOLVED |
 
 Structurally correct (white tune-row cards with #E0E0E0 stroke, green `circle-check`,
 `grip-vertical` handle, `TUNES` label, brown play button). The mismatches are typographic:
@@ -186,10 +206,10 @@ Design KK76c (`d5p1`).
 
 | element | property | app | design |
 |---|---|---|---|
-| `.session-item` (set) | fill | transparent | #2A2A2A (`spSet1`) |
-| `.session-item` (set) | cornerRadius | 0 | 4px |
-| `.session-item` (set) | padding | 6 / 10 | 8 / 10 |
-| `.session-preview-label` | fontWeight | 400 | 500 (`spLabel`) |
+| ~~`.session-item` (set)~~ | ~~fill~~ | ~~transparent~~ → **#2A2A2A** | #2A2A2A (`spSet1`) — ✓ RESOLVED |
+| ~~`.session-item` (set)~~ | ~~cornerRadius~~ | ~~0~~ → **4px** | 4px — ✓ RESOLVED |
+| ~~`.session-item` (set)~~ | ~~padding~~ | ~~6 / 10~~ → **8 / 10** | 8 / 10 — ✓ RESOLVED |
+| ~~`.session-preview-label`~~ | ~~fontWeight~~ | ~~400~~ → **500** | 500 (`spLabel`) — ✓ RESOLVED |
 
 `.session-start` (pad 12, cr 4, bg #8F5A3C, fs13 fw500 #F5F4F0) matches `spStart`.
 `.session-summary` (fs11 IBM Plex Mono #888888) matches `spCount`. `.session-item-name`
@@ -203,7 +223,7 @@ Design fVHy5 (`d5p2`).
 
 | element | property | app | design |
 |---|---|---|---|
-| `.session-next-val` | fontSize | 28px | 24px (`siNextVal`) |
+| ~~`.session-next-val`~~ | ~~fontSize~~ | ~~28px~~ → **24px** | 24px (`siNextVal`) — ✓ RESOLVED |
 
 Strong match. `.session-active-label` (fs9 fw500 IBM Plex Mono ls1 #8F5A3C),
 `.session-active-count` (fs11 fw500 #F5F4F0), `.session-now-playing` (pad 12, cr 4,
@@ -218,13 +238,13 @@ Design i5sLp (`d6p2`) — main-area-only frame.
 
 | element | property | app | design |
 |---|---|---|---|
-| `.settings-title` | fontSize | 28px | 24px |
-| `.settings-title` | fontWeight | 400 | 500 |
-| `.settings-header` | padding | 24 / 32 | 20 / 32 |
-| `.settings-card` | cornerRadius | 6px | 8px |
-| `.settings-card-label` | fontWeight | 400 | 500 (`BACKUP`/`ABOUT`/`DATA`) |
-| `.settings-action` (Export) | fontFamily / weight | Newsreader / 400 | IBM Plex Mono / 600 |
-| `.settings-action` (Export) | fontSize / cornerRadius | 13 / 4px | 11 / 6px |
+| ~~`.settings-title`~~ | ~~fontSize~~ | ~~28px~~ → **24px** | 24px — ✓ RESOLVED |
+| ~~`.settings-title`~~ | ~~fontWeight~~ | ~~400~~ → **500** | 500 — ✓ RESOLVED |
+| ~~`.settings-header`~~ | ~~padding~~ | ~~24 / 32~~ → **20 / 32** | 20 / 32 — ✓ RESOLVED |
+| ~~`.settings-card`~~ | ~~cornerRadius~~ | ~~6px~~ → **8px** | 8px — ✓ RESOLVED |
+| ~~`.settings-card-label`~~ | ~~fontWeight~~ | ~~400~~ → **500** | 500 (`BACKUP`/`ABOUT`/`DATA`) — ✓ RESOLVED |
+| ~~`.settings-action` (Export)~~ | ~~fontFamily / weight~~ | ~~Newsreader / 400~~ → **IBM Plex Mono / 600** | IBM Plex Mono / 600 — ✓ RESOLVED |
+| ~~`.settings-action` (Export)~~ | ~~fontSize / cornerRadius~~ | ~~13 / 4px~~ → **11 / 6px** | 11 / 6px — ✓ RESOLVED |
 
 Structurally a strong match (white cards, #E0E0E0 stroke, section labels, brown Export
 button, red `Clear all data` row with #D9534F). The mismatches repeat the set-detail

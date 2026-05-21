@@ -105,3 +105,61 @@ Dropped: **#2 ABC editor** — full-screen notation editor rejected; inline edit
 
 Action sheets #1 and #4 share a structure — build one reusable bottom-sheet component and
 parameterise the card + action rows.
+
+---
+
+## Wave 1 markup gaps
+
+Discovered by the Wave 1 CSS fix pass (2026-05-21). The fix pass resolved every
+straightforward CSS mismatch in `design-audit.md`; these five items are **WAIVED** in the
+audit because they need new or restructured component markup, not restyling. Listed in
+audit order.
+
+### A. Notes sheet — title block + footer — `vWmaK` · P2
+
+**Now:** `.notes-panel` has only the label + textarea. The dark theming is fixed (Wave 1),
+but the design's `nTitleBlock` (tune title fs=22 + meta line) and `nFoot` ("Saved" status +
+character count) have no markup. The label also reads "NOTES"; design `nLabel` is
+"PRACTICE NOTES".
+
+**Scope:** add a title block above the textarea (read from the open tune) and a footer row
+below it (saved indicator + live char count); change the label text. View + CSS only.
+
+### B. Session-ready — hero card — `J8hkB` · P2
+
+**Now:** the session-ready screen lists items but has no `heroCard`. CSS for the surrounding
+items is fixed (Wave 1); the design centrepiece — a `#2A2A2A` cr=12 card with a "READY TO
+PRACTICE" label, the big learned-tune number (`heroBig` fs=56), sub-lines, and the Start
+button *inside* the card — is absent.
+
+**Scope:** new `hero-card` component wrapping the existing `:session/start` button; the big
+number binds to the learned-tune count. View + CSS; no new state.
+
+### C. Session-live — now-playing detail + controls — `XwIFG` · P2
+
+**Now:** `.session-now-playing` card theming is fixed (Wave 1) but it shows only a small
+name. Missing: the `nowMeta` line (type/key/bpm), the `nowSkip` + `nowPause` 48px transport
+controls, and a real `nextCard` (the next tune's name + meta — currently a "?" teaser).
+
+**Scope:** expand the now-playing card with a meta line + 48px skip/pause buttons (wire to
+existing session-advance / pause handlers) and replace the "?" teaser with the resolved next
+tune's name + meta. View + CSS; handlers likely exist.
+
+### D. Sets-populated — always-expanded set cards — `7VNKz` · P2
+
+**Now:** `.set-card` is a collapse-by-default accordion (header only until tapped). The
+design has no expand/collapse — every card is always fully expanded, showing a numbered tune
+list, a ready dot per tune, and a "Play set" button.
+
+**Scope:** drop the accordion behaviour; render each card fully expanded with the numbered
+tune list + ready indicators + Play-set button inline. View change + CSS; removes the
+collapse state.
+
+### E. Settings — Export/Import list rows — `ddeLd` · P3
+
+**Now:** Export and Import are label + brown action-button rows. Card theming is fixed
+(Wave 1); the design wants list rows in the `icon + text + chevron` pattern (matching the
+mobile list-row style) instead of label+button.
+
+**Scope:** restructure the Export/Import rows as tappable list rows (leading icon, text,
+trailing chevron). View + CSS; same handlers.

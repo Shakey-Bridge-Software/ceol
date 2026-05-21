@@ -201,7 +201,16 @@
     (let [sets (vals (:sets state))]
       (if (seq sets)
         (map (fn [s] (set-card s state)) (sort-by :name sets))
-        [:div.sets-empty "No sets yet"]))]])
+        [:div.sets-empty
+         [:div.empty-icon
+          [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
+                 :stroke "currentColor" :stroke-width 2
+                 :stroke-linecap "round" :stroke-linejoin "round"}
+           [:polygon {:points "12 2 2 7 12 12 22 7 12 2"}]
+           [:polyline {:points "2 17 12 22 22 17"}]
+           [:polyline {:points "2 12 12 17 22 12"}]]]
+         [:div.empty-title "No sets yet"]
+         [:div.empty-subtitle "Tap New Set to get started"]]))]])
 
 ;; --- Session tab ---
 
@@ -232,7 +241,18 @@
         [:div.session-preview
          [:div.session-preview-label "SESSION QUEUE PREVIEW"]
          (map (fn [item] (session-preview-item item state)) queue)]]
-       [:div.session-empty "Mark tunes as learned to start a session"])]))
+       [:div.session-empty
+        [:div.empty-icon
+         [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
+                :stroke "currentColor" :stroke-width 2
+                :stroke-linecap "round" :stroke-linejoin "round"}
+          [:polyline {:points "16 3 21 3 21 8"}]
+          [:line {:x1 4 :y1 20 :x2 21 :y2 3}]
+          [:polyline {:points "21 16 21 21 16 21"}]
+          [:line {:x1 15 :y1 15 :x2 21 :y2 21}]
+          [:line {:x1 4 :y1 4 :x2 9 :y2 9}]]]
+        [:div.empty-title "No tunes ready yet"]
+        [:div.empty-subtitle "Mark tunes as learned to start a session"]])]))
 
 (defn session-tab-active [state]
   (let [queue (:session-queue state)
