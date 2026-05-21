@@ -93,8 +93,8 @@ body {
   gap: 6px;
 }
 .filter-chip {
-  padding: 4px 10px;
-  border-radius: 12px;
+  padding: 6px 12px;
+  border-radius: 14px;
   border: none;
   background: var(--dark-hover);
   color: var(--fg-muted);
@@ -105,7 +105,6 @@ body {
 .filter-chip.active {
   background: var(--accent);
   color: var(--fg-inverse);
-  font-weight: 500;
 }
 
 /* Filters row with add button */
@@ -334,9 +333,9 @@ body {
 .tune-row {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
-  border-radius: 4px;
-  gap: 12px;
+  padding: 14px 12px;
+  border-radius: 6px;
+  gap: 10px;
   cursor: pointer;
   border-left: 3px solid transparent;
   font-family: var(--font-heading);
@@ -345,10 +344,10 @@ body {
 .tune-row:hover .tune-row-menu-btn { opacity: 1; }
 .tune-row.active { background: var(--dark-hover); border-left-color: var(--accent); }
 .tune-row.learned { border-left-color: #3B6B4F; }
-.tune-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tune-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .tune-name {
   font-family: var(--font-heading);
-  font-size: 14px;
+  font-size: 16px;
   color: #aaa;
   white-space: nowrap;
   overflow: hidden;
@@ -356,7 +355,8 @@ body {
 }
 .tune-row.active .tune-name { color: var(--fg-inverse); font-weight: 500; }
 .tune-row.learned .tune-name { color: #A8A8A8; }
-.tune-meta { font-family: var(--font-mono); font-size: 10px; color: var(--fg-dim); text-transform: capitalize; }
+.tune-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-secondary); text-transform: capitalize; }
+.tune-row.active .tune-meta { color: var(--fg-muted); }
 .tune-row-menu-btn {
   border: none;
   background: transparent;
@@ -1026,6 +1026,9 @@ body {
 .tune-row-peek-delete { background: #D9534F; }
 .tune-row.swiping { transition: none !important; }
 
+/* Right-swipe-to-learn hint (desktop hides it; mobile shows it behind row) */
+.tune-row-learn-hint { display: none; }
+
 /* Inline tune-context-menu only used on desktop (hover-style). On touch the
    swipe-left peek provides Edit / Delete; tune actions live in controls sheet. */
 @media (max-width: 720px) {
@@ -1050,6 +1053,28 @@ body {
   .abcjs-title, .abcjs-rhythm, .abcjs-tempo, .abcjs-author, .abcjs-origin { display: none; }
   /* Hide tune-row right ⋮ on mobile (swipe gesture provides actions) */
   .tune-row-menu-btn { display: none; }
+  /* Tell the browser horizontal gestures on rows are app-handled, so the
+     iOS back-gesture doesn't intercept right swipes. */
+  .tune-row-wrap, .tune-row { touch-action: pan-y; }
+  /* Learn hint only renders while the wrap is in a right-swipe gesture.
+     The gesture module sets .swipe-right on the wrap during touchmove. */
+  .tune-row-wrap.swipe-right .tune-row-learn-hint {
+    display: flex; align-items: center; gap: 10px;
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 140px; padding: 0 18px;
+    background: rgba(59,107,79,0.18);
+    color: #3B6B4F;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 1px;
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .tune-row-learn-check {
+    width: 22px; height: 22px; border-radius: 11px;
+    background: rgba(59,107,79,0.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
   .sheet-area { padding: 16px; }
   .editing-strip { padding: 8px 16px; font-size: 10px; }
   .editing-strip-help { display: none; }
@@ -1454,6 +1479,26 @@ body {
     padding: 0 20px 12px;
   }
   .mobile-tune-list { display: flex; flex-direction: column; gap: 2px; padding: 4px 12px 80px; }
+
+  /* Empty filter state */
+  .mobile-empty-state {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; padding: 80px 40px;
+    text-align: center;
+  }
+  .mobile-empty-state .empty-icon {
+    width: 48px; height: 48px; border-radius: 24px;
+    background: #2a2a2a; color: var(--fg-muted);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mobile-empty-state .empty-title {
+    font-family: var(--font-heading); font-size: 18px; color: var(--fg-inverse);
+  }
+  .mobile-empty-state .empty-subtitle {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--fg-muted); letter-spacing: 1px;
+  }
 
   /* Floating action button */
   .mobile-fab {
