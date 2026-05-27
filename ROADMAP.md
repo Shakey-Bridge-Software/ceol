@@ -23,7 +23,7 @@
 - [x] Session mode: learned flag (k hotkey), queue building (sets as units when all tunes learned), shuffle, count-in between items, 2s pause, no lookahead, third sidebar tab
 - [x] Session UI: clean read-only main panel (no controls), progress bar, NOW PLAYING, PLAYED history
 - [x] Promise-based render sync: render-abc! synchronous, render-sheet-music! creates promise, wait-for-render! for session advance
-- [x] Tests: 43 tests, 183 assertions (chords, ABC, state, sets, beat engine, session)
+- [x] Tests: 67 tests, 5202 assertions (chords, ABC, state, sets, beat engine, session, actions, backup, mobile tune-editor; most assertions are generative)
 - [x] Delete-tune confirmation dialog (styled modal — covers tune deletion)
 - [x] Responsive mobile/tablet layout (mobile views, top bar, controls sheet, touch gestures)
 - [x] Import/export backup (export all user data as EDN, import + merge)

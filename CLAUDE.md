@@ -128,7 +128,23 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 ./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test)"
 ```
 
-43 tests, 183 assertions across chords, ABC processing, state, sets, beat engine, and session.
+67 tests, 5202 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor.
+
+### Browser end-to-end verification
+
+For mobile flows (B-items in `web/build-backlog.md`), use the CDP harness at
+`web/scripts/verify/`. Drives headless Chrome via DevTools Protocol — asserts
+cljs state + screenshots at 390×844.
+
+```bash
+# Terminal 1: shadow-cljs watch app
+# Terminal 2:
+cd web/scripts
+./verify.sh b1   # reference scenario: mobile tune-details editor
+```
+
+See `web/scripts/verify/README.md` for the helper API and gotchas
+(coachmark, `<select value>` quirk, settle timing).
 
 ## Dependencies
 
@@ -177,11 +193,18 @@ ceol/
       gesture.cljs    — mobile touch gestures
       chords.cljc     — chord algorithm
       handlers/
-        tune.cljs       — tune actions
-        editor.cljs     — ABC editor + inline-field actions
-        set.cljs        — set actions
-        playback.cljs   — play/stop orchestration
-        session.cljs    — practice-session actions
+        tune.cljs            — tune CRUD + mobile tune-editor wrappers
+        tune_editor.cljc     — pure helpers behind mobile tune-editor
+        editor.cljs          — ABC editor + inline-field actions
+        set.cljs             — set actions
+        playback.cljs        — play/stop orchestration
+        session.cljs         — practice-session actions
+    scripts/
+      cdp.mjs                — CDP harness (Node WebSocket → headless Chrome)
+      verify.sh              — chrome launcher + scenario runner
+      verify/
+        README.md            — verification process doc
+        b1.mjs               — reference scenario (mobile tune-details editor)
   test/
     ceol/
       split_test.clj  — ABC splitting tests
@@ -193,6 +216,7 @@ ceol/
         beat_engine_test.cljc — beat math tests
         session_test.cljc    — session logic tests
         actions_test.cljc    — action dispatch tests
+        tune_editor_test.cljc — mobile tune-editor draft helpers
         generative_test.cljc — generative/property tests
         backup_test.cljs     — backup export/import tests
         runner.cljs          — CLJS test runner

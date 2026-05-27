@@ -133,7 +133,7 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 ./bb -cp "src:web/src:test" -e "..."
 ```
 
-43 tests, 183 assertions covering chord algorithm, ABC processing, state queries, set logic, beat engine, and session logic.
+67 tests, 5202 assertions (most are generative) covering chord algorithm, ABC processing, state queries, set logic, beat engine, session logic, actions, backup round-trip, and the mobile tune-editor.
 
 ## Project structure
 
