@@ -61,6 +61,13 @@
 ;;   :field/cancel        []                         exit inline edit without saving
 ;;   :field/keydown       [key]                      Enter to confirm, Escape to cancel
 ;;
+;; Mobile tune-details editor (full-screen overlay)
+;;   :tune-editor/open-new     []                    open editor in :new mode (blank draft)
+;;   :tune-editor/open-edit    [tune-id]             open editor in :edit mode (draft cloned)
+;;   :tune-editor/cancel       []                    discard draft + close
+;;   :tune-editor/save         []                    commit draft + close
+;;   :tune-editor/update-draft [field value]         write to :tune-editor draft
+;;
 ;; Playback
 ;;   :playback/play       []                         toggle play/stop
 ;;   :playback/stop       []                         stop unconditionally
@@ -131,6 +138,13 @@
     :tune/update-key-mode (tune/update-key-mode! args)
     :tune/delete          (tune/delete! args)
     :tune/add-to-set      (tune/add-to-set! args)
+
+    ;; Mobile tune-details editor (full-screen overlay)
+    :tune-editor/open-new     (tune/editor-open-new! args)
+    :tune-editor/open-edit    (tune/editor-open-edit! args)
+    :tune-editor/cancel       (tune/editor-cancel! args)
+    :tune-editor/save         (tune/editor-save! args)
+    :tune-editor/update-draft (tune/editor-update-draft! args)
 
     ;; Editor + inline fields
     :editor/toggle  (editor/toggle! args)

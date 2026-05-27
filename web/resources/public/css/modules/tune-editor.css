@@ -1,0 +1,170 @@
+/* ===========================================================================
+   Mobile tune-details editor — full-screen overlay reached from the FAB
+   ("New tune") or the (forthcoming) action sheet's "Edit details" row.
+   Design source: design.pen frames FvkOu (new) + kMKsH (edit).
+   --------------------------------------------------------------------------- */
+
+.te-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: #1A1A1A;
+  display: flex;
+  flex-direction: column;
+  animation: fade-in 0.15s;
+}
+
+/* Hide on desktop — desktop uses inline tune-header click-to-cycle fields. */
+@media (min-width: 721px) {
+  .te-overlay { display: none !important; }
+}
+
+/* Top bar — Cancel · title · Save pill */
+.te-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px 16px;
+}
+.te-cancel {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #888;
+  cursor: pointer;
+}
+.te-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 500;
+  color: #F5F4F0;
+}
+.te-save {
+  background: var(--accent);
+  border: none;
+  border-radius: 14px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #fff;
+  cursor: pointer;
+}
+.te-save:active { opacity: 0.85; }
+
+/* Body — scrollable column of labelled sections */
+.te-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 8px 20px calc(env(safe-area-inset-bottom, 0px) + 24px) 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.te-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0; /* allows truncation in flex row */
+}
+
+/* Two sections side by side (KEY + MODE) */
+.te-row {
+  display: flex;
+  gap: 12px;
+}
+.te-row > .te-section { flex: 1; }
+
+.te-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #666;
+}
+
+.te-input {
+  background: #2A2A2A;
+  border: none;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 500;
+  color: #F5F4F0;
+  width: 100%;
+  outline: none;
+}
+.te-input::placeholder { color: #555; font-weight: 400; }
+.te-input:focus { outline: 1px solid var(--accent); }
+
+/* Chip rows (type, time-sig) — horizontal scroll if overflow */
+.te-chip-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.te-chip-row::-webkit-scrollbar { display: none; }
+
+.te-chip {
+  flex: 0 0 auto;
+  background: #2A2A2A;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #AAAAAA;
+  cursor: pointer;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.te-chip:active { background: #333; }
+.te-chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Native select dressed to match design — chevron drawn separately */
+.te-select-wrap {
+  position: relative;
+  background: #2A2A2A;
+  border-radius: 8px;
+}
+.te-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 36px 14px 14px;
+  width: 100%;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 500;
+  color: #F5F4F0;
+  outline: none;
+  cursor: pointer;
+}
+.te-select:focus { outline: 1px solid var(--accent); border-radius: 8px; }
+.te-select-caret {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  color: #888;
+  font-size: 16px;
+  pointer-events: none;
+}
+.te-select option {
+  background: #2A2A2A;
+  color: #F5F4F0;
+}

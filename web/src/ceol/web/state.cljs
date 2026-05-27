@@ -133,6 +133,10 @@
            :context-menu-tune-id nil
            :swipe-peek-tune-id   nil
            :delete-confirm-tune-id nil
+           ;; Mobile tune-details editor (nil = closed)
+           ;; {:mode :new|:edit :tune-id <id-or-nil>
+           ;;  :draft {:name :type :time-sig :key :mode-name :session-id}}
+           :tune-editor         nil
            :onboarded?           false
            :guitar?         false
            :editing-field   nil

@@ -19,4 +19,5 @@
 @import url('modules/settings.css');     /* settings view, new-tune-btn, sidebar settings btn */
 @import url('modules/sets-detail.css');  /* set detail view */
 @import url('modules/editor.css');       /* editing strip, ABC editor, playback bar, notes panel */
+@import url('modules/tune-editor.css');  /* mobile full-screen tune-details editor */
 @import url('modules/mobile.css');       /* mobile shell, modals, swipe, all @media blocks */

@@ -824,7 +824,7 @@
            [:div.empty-subtitle "Try another filter or add a tune"]]
           [:div.mobile-tune-list
            (map (fn [t] (tune-row t state)) tunes)])))
-     [:button.mobile-fab {:on {:click [[:tune/add]]}}
+     [:button.mobile-fab {:on {:click [[:tune-editor/open-new]]}}
       [:span.mobile-fab-icon "+"]]]))
 
 (defn main-area [state]
@@ -871,6 +871,96 @@
                           :on {:click [[:section/set nil]]}} "All"]]
        [:span.mobile-top-bar-spacer])]))
 
+(def ^:private editor-types
+  ;; Types shown as chip row in the mobile editor. Matches the design (5 types
+  ;; fit cleanly on a 390-wide screen); the app's :slide :mazourka :other are
+  ;; still usable via desktop, but rare for hand-entered tunes.
+  [:polka :jig :reel :hornpipe :slip-jig])
+
+(def ^:private editor-keys ["C" "D" "E" "F" "G" "A" "B"])
+
+(def ^:private editor-modes
+  ;; Friendly labels for the mode dropdown; :value maps to :mode-name.
+  [{:value "Ionian"     :label "major"}
+   {:value "Dorian"     :label "dorian"}
+   {:value "Mixolydian" :label "mixolydian"}
+   {:value "Aeolian"    :label "minor"}])
+
+(defn- te-chip [{:keys [active? label on-click]}]
+  [:button.te-chip {:class (when active? "active")
+                    :on {:click on-click}} label])
+
+(defn mobile-tune-editor [state]
+  (when-let [{:keys [mode draft]} (:tune-editor state)]
+    (let [title (if (= mode :new) "New tune" "Edit tune")]
+      [:div.te-overlay
+       [:div.te-top
+        [:button.te-cancel {:on {:click [[:tune-editor/cancel]]}} "Cancel"]
+        [:div.te-title title]
+        [:button.te-save {:on {:click [[:tune-editor/save]]}} "Save"]]
+       [:div.te-body
+        ;; NAME
+        [:div.te-section
+         [:div.te-label "NAME"]
+         [:input.te-input
+          {:type "text"
+           :value (:name draft)
+           :placeholder "Tune name"
+           :auto-focus (= mode :new)
+           :on {:input [[:tune-editor/update-draft :name :event/target.value]]}}]]
+        ;; TYPE
+        [:div.te-section
+         [:div.te-label "TYPE"]
+         [:div.te-chip-row
+          (map (fn [t]
+                 (te-chip {:active?  (= t (:type draft))
+                           :label    (get tune-type-labels t)
+                           :on-click [[:tune-editor/update-draft :type t]]}))
+               editor-types)]]
+        ;; KEY + MODE row — :selected on the matching option (HTML doesn't honour
+        ;; `value` on <select> directly; Replicant doesn't normalise this for us).
+        [:div.te-row
+         [:div.te-section
+          [:div.te-label "KEY"]
+          [:div.te-select-wrap
+           [:select.te-select
+            {:on {:change [[:tune-editor/update-draft :key :event/target.value]]}}
+            (map (fn [k]
+                   [:option (cond-> {:value k}
+                              (= k (:key draft)) (assoc :selected true))
+                    k])
+                 editor-keys)]
+           [:span.te-select-caret "›"]]]
+         [:div.te-section
+          [:div.te-label "MODE"]
+          [:div.te-select-wrap
+           [:select.te-select
+            {:on {:change [[:tune-editor/update-draft :mode-name :event/target.value]]}}
+            (map (fn [{:keys [value label]}]
+                   [:option (cond-> {:value value}
+                              (= value (:mode-name draft)) (assoc :selected true))
+                    label])
+                 editor-modes)]
+           [:span.te-select-caret "›"]]]]
+        ;; TIME SIGNATURE
+        [:div.te-section
+         [:div.te-label "TIME SIGNATURE"]
+         [:div.te-chip-row
+          (map (fn [ts]
+                 (te-chip {:active?  (= ts (:time-sig draft))
+                           :label    ts
+                           :on-click [[:tune-editor/update-draft :time-sig ts]]}))
+               time-sigs)]]
+        ;; SESSION ID
+        [:div.te-section
+         [:div.te-label "THESESSION.ORG ID  (optional)"]
+         [:input.te-input
+          {:type "text"
+           :inputmode "numeric"
+           :value (:session-id draft)
+           :placeholder "e.g. 1834"
+           :on {:input [[:tune-editor/update-draft :session-id :event/target.value]]}}]]]])))
+
 (defn delete-confirm-modal [state]
   (when-let [tune-id (:delete-confirm-tune-id state)]
     (let [tune (state/tune-by-id state tune-id)]
@@ -914,4 +1004,5 @@
    (main-area state)
    (controls-sheet state)
    (delete-confirm-modal state)
+   (mobile-tune-editor state)
    (onboarding-coachmark state)])
