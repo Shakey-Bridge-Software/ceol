@@ -38,11 +38,18 @@ Elm architecture: `init → update → view` loop.
 
 ### Web (ClojureScript + Replicant)
 Elm-like architecture: atom + watcher + Replicant render.
-- **core.cljs** — entry point, event dispatch (`handle-action!`), ABC rendering, playback orchestration, localStorage persistence
-- **state.cljs** — app-state atom, query functions, set/tune data model
-- **views.cljs** — Replicant hiccup components (sidebar, sheet music, editor, playback bar)
+- **core.cljs** — entry point, init, keyboard shortcuts, `dispatch-action!` router. Most actions delegate to `handlers/*`; trivial one-liners (filter, tab, tempo) stay inline.
+- **state.cljs** — app-state atom, query functions, set/tune data model, malli schemas
+- **views.cljs** — Replicant hiccup components (sidebar, sheet music, editor, playback bar, mobile layout)
+- **persist.cljs** — localStorage I/O + remote data loading (custom tunes, sets, edits, notes, learned, ABC data); schema-validates at the boundary
+- **render.cljs** — imperative abc.js sheet-music rendering, driven by a state watch
+- **handlers/** — action handlers split by domain: `tune.cljs`, `editor.cljs`, `set.cljs`, `playback.cljs`, `session.cljs`
 - **abc_bridge.cljs** — abc.js interop (render SVG, synth play/stop, shared AudioContext)
 - **guitar.cljs** — Tone.js Sampler with CDN acoustic guitar samples, strumming patterns per tune type
+- **metronome.cljs** — standalone self-correcting metronome click
+- **beat_engine.cljc** — shared pure beat math (beats-for-tune, ms-per-beat/bar)
+- **backup.cljs** — export/import all user data as EDN
+- **gesture.cljs** — mobile touch gestures (swipe-peek, full-swipe delete, swipe-right learned)
 - **chords.cljc** — chord suggestion algorithm (bar-level, mode-based, pitch-class weighting)
 
 ## Key patterns
@@ -61,6 +68,15 @@ Elm-like architecture: atom + watcher + Replicant render.
 - **abc.js quirks**: `wrap` option causes missing barlines — use ABC newlines for line breaks instead. `chordsOff: true` suppresses piano chord audio. `program: 105` for banjo.
 - **Tone.js**: lazy init via `Tone.start()` on first user interaction. CDN samples from tonejs-instruments.
 
+### Deliberate design divergences (web)
+Cases where the app intentionally differs from `design.pen`, or a design-token
+question was deliberately settled — do not "fix" these to match the mockups.
+- **Slim mobile playback bar** — the mobile playback bar uses a 48px play button / `[0,16]` padding, not the design's 64px / 16. Intentional redesign (commit "replace playback bar with slim mobile design").
+- **Inline notation editing kept** — the full-screen ABC notation editor (`design.pen` frame `rT1yT`) is rejected. The app keeps the inline `.editor-panel` textarea so edits drive live sheet-music re-renders in place; a separate editor would break that.
+- **Full-swipe-left → delete-confirm modal** — a left swipe past the 140px threshold opens the styled delete-confirm modal directly. The design's intermediate "Release to delete" reveal (`qkOww`) is not implemented; the confirm-modal flow is the chosen gesture.
+- **Sidebar `gap` = 20** — `design.pen` frames disagree (`d1p1` says 24; `d3p2`/`d4p1`/`d5p1` say 20). The app's 20 matches the majority; the `d1p1` frame's 24 is the design-side bug.
+- **`.tune-name` default colour `#D4D2CC`** — settled value for the base/unselected tune-row name (active `#F5F4F0`, learned `#A8A8A8`). The earlier `#aaa` was a bug.
+
 ## Data files
 
 ### ~/.ceol/
@@ -75,6 +91,15 @@ Elm-like architecture: atom + watcher + Replicant render.
 - `ceol-abc-edits` — edited ABC per tune (with chord annotations)
 - `ceol-custom-tunes` — user-added/edited tune metadata
 - `ceol-sets` — set definitions
+- `ceol-learned-tunes` — set of learned tune IDs
+- `ceol-tune-notes` — practice notes per tune
+- `ceol-onboarded` — first-launch coachmark dismissed flag
+
+### Web bundled data (`web/resources/public/data/`)
+Fetched at startup by `persist.cljs`; localStorage overrides these.
+- `local-abc.edn` — hand-written ABC bodies, keyed by tune ID (see below)
+- `default-abc-edits.edn` — seed ABC edits (with chord annotations) merged under any localStorage edits
+- `default-sets.edn` — seed set definitions, used when no `ceol-sets` key exists
 
 ### local-abc.edn
 Hand-written file at `~/.ceol/local-abc.edn`, also copied to `web/resources/public/data/`. Maps tune IDs to ABC body strings (no headers). Both TUI and web read from this.
@@ -103,7 +128,7 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 ./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test)"
 ```
 
-22 tests, 118 assertions across chords, ABC processing, state, and sets.
+43 tests, 183 assertions across chords, ABC processing, state, sets, beat engine, and session.
 
 ## Dependencies
 
@@ -133,24 +158,44 @@ ceol/
     package.json
     resources/public/
       index.html
-      css/style.css
-      data/local-abc.edn
+      css/style.css       — entry; imports css/modules/*
+      css/modules/        — split CSS modules
+      data/local-abc.edn        — hand-written ABC bodies
+      data/default-abc-edits.edn — seed ABC edits
+      data/default-sets.edn      — seed sets
     src/ceol/web/
-      core.cljs       — entry, dispatch, persistence
-      state.cljs      — app state, queries
-      views.cljs      — UI components
+      core.cljs       — entry, init, keyboard shortcuts, dispatch router
+      state.cljs      — app state, queries, schemas
+      views.cljs      — UI components (desktop + mobile)
+      persist.cljs    — localStorage I/O + remote data loading
+      render.cljs     — imperative abc.js sheet rendering
       abc_bridge.cljs — abc.js interop
       guitar.cljs     — Tone.js guitar
+      metronome.cljs  — standalone metronome click
+      beat_engine.cljc — shared beat math
+      backup.cljs     — export/import user data
+      gesture.cljs    — mobile touch gestures
       chords.cljc     — chord algorithm
+      handlers/
+        tune.cljs       — tune actions
+        editor.cljs     — ABC editor + inline-field actions
+        set.cljs        — set actions
+        playback.cljs   — play/stop orchestration
+        session.cljs    — practice-session actions
   test/
     ceol/
       split_test.clj  — ABC splitting tests
       web/
-        abc_test.cljc    — ABC processing tests
-        chords_test.cljc — chord algorithm tests
-        state_test.cljc  — state query tests
-        sets_test.cljc   — set logic tests
-        runner.cljs      — CLJS test runner
+        abc_test.cljc        — ABC processing tests
+        chords_test.cljc     — chord algorithm tests
+        state_test.cljc      — state query tests
+        sets_test.cljc       — set logic tests
+        beat_engine_test.cljc — beat math tests
+        session_test.cljc    — session logic tests
+        actions_test.cljc    — action dispatch tests
+        generative_test.cljc — generative/property tests
+        backup_test.cljs     — backup export/import tests
+        runner.cljs          — CLJS test runner
   local-abc.edn        — hand-written ABC (also at ~/.ceol/)
   design.pen            — UI mockups (Pencil)
 ```
