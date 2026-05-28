@@ -25,19 +25,20 @@ Re-prioritized 2026-05-22 after the Wave 2 audit.
 - ✓ **B1 — Mobile tune-details editor** (commit `150b0e4`) — FAB now opens
   the editor; persists name/type/key/mode/time-sig/session-id. Verify scenario
   `web/scripts/verify/b1.mjs`.
-- ✓ **Item #1 — Tune action sheet** + **B4 Duplicate handler** — bottom sheet
-  with Edit details / Edit notation / Add to set / Duplicate / Delete. Swipe-peek
-  removed (G8). Verify scenario `web/scripts/verify/item1.mjs`.
+- ✓ **Item #1 — Tune action sheet** + **B4 Duplicate handler** (commit `6aff231`)
+  — bottom sheet with Edit details / Edit notation / Add to set / Duplicate /
+  Delete. Swipe-peek removed (G8). Verify `web/scripts/verify/item1.mjs`.
+- ✓ **B2 — Confirm dialogs** — generic `:confirm/open` action + `confirm-modal`
+  view. Wired into import-overwrite ("Replace all data?") and set-delete
+  ("Delete set?"). Reuses existing `.modal` CSS. Verify `web/scripts/verify/b2.mjs`.
 
 **P2 — works via an off-design fallback**
 
-1. **B2 — Confirm dialogs** — import-overwrite + set-delete currently fire
-   destructively with no warning. Small/medium.
-2. **B5 — Reduce web seed 54 → 3 deletable starter tunes** — small; fixes the
+1. **B5 — Reduce web seed 54 → 3 deletable starter tunes** — small; fixes the
    onboarding flow (zero-tunes state is currently unreachable).
-3. **Item #3 — New / edit set editor**, then **Item #4 — Set action sheet** —
+2. **Item #3 — New / edit set editor**, then **Item #4 — Set action sheet** —
    #4's "Edit set" routes into #3. #4 is gap **G4**.
-4. **B3 — Mobile backup-status banner** — small; export/import currently give
+3. **B3 — Mobile backup-status banner** — small; export/import currently give
    mobile users no feedback.
 
 **P3 — polish**

@@ -124,6 +124,7 @@ scripts/
 ## Coverage status
 
 - `b1` — Mobile tune-details editor — passes (commit `150b0e4`).
-- `item1` — Tune action sheet + B4 duplicate — passes.
+- `item1` — Tune action sheet + B4 duplicate — passes (commit `6aff231`).
+- `b2` — Generic confirm modal (set-delete + import) — passes.
 
 Add a row when you ship a new B-item with a scenario.

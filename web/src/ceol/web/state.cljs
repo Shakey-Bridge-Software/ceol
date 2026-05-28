@@ -65,6 +65,7 @@
 ;;   :controls-sheet-open?  bool          "NOW PLAYING" controls bottom sheet open (mobile playback)
 ;;   :context-menu-tune-id  id | nil      tune whose desktop dropdown / mobile action-sheet is open
 ;;   :delete-confirm-tune-id id | nil     tune pending delete-confirm modal
+;;   :confirm               map | nil     generic confirm modal payload (title, body, on-confirm)
 ;;   :onboarded?            bool          first-launch coachmark dismissed (persisted)
 ;;
 ;; Tune notes
@@ -131,6 +132,10 @@
            :controls-sheet-open? false
            :context-menu-tune-id nil
            :delete-confirm-tune-id nil
+           ;; Generic confirm modal (nil = closed). Shape when open:
+           ;; {:title "..." :body "..." :destructive-label "..."
+           ;;  :on-confirm [[:some/action arg ...] ...]}
+           :confirm nil
            ;; Mobile tune-details editor (nil = closed)
            ;; {:mode :new|:edit :tune-id <id-or-nil>
            ;;  :draft {:name :type :time-sig :key :mode-name :session-id}}

@@ -146,7 +146,14 @@
              (typeahead-results state)]
             [:div.set-actions
              [:button.set-add-btn {:on {:click [[:set/start-adding set-id]]}} "+"]
-             [:button.delete-set {:on {:click [[:set/delete set-id]]}} "Delete"]])]))]))
+             [:button.delete-set
+              {:on {:click [[:confirm/open
+                             {:title "Delete set?"
+                              :body (str "“" (:name set-data) "” will be removed. "
+                                         "Its tunes stay in your library.")
+                              :destructive-label "Delete"
+                              :on-confirm [[:set/delete set-id]]}]]}}
+              "Delete"]])]))]))
 
 (defn set-creation-form [state]
   (let [name-confirmed? (:creating-set-name state)
@@ -726,7 +733,14 @@
      [:div.settings-row
       [:div.settings-row-text "Import backup from .edn"]
       [:button.settings-action.settings-action-secondary
-       {:on {:click [[:backup/import]]}}
+       {:on {:click [[:confirm/open
+                      {:title "Replace all data?"
+                       :body (str "Importing a backup overwrites every custom "
+                                  "tune, set, edit, and learned mark on this "
+                                  "device. Export your current data first if "
+                                  "you want to keep it.")
+                       :destructive-label "Choose file"
+                       :on-confirm [[:backup/import]]}]]}}
        "Choose file"]]]
     [:div.settings-card
      [:div.settings-card-label "ABOUT"]
@@ -1003,6 +1017,25 @@
          [:button.modal-destructive
           {:on {:click [[:delete/confirm tune-id]]}} "Delete"]]]])))
 
+
+(defn confirm-modal
+  "Generic confirm modal. State slot :confirm holds the payload:
+     {:title \"...\" :body \"...\" :destructive-label \"...\"
+      :on-confirm [[:action arg] ...]}
+   The destructive button fires the :on-confirm actions and then closes
+   the slot via [:confirm/cancel]."
+  [state]
+  (when-let [{:keys [title body destructive-label on-confirm]} (:confirm state)]
+    [:div.modal-backdrop {:on {:click [[:confirm/cancel]]}}
+     [:div.modal {:on {:click [[:event/stop]]}}
+      [:div.modal-title title]
+      [:div.modal-body body]
+      [:div.modal-actions
+       [:button.modal-cancel {:on {:click [[:confirm/cancel]]}} "Cancel"]
+       [:button.modal-destructive
+        {:on {:click (vec (concat on-confirm [[:confirm/cancel]]))}}
+        (or destructive-label "OK")]]]]))
+
 (defn onboarding-coachmark [state]
   (when (and (not (:onboarded? state))
              (seq (state/filtered-tunes state)))
@@ -1033,6 +1066,7 @@
    (main-area state)
    (controls-sheet state)
    (delete-confirm-modal state)
+   (confirm-modal state)
    (mobile-tune-action-sheet state)
    (mobile-tune-editor state)
    (onboarding-coachmark state)])

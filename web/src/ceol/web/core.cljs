@@ -113,6 +113,8 @@
 ;;   :delete/request      [tune-id]                   open delete-confirm modal for a tune
 ;;   :delete/cancel       []                          dismiss delete-confirm modal
 ;;   :delete/confirm      [tune-id]                   confirm + delete
+;;   :confirm/open        [{:title :body :destructive-label :on-confirm}] open generic confirm
+;;   :confirm/cancel      []                          dismiss generic confirm
 ;;   :onboarding/dismiss  []                          dismiss first-launch coachmark (persists)
 ;;   :data/clear-confirm  []                          confirm-then-wipe all localStorage
 ;;
@@ -172,6 +174,16 @@
     (let [[tune-id] args]
       (swap! state/app-state assoc :delete-confirm-tune-id nil)
       (tune/delete! [tune-id]))
+
+    ;; Generic confirm modal — opts is a map with :title :body
+    ;; :destructive-label :on-confirm (a Replicant-style actions vector).
+    ;; The confirm button's :on-confirm runs *and then* :confirm/cancel
+    ;; clears the slot — wired in the view, not here.
+    :confirm/open
+    (swap! state/app-state assoc :confirm (first args))
+
+    :confirm/cancel
+    (swap! state/app-state assoc :confirm nil)
 
     :mobile/back
     (swap! state/app-state

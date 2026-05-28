@@ -78,7 +78,7 @@
 
 
 (defn duplicate! [[tune-id]]
-  ;; Clone a tune (any: base or custom) into a fresh custom tune with " (copy)"
+  ;; Clone any tune (catalog or user-added) into a fresh tune with " (copy)"
   ;; suffix. Carries the ABC body across (from :abc-edits, falling back to
   ;; :abc-data) so the duplicate immediately renders. Selects the new tune.
   (let [s        @state/app-state
@@ -95,15 +95,14 @@
             src-abc   (state/edited-abc-for-tune s tune-id)]
         (swap! state/app-state
                (fn [s]
-                 (let [custom (assoc (:custom-tunes s) new-id new-tune)
-                       merged (state/merge-tunes state/base-tunes custom)]
-                   (cond-> (merge s {:custom-tunes custom} merged
-                                  {:selected-tune-id new-id
-                                   :main-view :tune
-                                   :mobile-view :detail
-                                   :context-menu-tune-id nil})
-                     src-abc (assoc-in [:abc-edits new-id] src-abc)))))
-        (persist/save-custom-tunes!)
+                 (cond-> (merge s
+                                (state/prepare-tunes (assoc (:tunes s) new-id new-tune))
+                                {:selected-tune-id new-id
+                                 :main-view :tune
+                                 :mobile-view :detail
+                                 :context-menu-tune-id nil})
+                   src-abc (assoc-in [:abc-edits new-id] src-abc))))
+        (persist/save-tunes!)
         (when src-abc (persist/schedule-save!))))))
 
 (defn add-to-set! [[tune-id]]
