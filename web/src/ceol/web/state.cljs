@@ -63,8 +63,7 @@
 ;;   :main-view             :tune | :set | :settings   which main panel is showing
 ;;   :mobile-view           :list | :detail | :tune    push-nav level on the phone layout
 ;;   :controls-sheet-open?  bool          "NOW PLAYING" controls bottom sheet open (mobile playback)
-;;   :context-menu-tune-id  id | nil      tune whose action menu / mobile action-sheet is open
-;;   :swipe-peek-tune-id    id | nil      tune row currently peeked open by left-swipe
+;;   :context-menu-tune-id  id | nil      tune whose desktop dropdown / mobile action-sheet is open
 ;;   :delete-confirm-tune-id id | nil     tune pending delete-confirm modal
 ;;   :onboarded?            bool          first-launch coachmark dismissed (persisted)
 ;;
@@ -131,7 +130,6 @@
            :mobile-view          :list
            :controls-sheet-open? false
            :context-menu-tune-id nil
-           :swipe-peek-tune-id   nil
            :delete-confirm-tune-id nil
            ;; Mobile tune-details editor (nil = closed)
            ;; {:mode :new|:edit :tune-id <id-or-nil>

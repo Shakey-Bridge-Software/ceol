@@ -124,5 +124,6 @@ scripts/
 ## Coverage status
 
 - `b1` — Mobile tune-details editor — passes (commit `150b0e4`).
+- `item1` — Tune action sheet + B4 duplicate — passes.
 
 Add a row when you ship a new B-item with a scenario.

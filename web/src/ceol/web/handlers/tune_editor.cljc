@@ -62,3 +62,21 @@
    [:key        (:key draft)]
    [:mode-name  (:mode-name draft)]
    [:session-id (parse-session-id (:session-id draft))]])
+
+
+;; --- B4: Duplicate-tune name helper -----------------------------------------
+;; Lives alongside the editor helpers because both serve handlers.tune and
+;; both are pure (atom-free, no side effects). Side-effectful duplicate!
+;; wraps this in handlers.tune.
+
+(defn unique-copy-name
+  "Append \" (copy)\" to a tune name, or \" (copy N)\" if a prior copy with the
+   same base name already exists in `existing-names`."
+  [base-name existing-names]
+  (let [names (set existing-names)
+        try1  (str base-name " (copy)")]
+    (if-not (contains? names try1)
+      try1
+      (loop [n 2]
+        (let [try-n (str base-name " (copy " n ")")]
+          (if-not (contains? names try-n) try-n (recur (inc n))))))))

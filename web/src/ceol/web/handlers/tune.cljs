@@ -76,6 +76,36 @@
   (persist/schedule-save-notes!)
   (persist/save-learned!))
 
+
+(defn duplicate! [[tune-id]]
+  ;; Clone a tune (any: base or custom) into a fresh custom tune with " (copy)"
+  ;; suffix. Carries the ABC body across (from :abc-edits, falling back to
+  ;; :abc-data) so the duplicate immediately renders. Selects the new tune.
+  (let [s        @state/app-state
+        src      (state/tune-by-id s tune-id)]
+    (when src
+      (let [new-id    (state/next-tune-id s)
+            all-names (mapv :name (vals (:tunes s)))
+            new-name  (ed/unique-copy-name (:name src) all-names)
+            new-tune  (-> src
+                          (assoc :id new-id :name new-name)
+                          ;; Drop session-id — a copy is no longer the canonical
+                          ;; thesession.org reference.
+                          (dissoc :session-id))
+            src-abc   (state/edited-abc-for-tune s tune-id)]
+        (swap! state/app-state
+               (fn [s]
+                 (let [custom (assoc (:custom-tunes s) new-id new-tune)
+                       merged (state/merge-tunes state/base-tunes custom)]
+                   (cond-> (merge s {:custom-tunes custom} merged
+                                  {:selected-tune-id new-id
+                                   :main-view :tune
+                                   :mobile-view :detail
+                                   :context-menu-tune-id nil})
+                     src-abc (assoc-in [:abc-edits new-id] src-abc)))))
+        (persist/save-custom-tunes!)
+        (when src-abc (persist/schedule-save!))))))
+
 (defn add-to-set! [[tune-id]]
   (let [s    @state/app-state
         sets (:sets s)]

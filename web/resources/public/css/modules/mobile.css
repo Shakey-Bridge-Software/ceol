@@ -97,19 +97,8 @@
 }
 .modal-destructive { background: #D9534F; color: #fff; border-color: #D9534F; }
 
-/* Swipe peek state */
-.tune-row-peek-actions { display: none; }
-.tune-row-wrap.peek .tune-row-peek-actions {
-  display: flex; position: absolute; right: 0; top: 0; bottom: 0;
-  width: 160px; align-items: stretch;
-}
-.tune-row-peek-edit, .tune-row-peek-delete {
-  flex: 1; border: none; cursor: pointer;
-  font-family: var(--font-heading); font-size: 12px;
-  color: #fff;
-}
-.tune-row-peek-edit { background: #666666; }
-.tune-row-peek-delete { background: #D9534F; }
+/* Active swipe state (no transition during drag). The 60px swipe-peek was
+   removed (G8) — per-tune actions live in the bottom action sheet now. */
 .tune-row.swiping { transition: none !important; }
 
 /* Right-swipe-to-learn hint (desktop hides it; mobile shows it behind row) */

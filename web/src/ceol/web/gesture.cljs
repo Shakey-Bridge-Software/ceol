@@ -2,12 +2,13 @@
   "Touch gesture handling for mobile. Hand-rolled swipe on tune rows.
    The gesture works directly on DOM elements (no per-frame app-state churn)
    and only commits to app-state on touchend with a final outcome.
-   Left swipe  → peek (Edit/Delete) at peek-threshold, delete-confirm at
-   delete-threshold. Right swipe → toggle learned at learn-threshold."
+   Left swipe past delete-threshold → delete-confirm modal. Right swipe past
+   learn-threshold → toggle learned. The intermediate peek (Edit/Delete
+   reveal) was removed (G8 decision) — per-tune actions live in the bottom
+   action sheet now."
   (:require [ceol.web.state :as state]
             [ceol.web.persist :as persist]))
 
-(def ^:private peek-threshold 60)
 (def ^:private delete-threshold 140)
 (def ^:private learn-threshold 120)
 
@@ -73,15 +74,10 @@
       (let [d (or dx 0)
             left (- d)]
         (cond
-          ;; Left swipe past delete threshold → delete-confirm
+          ;; Left swipe past delete threshold → delete-confirm modal
           (>= left delete-threshold)
           (do (reset-transform! row)
               (swap! state/app-state assoc :delete-confirm-tune-id tune-id))
-
-          ;; Left swipe past peek threshold → settle at -120px revealing actions
-          (>= left peek-threshold)
-          (do (set! (.. row -style -transform) "translateX(-120px)")
-              (swap! state/app-state assoc :swipe-peek-tune-id tune-id))
 
           ;; Right swipe past learn threshold → toggle learned and snap back
           (>= d learn-threshold)
@@ -93,8 +89,7 @@
               (persist/save-learned!))
 
           :else
-          (do (reset-transform! row)
-              (swap! state/app-state assoc :swipe-peek-tune-id nil)))))
+          (reset-transform! row))))
     (reset! g nil)))
 
 (defn- on-touch-cancel [_e]

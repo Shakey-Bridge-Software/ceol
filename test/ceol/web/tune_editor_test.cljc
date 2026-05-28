@@ -83,3 +83,20 @@
     (is (= "Untitled tune" (second (first (ed/draft->edit-updates ed/blank-draft))))))
   (testing "blank session-id parses to nil"
     (is (nil? (second (last (ed/draft->edit-updates ed/blank-draft)))))))
+
+(deftest unique-copy-name-spec
+  (testing "no prior copy → \" (copy)\""
+    (is (= "Maggie in the Woods (copy)"
+           (ed/unique-copy-name "Maggie in the Woods" []))))
+  (testing "self in existing list is fine (only collisions matter)"
+    (is (= "Foo (copy)" (ed/unique-copy-name "Foo" ["Foo"]))))
+  (testing "first collision bumps to \" (copy 2)\""
+    (is (= "Foo (copy 2)"
+           (ed/unique-copy-name "Foo" ["Foo" "Foo (copy)"]))))
+  (testing "subsequent collisions keep incrementing"
+    (is (= "Foo (copy 4)"
+           (ed/unique-copy-name "Foo"
+                                ["Foo" "Foo (copy)" "Foo (copy 2)" "Foo (copy 3)"]))))
+  (testing "unrelated names don't interfere"
+    (is (= "Foo (copy)"
+           (ed/unique-copy-name "Foo" ["Bar" "Baz (copy)" "Qux"])))))

@@ -75,25 +75,15 @@
 (defn tune-row [tune state]
   (let [active? (= (:id tune) (:selected-tune-id state))
         learned? (state/learned? state (:id tune))
-        menu-open? (= (:context-menu-tune-id state) (:id tune))
-        peek? (= (:swipe-peek-tune-id state) (:id tune))
-        catalog-tune? (state/catalog-tune? (:id tune))]
-    [:div.tune-row-wrap {:class (when peek? "peek")}
+        menu-open? (= (:context-menu-tune-id state) (:id tune))]
+    [:div.tune-row-wrap
      [:div.tune-row-learn-hint
       [:span.tune-row-learn-check "✓"]
       [:span.tune-row-learn-label (if learned? "Unlearn" "Learned")]]
-     [:div.tune-row-peek-actions
-      (when-not catalog-tune?                               ;;Catalog tunes are 'immutable' in the sense that they cannot be changed, only deleted.
-        [:button.tune-row-peek-edit
-         {:on {:click [[:swipe/clear] [:tune/select (:id tune)] [:editor/open]]}}
-         "Edit"])
-      [:button.tune-row-peek-delete
-       {:on {:click [[:swipe/clear] [:tune/delete (:id tune)]]}}
-       "Delete"]]
      [:div.tune-row {:class (str (when active? "active")
                                  (when learned? " learned"))
                      :data-tune-id (:id tune)
-                     :on {:click [[:swipe/clear] [:tune/select (:id tune)]]
+                     :on {:click [[:tune/select (:id tune)]]
                           :contextmenu [[:event/prevent] [:menu/open (:id tune)]]}}
       [:div.tune-info
        [:div.tune-name (:name tune)]
@@ -101,7 +91,9 @@
         (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · " (key-mode-label (:key tune) (:mode-name tune)))]]
       [:button.tune-row-menu-btn
        {:on {:click [[:event/stop] [:menu/open (:id tune)]]}}
-       "\u22ee"]]
+       "⋮"]]
+     ;; Desktop dropdown still renders inline (CSS hides on mobile);
+     ;; mobile users get the bottom action sheet rendered from `app`.
      (when menu-open?
        (tune-context-menu (:id tune)))]))
 
@@ -890,6 +882,43 @@
   [:button.te-chip {:class (when active? "active")
                     :on {:click on-click}} label])
 
+(def ^:private action-sheet-rows
+  ;; Order matches design qgF2n: Edit details / Edit notation / Add to set /
+  ;; Duplicate / Delete. Each row builds its dispatch from the tune-id.
+  [{:icon "✎" :label "Edit details"
+    :build (fn [id] [[:menu/close] [:tune-editor/open-edit id]])}
+   {:icon "♪" :label "Edit notation"
+    :build (fn [id] [[:menu/close] [:tune/select id] [:editor/open]])}
+   {:icon "≡" :label "Add to set"
+    :build (fn [id] [[:menu/close] [:tune/select id] [:tune/add-to-set id]])}
+   {:icon "⧉" :label "Duplicate"
+    :build (fn [id] [[:menu/close] [:tune/duplicate id]])}
+   {:icon "✕" :label "Delete" :danger? true
+    :build (fn [id] [[:menu/close] [:delete/request id]])}])
+
+(defn mobile-tune-action-sheet [state]
+  (when-let [tune-id (:context-menu-tune-id state)]
+    (when-let [tune (state/tune-by-id state tune-id)]
+      [:div.as-overlay {:on {:click [[:menu/close]]}}
+       [:div.as-sheet {:on {:click [[:event/stop]]}}
+        [:div.as-handle [:div.as-handle-bar]]
+        [:div.as-tune-card
+         [:div.as-tune-title (:name tune)]
+         [:div.as-tune-meta
+          (str (get tune-type-labels (:type tune)) " · "
+               (:time-sig tune) " · "
+               (key-mode-label (:key tune) (:mode-name tune)))]]
+        [:div.as-divider]
+        [:div.as-actions
+         (map (fn [{:keys [icon label danger? build]}]
+                [:button.as-row {:class (when danger? "as-row-danger")
+                                 :on {:click (build tune-id)}}
+                 [:span.as-row-icon icon]
+                 [:span.as-row-label label]])
+              action-sheet-rows)]
+        [:div.as-cancel-wrap
+         [:button.as-cancel {:on {:click [[:menu/close]]}} "Cancel"]]]])))
+
 (defn mobile-tune-editor [state]
   (when-let [{:keys [mode draft]} (:tune-editor state)]
     (let [title (if (= mode :new) "New tune" "Edit tune")]
@@ -1004,5 +1033,6 @@
    (main-area state)
    (controls-sheet state)
    (delete-confirm-modal state)
+   (mobile-tune-action-sheet state)
    (mobile-tune-editor state)
    (onboarding-coachmark state)])

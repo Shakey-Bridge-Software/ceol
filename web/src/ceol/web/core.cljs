@@ -48,6 +48,7 @@
 ;;   :tune/update-field   [tune-id field value]      update one field on a tune
 ;;   :tune/update-key-mode [tune-id key mode-name]   update key + mode together
 ;;   :tune/delete         [tune-id]                  delete custom tune (no-op on catalog)
+;;   :tune/duplicate      [tune-id]                  clone tune (+ABC) as fresh custom tune
 ;;   :tune/add-to-set     [tune-id]                  add tune to active/only set
 ;;   :abc/render          []                         no-op (render triggered by state watch)
 ;;
@@ -109,7 +110,7 @@
 ;;   :settings/open       []                          show settings panel (main-view)
 ;;   :settings/close      []                          back to tune panel
 ;;   :mobile/back         []                          pop one nav level (detail→list, set/settings→tune)
-;;   :swipe/clear         []                          clear swipe-peek on a tune row
+;;   :delete/request      [tune-id]                   open delete-confirm modal for a tune
 ;;   :delete/cancel       []                          dismiss delete-confirm modal
 ;;   :delete/confirm      [tune-id]                   confirm + delete
 ;;   :onboarding/dismiss  []                          dismiss first-launch coachmark (persists)
@@ -137,6 +138,7 @@
     :tune/update-field    (tune/update-field! args)
     :tune/update-key-mode (tune/update-key-mode! args)
     :tune/delete          (tune/delete! args)
+    :tune/duplicate       (tune/duplicate! args)
     :tune/add-to-set      (tune/add-to-set! args)
 
     ;; Mobile tune-details editor (full-screen overlay)
@@ -159,8 +161,9 @@
     (do (swap! state/app-state assoc :onboarded? true)
         (try (.setItem js/localStorage "ceol-onboarded" "1")
              (catch :default _)))
-    :swipe/clear
-    (swap! state/app-state assoc :swipe-peek-tune-id nil)
+
+    :delete/request
+    (swap! state/app-state assoc :delete-confirm-tune-id (first args))
 
     :delete/cancel
     (swap! state/app-state assoc :delete-confirm-tune-id nil)
