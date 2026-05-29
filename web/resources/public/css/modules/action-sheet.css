@@ -1,7 +1,8 @@
 /* ===========================================================================
-   Mobile tune action sheet — bottom sheet over a dimmed tune list, reached
-   via the ⋮ button on every tune row. Replaces the swipe-peek (G8 decision).
-   Design source: design.pen frame qgF2n (action-sheet `KTztA`).
+   Mobile bottom action sheet — shared shell for the tune sheet (⋮ on a tune
+   row, replaces the swipe-peek per G8) and the set sheet (⋮ on the set
+   detail). One renderer: views/mobile-bottom-sheet.
+   Design source: design.pen frames qgF2n (tune) + kihYP (set).
    --------------------------------------------------------------------------- */
 
 .as-overlay {
@@ -43,14 +44,14 @@
   background: #444;
 }
 
-.as-tune-card {
+.as-card {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 12px 20px 16px 20px;
   min-width: 0;
 }
-.as-tune-title {
+.as-title {
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 500;
@@ -59,7 +60,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.as-tune-meta {
+.as-meta {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 1px;

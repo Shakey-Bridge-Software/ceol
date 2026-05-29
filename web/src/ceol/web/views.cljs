@@ -917,28 +917,47 @@
    {:icon "✕" :label "Delete" :danger? true
     :build (fn [id] [[:menu/close] [:delete/request id]])}])
 
+(defn mobile-bottom-sheet
+  "Shared mobile bottom-sheet shell (design qgF2n / kihYP). `rows` is a seq of
+   {:icon :label :danger? :on-click}; `on-close` is the actions vector run by
+   both the backdrop and the Cancel button. Used by the tune + set action
+   sheets — the only thing that differs between them is the card + rows."
+  [{:keys [title subtitle rows on-close]}]
+  [:div.as-overlay {:on {:click on-close}}
+   [:div.as-sheet {:on {:click [[:event/stop]]}}
+    [:div.as-handle [:div.as-handle-bar]]
+    [:div.as-card
+     [:div.as-title title]
+     [:div.as-meta subtitle]]
+    [:div.as-divider]
+    [:div.as-actions
+     (map (fn [{:keys [icon label danger? on-click]}]
+            [:button.as-row {:class (when danger? "as-row-danger")
+                             :on {:click on-click}}
+             [:span.as-row-icon icon]
+             [:span.as-row-label label]])
+          rows)]
+    [:div.as-cancel-wrap
+     [:button.as-cancel {:on {:click on-close}} "Cancel"]]]])
+
+(defn- sheet-rows
+  "Resolve a row-spec table ({:icon :label :danger? :build}) against `arg` into
+   the {:icon :label :danger? :on-click} rows mobile-bottom-sheet renders."
+  [row-specs arg]
+  (map (fn [{:keys [icon label danger? build]}]
+         {:icon icon :label label :danger? danger? :on-click (build arg)})
+       row-specs))
+
 (defn mobile-tune-action-sheet [state]
   (when-let [tune-id (:context-menu-tune-id state)]
     (when-let [tune (state/tune-by-id state tune-id)]
-      [:div.as-overlay {:on {:click [[:menu/close]]}}
-       [:div.as-sheet {:on {:click [[:event/stop]]}}
-        [:div.as-handle [:div.as-handle-bar]]
-        [:div.as-tune-card
-         [:div.as-tune-title (:name tune)]
-         [:div.as-tune-meta
-          (str (get tune-type-labels (:type tune)) " · "
-               (:time-sig tune) " · "
-               (key-mode-label (:key tune) (:mode-name tune)))]]
-        [:div.as-divider]
-        [:div.as-actions
-         (map (fn [{:keys [icon label danger? build]}]
-                [:button.as-row {:class (when danger? "as-row-danger")
-                                 :on {:click (build tune-id)}}
-                 [:span.as-row-icon icon]
-                 [:span.as-row-label label]])
-              action-sheet-rows)]
-        [:div.as-cancel-wrap
-         [:button.as-cancel {:on {:click [[:menu/close]]}} "Cancel"]]]])))
+      (mobile-bottom-sheet
+       {:title    (:name tune)
+        :subtitle (str (get tune-type-labels (:type tune)) " · "
+                       (:time-sig tune) " · "
+                       (key-mode-label (:key tune) (:mode-name tune)))
+        :on-close [[:menu/close]]
+        :rows     (sheet-rows action-sheet-rows tune-id)}))))
 
 (def ^:private set-action-sheet-rows
   ;; Order matches design kihYP: Play set / Edit set / Duplicate / Delete.
@@ -965,24 +984,12 @@
       (let [n (count (:tune-ids set-data))
             all-learned? (and (pos? n)
                               (every? #(state/learned? state %) (:tune-ids set-data)))]
-        [:div.as-overlay {:on {:click [[:set-menu/close]]}}
-         [:div.as-sheet {:on {:click [[:event/stop]]}}
-          [:div.as-handle [:div.as-handle-bar]]
-          [:div.as-tune-card
-           [:div.as-tune-title (:name set-data)]
-           [:div.as-tune-meta
-            (str n " tune" (when (not= 1 n) "s")
-                 (when all-learned? " · all learned"))]]
-          [:div.as-divider]
-          [:div.as-actions
-           (map (fn [{:keys [icon label danger? build]}]
-                  [:button.as-row {:class (when danger? "as-row-danger")
-                                   :on {:click (build set-data)}}
-                   [:span.as-row-icon icon]
-                   [:span.as-row-label label]])
-                set-action-sheet-rows)]
-          [:div.as-cancel-wrap
-           [:button.as-cancel {:on {:click [[:set-menu/close]]}} "Cancel"]]]]))))
+        (mobile-bottom-sheet
+         {:title    (:name set-data)
+          :subtitle (str n " tune" (when (not= 1 n) "s")
+                         (when all-learned? " · all learned"))
+          :on-close [[:set-menu/close]]
+          :rows     (sheet-rows set-action-sheet-rows set-data)})))))
 
 (defn mobile-tune-editor [state]
   (when-let [{:keys [mode draft]} (:tune-editor state)]
