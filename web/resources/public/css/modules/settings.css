@@ -46,7 +46,6 @@
   text-transform: uppercase; letter-spacing: 1px;
   cursor: pointer;
 }
-.settings-action-secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); }
 .settings-action-danger { background: transparent; color: #D9534F; border: 1px solid #D9534F; }
 .settings-action-danger:hover { background: #D9534F; color: #fff; }
 
@@ -65,6 +64,9 @@
   text-align: left;
   cursor: pointer;
 }
+/* Grey alpha reads on both the light desktop card and the dark mobile card. */
+.settings-list-row:hover { background: rgba(127, 127, 127, 0.08); }
+.settings-list-row:active { background: rgba(127, 127, 127, 0.14); }
 .settings-list-icon { display: flex; color: var(--fg-muted); flex-shrink: 0; }
 .settings-list-body { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .settings-list-title { font-family: var(--font-heading); font-size: 15px; color: var(--fg); }
