@@ -107,3 +107,45 @@
 .typeahead-name { flex: 1; }
 .typeahead-item.highlighted .typeahead-name { font-weight: 500; }
 .typeahead-type { font-family: var(--font-mono); font-size: 10px; opacity: 0.7; text-transform: capitalize; }
+
+/* Wave 1 D — mobile always-expanded set cards (design 7VNKz). Replaces the
+   accordion on the mobile sets list; rendered only in mobile-list-view, which is
+   hidden on desktop, so no media query is needed. */
+.mset-list { display: flex; flex-direction: column; gap: 10px; }
+.mset-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #2A2A2A;
+  cursor: pointer;
+}
+.mset-header { display: flex; align-items: center; justify-content: space-between; }
+.mset-name { font-family: var(--font-heading); font-size: 16px; font-weight: 500; color: var(--fg-inverse); }
+.mset-count { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-muted); }
+.mset-tunes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.mset-tune { display: flex; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: #D4D2CC; }
+.mset-num { color: #D4D2CC; }
+.mset-tune-name { color: #D4D2CC; }
+.mset-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 6px; }
+.mset-progress { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; }
+.mset-progress.all { color: #3B6B4F; }
+.mset-progress.partial { color: #8F6F3C; }
+.mset-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mset-play {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.mset-play:active { opacity: 0.85; }
+.mset-play-icon { font-size: 11px; }

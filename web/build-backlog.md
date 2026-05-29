@@ -316,7 +316,7 @@ currently a "?" teaser).
 (wire to existing session-advance / pause handlers) and replace the "?" teaser with
 the resolved next tune's name + meta. View + CSS; handlers likely exist.
 
-### D. Sets-populated — always-expanded set cards — `7VNKz` · P2
+### D. Sets-populated — always-expanded set cards — `7VNKz` · P2 · ✓ SHIPPED
 
 **Now:** `.set-card` is a collapse-by-default accordion (header only until tapped).
 The design has no expand/collapse — every card is always fully expanded, showing a

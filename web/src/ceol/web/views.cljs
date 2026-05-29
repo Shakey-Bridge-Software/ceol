@@ -878,6 +878,58 @@
         ;; Mobile slim bar — hidden >720px
         (mobile-playback-bar state)))]))
 
+(defn- mobile-set-card
+  "Always-expanded set card for the mobile sets list (design 7VNKz): numbered
+   tune list, a learned-progress footer (one dot — green when all learned, amber
+   otherwise), and Play set. Tapping the card drills into the set detail (where
+   the ⋮ opens the action sheet); the Play button stops that bubble."
+  [set-data state]
+  (let [set-id    (:id set-data)
+        tune-ids  (:tune-ids set-data)
+        tunes     (state/set-tunes state set-data)
+        total     (count tune-ids)
+        learned-n (count (filter #(state/learned? state %) tune-ids))
+        all?      (and (pos? total) (= learned-n total))]
+    [:div.mset-card {:on {:click [[:set/toggle set-id]]}}
+     [:div.mset-header
+      [:div.mset-name (:name set-data)]
+      [:div.mset-count (str total " tune" (when (not= 1 total) "s"))]]
+     [:ol.mset-tunes
+      (map-indexed
+       (fn [i t]
+         [:li.mset-tune
+          [:span.mset-num (str (inc i) ".")]
+          [:span.mset-tune-name (or (:name t) "Unknown")]])
+       tunes)]
+     [:div.mset-footer
+      [:span.mset-progress {:class (if all? "all" "partial")}
+       [:span.mset-dot]
+       (if all? "All learned" (str learned-n " of " total " learned"))]
+      (when (pos? total)
+        [:button.mset-play
+         {:on {:click [[:event/stop] [:set/select-tune set-id (first tune-ids)] [:playback/play]]}}
+         [:span.mset-play-icon "▶"] " Play set"])]]))
+
+(defn- mobile-sets-tab
+  "Mobile sets list (Wave 1 D): always-expanded cards, no accordion. New-set opens
+   the full-screen editor (Item #3); desktop's inline wizard stays in sets-tab."
+  [state]
+  [:div.sets-content
+   [:button.add-set-btn--mobile {:on {:click [[:set-editor/open-new]]}} "+ New Set"]
+   (let [sets (vals (:sets state))]
+     (if (seq sets)
+       [:div.mset-list (map (fn [s] (mobile-set-card s state)) (sort-by :name sets))]
+       [:div.sets-empty
+        [:div.empty-icon
+         [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
+                :stroke "currentColor" :stroke-width 2
+                :stroke-linecap "round" :stroke-linejoin "round"}
+          [:polygon {:points "12 2 2 7 12 12 22 7 12 2"}]
+          [:polyline {:points "2 17 12 22 22 17"}]
+          [:polyline {:points "2 12 12 17 22 12"}]]]
+        [:div.empty-title "No sets yet"]
+        [:div.empty-subtitle "Tap New Set to get started"]]))])
+
 (defn mobile-list-view [state]
   (let [tunes (state/filtered-tunes state)
         current-filter (:filter state)
@@ -899,7 +951,7 @@
        [:button.mobile-tab {:class (when (= :session current-tab) "active")
                             :on {:click [[:tab/set :session]]}} "Session"]]]
      (case current-tab
-       :sets (sets-tab state)
+       :sets (mobile-sets-tab state)
        :session (session-tab state)
        (list
         [:div.mobile-filters
