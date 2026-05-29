@@ -813,23 +813,41 @@
    [:div.settings-body
     [:div.settings-card
      [:div.settings-card-label "BACKUP"]
-     [:div.settings-row
-      [:div.settings-row-text "Export backup as .edn"]
-      [:button.settings-action
-       {:on {:click [[:backup/export]]}}
-       "Export"]]
-     [:div.settings-row
-      [:div.settings-row-text "Import backup from .edn"]
-      [:button.settings-action.settings-action-secondary
-       {:on {:click [[:confirm/open
-                      {:title "Replace all data?"
-                       :body (str "Importing a backup overwrites every custom "
-                                  "tune, set, edit, and learned mark on this "
-                                  "device. Export your current data first if "
-                                  "you want to keep it.")
-                       :destructive-label "Choose file"
-                       :on-confirm [[:backup/import]]}]]}}
-       "Choose file"]]]
+     ;; Wave 1 E — Export/Import as tappable icon + text + chevron list rows
+     ;; (design ddeLd); same handlers as the old label+button rows.
+     [:button.settings-list-row {:on {:click [[:backup/export]]}}
+      [:span.settings-list-icon
+       [:svg {:width 18 :height 18 :viewBox "0 0 24 24" :fill "none"
+              :stroke "currentColor" :stroke-width 2
+              :stroke-linecap "round" :stroke-linejoin "round"}
+        [:path {:d "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}]
+        [:polyline {:points "7 10 12 15 17 10"}]
+        [:line {:x1 12 :y1 15 :x2 12 :y2 3}]]]
+      [:div.settings-list-body
+       [:div.settings-list-title "Export backup"]
+       [:div.settings-list-sub "Save all data as a .edn file"]]
+      [:span.settings-list-chevron "›"]]
+     [:div.settings-list-divider]
+     [:button.settings-list-row
+      {:on {:click [[:confirm/open
+                     {:title "Replace all data?"
+                      :body (str "Importing a backup overwrites every custom "
+                                 "tune, set, edit, and learned mark on this "
+                                 "device. Export your current data first if "
+                                 "you want to keep it.")
+                      :destructive-label "Choose file"
+                      :on-confirm [[:backup/import]]}]]}}
+      [:span.settings-list-icon
+       [:svg {:width 18 :height 18 :viewBox "0 0 24 24" :fill "none"
+              :stroke "currentColor" :stroke-width 2
+              :stroke-linecap "round" :stroke-linejoin "round"}
+        [:path {:d "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}]
+        [:polyline {:points "17 8 12 3 7 8"}]
+        [:line {:x1 12 :y1 3 :x2 12 :y2 15}]]]
+      [:div.settings-list-body
+       [:div.settings-list-title "Import backup"]
+       [:div.settings-list-sub "Restore from a .edn file"]]
+      [:span.settings-list-chevron "›"]]]
     [:div.settings-card
      [:div.settings-card-label "ABOUT"]
      [:div.settings-row

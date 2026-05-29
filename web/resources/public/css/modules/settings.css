@@ -50,6 +50,28 @@
 .settings-action-danger { background: transparent; color: #D9534F; border: 1px solid #D9534F; }
 .settings-action-danger:hover { background: #D9534F; color: #fff; }
 
+/* Wave 1 E — Export/Import as icon + text + chevron list rows (design ddeLd).
+   The card supplies horizontal padding, so rows use vertical padding only.
+   Greys (--fg-muted/--fg-secondary) read on both the light desktop card and the
+   dark mobile card; the title flips to --fg-inverse on mobile (see mobile.css). */
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.settings-list-icon { display: flex; color: var(--fg-muted); flex-shrink: 0; }
+.settings-list-body { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.settings-list-title { font-family: var(--font-heading); font-size: 15px; color: var(--fg); }
+.settings-list-sub { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-muted); }
+.settings-list-chevron { color: var(--fg-secondary); font-size: 18px; line-height: 1; flex-shrink: 0; }
+.settings-list-divider { height: 1px; background: var(--border); }
+
 .new-tune-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   background: transparent;

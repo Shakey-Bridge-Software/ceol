@@ -146,6 +146,9 @@ scripts/
   the empty state with no learned tunes, then learns 1 / 3 tunes and asserts the
   hero card's big number, singular/plural sub-lines, the in-card Start button +
   shuffle icon, and that clicking Start flips `:session-mode?`.
+- `waveE` — settings Export/Import list rows — passes. Opens settings, asserts
+  the BACKUP section renders two icon + title + subtitle + chevron list rows with
+  a divider, and that tapping Import routes through the B2 confirm modal.
 - `waveD` — mobile always-expanded set cards — passes. Asserts the numbered tune
   list renders without a tap (no accordion), the learned-progress footer (amber
   "0 of N learned" → green "All learned" after learning every tune), the Play-set

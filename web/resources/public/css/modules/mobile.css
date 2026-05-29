@@ -671,6 +671,8 @@
   .settings-row { border-top-color: #1F1F1F; }
   .settings-row-text { color: var(--fg-inverse); }
   .settings-row-value { color: var(--fg-muted); }
+  .settings-list-title { color: var(--fg-inverse); }
+  .settings-list-divider { background: #1F1F1F; }
 
   /* session-ready / session-live — CSS-only token corrections (XwIFG / J8hkB).
      Hero-card / now-card structural markup is out of Wave-1 CSS scope. */

@@ -326,7 +326,7 @@ numbered tune list, a ready dot per tune, and a "Play set" button.
 numbered tune list + ready indicators + Play-set button inline. View change + CSS;
 removes the collapse state.
 
-### E. Settings — Export/Import list rows — `ddeLd` · P3
+### E. Settings — Export/Import list rows — `ddeLd` · P3 · ✓ SHIPPED
 
 **Now:** Export and Import are label + brown action-button rows. Card theming is
 fixed (Wave 1); the design wants list rows in the `icon + text + chevron` pattern
