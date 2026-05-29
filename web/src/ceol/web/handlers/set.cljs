@@ -8,6 +8,12 @@
             [ceol.web.persist :as persist]
             [ceol.web.handlers.set-editor :as se]))
 
+(defn- reset-typeahead
+  "Clear the shared tune-search box. The query + index always move together —
+   they encode one concept (an empty search). Used across the set editor."
+  [s]
+  (assoc s :typeahead-query "" :typeahead-index 0))
+
 ;; --- Creation wizard ---
 
 (defn start-create! [_args]
@@ -162,36 +168,51 @@
 ;; the shared :typeahead-query state and the :set/typeahead handler.
 
 (defn editor-open-new! [_args]
-  (swap! state/app-state assoc
-         :set-editor {:mode :new :set-id nil :draft se/blank-draft :picking? false}
-         :typeahead-query "" :typeahead-index 0))
+  (swap! state/app-state
+         (fn [s]
+           (-> s
+               (assoc :set-editor {:mode :new :set-id nil
+                                   :draft se/blank-draft :picking? false})
+               reset-typeahead))))
 
 (defn editor-open-edit! [[set-id]]
-  (when-let [set-data (get (:sets @state/app-state) set-id)]
-    (swap! state/app-state assoc
-           :set-editor {:mode :edit :set-id set-id
-                        :draft (se/set->draft set-data) :picking? false}
-           :typeahead-query "" :typeahead-index 0)))
+  (let [s @state/app-state]
+    (when-let [set-data (get (:sets s) set-id)]
+      ;; Scrub any tune-ids pointing at a since-deleted tune (tune/delete! does
+      ;; not scrub sets). This keeps the draft, the rendered rows and the drag
+      ;; reorder all in one index space — and drops the dangling ref on save.
+      (let [draft   (se/set->draft set-data)
+            present (filterv #(state/tune-by-id s %) (:tune-ids draft))]
+        (swap! state/app-state
+               (fn [s']
+                 (-> s'
+                     (assoc :set-editor {:mode :edit :set-id set-id
+                                         :draft (assoc draft :tune-ids present)
+                                         :picking? false})
+                     reset-typeahead)))))))
 
 (defn editor-cancel! [_args]
-  (swap! state/app-state assoc :set-editor nil :typeahead-query "" :typeahead-index 0))
+  (swap! state/app-state (fn [s] (-> s (assoc :set-editor nil) reset-typeahead))))
 
 (defn editor-update-draft! [[field value]]
   (swap! state/app-state assoc-in [:set-editor :draft field] value))
 
 (defn editor-start-pick! [_args]
-  (swap! state/app-state assoc-in [:set-editor :picking?] true)
-  (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
+  (swap! state/app-state
+         (fn [s] (-> s (assoc-in [:set-editor :picking?] true) reset-typeahead))))
 
 (defn editor-stop-pick! [_args]
-  (swap! state/app-state assoc-in [:set-editor :picking?] false)
-  (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
+  (swap! state/app-state
+         (fn [s] (-> s (assoc-in [:set-editor :picking?] false) reset-typeahead))))
 
 (defn editor-add-tune! [[tune-id]]
   ;; Adds to the draft only — no persist until Save. Picker stays open so
   ;; several tunes can be added in a row; the query resets each time.
-  (swap! state/app-state update-in [:set-editor :draft :tune-ids] se/add-tune tune-id)
-  (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
+  (swap! state/app-state
+         (fn [s]
+           (-> s
+               (update-in [:set-editor :draft :tune-ids] se/add-tune tune-id)
+               reset-typeahead))))
 
 (defn editor-remove-tune! [[tune-id]]
   (swap! state/app-state update-in [:set-editor :draft :tune-ids] se/remove-tune tune-id))
@@ -201,7 +222,7 @@
 
 (defn editor-save! [_args]
   (let [s (deref state/app-state)
-        {:keys [mode set-id draft]} (:set-editor s)]
+        {:keys [set-id draft]} (:set-editor s)]
     (when (and draft (se/can-save? draft))
       (let [id      (or set-id (state/next-set-id s))
             new-set (se/draft->set id draft)]
@@ -209,9 +230,6 @@
                (fn [s']
                  (-> s'
                      (assoc-in [:sets id] new-set)
-                     (assoc :active-set-id id
-                            :main-view :set
-                            :set-editor nil
-                            :typeahead-query ""
-                            :typeahead-index 0))))
+                     (assoc :active-set-id id :main-view :set :set-editor nil)
+                     reset-typeahead)))
         (persist/save-sets!)))))

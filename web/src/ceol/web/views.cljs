@@ -1070,8 +1070,8 @@
 ;; (data-idx / data-tune-id) is the drag-reorder handle wired in gesture.cljs;
 ;; the reorder itself is the pure :set-editor/reorder action.
 
-(defn- se-tune-row [state idx tune]
-  [:div.se-tune-row {:data-idx idx :data-tune-id (:id tune)}
+(defn- se-tune-row [idx tune]
+  [:div.se-tune-row {:data-idx idx}
    [:span.se-grip "⠿"]
    [:div.se-tune-info
     [:div.se-tune-name (:name tune)]
@@ -1086,7 +1086,10 @@
   [state draft-tune-ids]
   (let [in-draft? (set draft-tune-ids)
         query     (:typeahead-query state)
-        results   (->> (state/search-tunes state query 12)
+        ;; Pull a generous candidate set, exclude already-added tunes, THEN
+        ;; cap — capping first could hide matches when the top hits are all
+        ;; already in the draft.
+        results   (->> (state/search-tunes state query 50)
                        (remove #(in-draft? (:id %)))
                        (take 6))]
     [:div.se-picker
@@ -1127,7 +1130,7 @@
          [:div.se-tune-list
           (map-indexed (fn [i tid]
                          (when-let [t (state/tune-by-id state tid)]
-                           (se-tune-row state i t)))
+                           (se-tune-row i t)))
                        tune-ids)]
          (if picking?
            (se-picker state tune-ids)

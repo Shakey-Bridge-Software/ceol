@@ -213,6 +213,33 @@ const draggingCleared = await evalJs(`document.querySelector(".se-tune-row.se-dr
 assert(draggingCleared === true, ".se-dragging clears on release");
 await dispatch(kwExpr("set-editor", "cancel"));
 
+// 11) Dangling tune-id scrub — a set referencing a since-deleted tune is
+// repaired on open so draft/render/reorder share one index space (tune/delete!
+// does not scrub sets).
+await dispatch(kwExpr("set-editor", "open-new"));
+await sleep(100);
+await dispatch(kwExpr("set-editor", "update-draft"),
+               vecExpr([kwExpr("name"), JSON.stringify("Scrub Test")]));
+await dispatch(kwExpr("set-editor", "start-pick"));
+await sleep(60);
+await dispatch(kwExpr("set-editor", "add-tune"), vecExpr([1]));
+await sleep(50);
+await dispatch(kwExpr("set-editor", "add-tune"), vecExpr([7]));
+await sleep(60);
+await dispatch(kwExpr("set-editor", "save"));
+await sleep(200);
+const scrubId = JSON.parse(await evalJs(getInExpr(["active-set-id"])));
+await dispatch(kwExpr("tune", "delete"), vecExpr([7])); // remove tune from library
+await sleep(150);
+await dispatch(kwExpr("set-editor", "open-edit"), vecExpr([JSON.stringify(scrubId)]));
+await sleep(150);
+assert(JSON.stringify(await tuneIds()) === "[1]",
+       `open-edit scrubs the dangling deleted tune-id (got ${JSON.stringify(await tuneIds())})`);
+const scrubRows = JSON.parse(await evalJs(
+  `JSON.stringify(document.querySelectorAll(".se-tune-row").length)`));
+assert(scrubRows === 1, "rendered rows match the scrubbed draft");
+await dispatch(kwExpr("set-editor", "cancel"));
+
 shutdown();
 process.exit(0);
 

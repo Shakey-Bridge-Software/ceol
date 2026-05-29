@@ -127,13 +127,19 @@
     (when-let [row (ancestor-with-class (.-target e) "se-tune-row" nil)]
       (let [t    (aget (.-touches e) 0)
             list (.-parentElement row)
-            rows (.querySelectorAll list ".se-tune-row")]
+            rows (.querySelectorAll list ".se-tune-row")
+            ;; Row pitch = centre-to-centre distance, read from layout so the
+            ;; CSS gap is never duplicated here. Falls back to row height when
+            ;; there's only one row (drag is a no-op then anyway).
+            slot (if (> (.-length rows) 1)
+                   (- (.-offsetTop (aget rows 1)) (.-offsetTop (aget rows 0)))
+                   (.-offsetHeight row))]
         (.preventDefault e)
         (reset! drag {:row     row
                       :from    (js/parseInt (.getAttribute row "data-idx") 10)
                       :count   (.-length rows)
                       :start-y (.-clientY t)
-                      :slot    (+ (.-offsetHeight row) 8)}) ; 8px = .se-tune-list gap
+                      :slot    slot})
         (.add (.-classList row) "se-dragging")))))
 
 (defn- on-drag-move [e]
