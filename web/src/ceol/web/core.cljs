@@ -95,6 +95,9 @@
 ;;   :set/start-adding    [set-id]                   open inline typeahead for set
 ;;   :set/add-tune-keydown [set-id key]              handle keydown in set's add-tune input
 ;;   :set/delete          [set-id]                   delete set
+;;   :set/duplicate       [set-id]                   clone set with " (copy)" name
+;;   :set-menu/open       [set-id]                   open the set action sheet (mobile)
+;;   :set-menu/close      []                         close the set action sheet
 ;;
 ;; Mobile set editor (full-screen overlay)
 ;;   :set-editor/open-new     []                     open editor for a new set
@@ -257,6 +260,11 @@
     :set/start-adding     (set-h/start-adding! args)
     :set/add-tune-keydown (set-h/add-tune-keydown! args)
     :set/delete           (set-h/delete! args)
+    :set/duplicate        (set-h/duplicate! args)
+
+    ;; Mobile set action sheet (bottom sheet on the set-detail ⋮)
+    :set-menu/open  (swap! state/app-state assoc :context-menu-set-id (first args))
+    :set-menu/close (swap! state/app-state assoc :context-menu-set-id nil)
 
     ;; Mobile full-screen set editor (draft-based overlay)
     :set-editor/open-new     (set-h/editor-open-new! args)

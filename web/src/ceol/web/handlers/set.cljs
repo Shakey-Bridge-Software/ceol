@@ -6,7 +6,8 @@
    All persistence routes through ceol.web.persist."
   (:require [ceol.web.state :as state]
             [ceol.web.persist :as persist]
-            [ceol.web.handlers.set-editor :as se]))
+            [ceol.web.handlers.set-editor :as se]
+            [ceol.web.handlers.tune-editor :as ed]))
 
 (defn- reset-typeahead
   "Clear the shared tune-search box. The query + index always move together —
@@ -159,6 +160,25 @@
                                (cond-> (= set-id (:active-set-id s))
                                  (assoc :active-set-id nil)))))
   (persist/save-sets!))
+
+(defn duplicate! [[set-id]]
+  ;; Clone a set into a fresh one with a " (copy)" name, selecting it. The
+  ;; tune-ids vector is shared by value (ints), so the copy is independent.
+  ;; ed/unique-copy-name is the same pure helper tune duplication uses.
+  (let [s (deref state/app-state)]
+    (when-let [src (get (:sets s) set-id)]
+      (let [new-id  (state/next-set-id s)
+            new-set {:id       new-id
+                     :name     (ed/unique-copy-name (:name src) (map :name (vals (:sets s))))
+                     :tune-ids (vec (:tune-ids src))}]
+        (swap! state/app-state
+               (fn [s']
+                 (-> s'
+                     (assoc-in [:sets new-id] new-set)
+                     (assoc :active-set-id new-id
+                            :main-view :set
+                            :context-menu-set-id nil))))
+        (persist/save-sets!)))))
 
 ;; --- Mobile full-screen set editor ------------------------------------------
 ;; Draft-based editor (Cancel discards, Save commits) mirroring the tune

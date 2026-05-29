@@ -714,7 +714,7 @@
                         [:playback/play]]}}
           "\u25b6 Play set"]
          [:button.set-detail-more
-          {:on {:click [[:set-editor/open-edit set-id]]}} "\u22ee"]]]
+          {:on {:click [[:set-menu/open set-id]]}} "\u22ee"]]]
        [:div.divider]
        [:div.set-detail-list-label "TUNES"]
        [:div.set-detail-list
@@ -940,6 +940,50 @@
         [:div.as-cancel-wrap
          [:button.as-cancel {:on {:click [[:menu/close]]}} "Cancel"]]]])))
 
+(def ^:private set-action-sheet-rows
+  ;; Order matches design kihYP: Play set / Edit set / Duplicate / Delete.
+  ;; Each row builds its dispatch from the set-data map.
+  [{:icon "▶" :label "Play set"
+    :build (fn [{:keys [id tune-ids]}]
+             [[:set-menu/close] [:set/select-tune id (first tune-ids)] [:playback/play]])}
+   {:icon "✎" :label "Edit set"
+    :build (fn [{:keys [id]}] [[:set-menu/close] [:set-editor/open-edit id]])}
+   {:icon "⧉" :label "Duplicate"
+    :build (fn [{:keys [id]}] [[:set-menu/close] [:set/duplicate id]])}
+   {:icon "✕" :label "Delete" :danger? true
+    :build (fn [{:keys [id name]}]
+             [[:set-menu/close]
+              [:confirm/open {:title "Delete set?"
+                              :body (str "“" name "” will be removed. "
+                                         "Its tunes stay in your library.")
+                              :destructive-label "Delete"
+                              :on-confirm [[:set/delete id]]}]])}])
+
+(defn mobile-set-action-sheet [state]
+  (when-let [set-id (:context-menu-set-id state)]
+    (when-let [set-data (get (:sets state) set-id)]
+      (let [n (count (:tune-ids set-data))
+            all-learned? (and (pos? n)
+                              (every? #(state/learned? state %) (:tune-ids set-data)))]
+        [:div.as-overlay {:on {:click [[:set-menu/close]]}}
+         [:div.as-sheet {:on {:click [[:event/stop]]}}
+          [:div.as-handle [:div.as-handle-bar]]
+          [:div.as-tune-card
+           [:div.as-tune-title (:name set-data)]
+           [:div.as-tune-meta
+            (str n " tune" (when (not= 1 n) "s")
+                 (when all-learned? " · all learned"))]]
+          [:div.as-divider]
+          [:div.as-actions
+           (map (fn [{:keys [icon label danger? build]}]
+                  [:button.as-row {:class (when danger? "as-row-danger")
+                                   :on {:click (build set-data)}}
+                   [:span.as-row-icon icon]
+                   [:span.as-row-label label]])
+                set-action-sheet-rows)]
+          [:div.as-cancel-wrap
+           [:button.as-cancel {:on {:click [[:set-menu/close]]}} "Cancel"]]]]))))
+
 (defn mobile-tune-editor [state]
   (when-let [{:keys [mode draft]} (:tune-editor state)]
     (let [title (if (= mode :new) "New tune" "Edit tune")]
@@ -1150,6 +1194,7 @@
    (delete-confirm-modal state)
    (confirm-modal state)
    (mobile-tune-action-sheet state)
+   (mobile-set-action-sheet state)
    (mobile-tune-editor state)
    (set-editor state)
    (onboarding-coachmark state)])

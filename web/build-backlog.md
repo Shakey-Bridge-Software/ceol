@@ -44,11 +44,14 @@ Re-prioritized 2026-05-22 after the Wave 2 audit.
   — desktop keeps the inline `.set-creation` wizard. Reached from the mobile
   "+ New Set" button and the set-detail `⋮`. Verify `web/scripts/verify/item3.mjs`.
 
+- ✓ **Item #4 — Set action sheet** (`kihYP`, gap **G4**) — bottom sheet on the
+  set-detail `⋮` (`:context-menu-set-id`): Play set / Edit set (→ Item #3 editor)
+  / Duplicate (`:set/duplicate`, " (copy)" name) / Delete (→ B2 confirm). Reuses
+  the `.as-*` action-sheet shell. Verify `web/scripts/verify/item4.mjs`.
+
 **P2 — works via an off-design fallback**
 
-1. **Item #4 — Set action sheet** — clones item #1; its "Edit set" routes into
-   the Item #3 editor (`:set-editor/open-edit`). Gap **G4**.
-2. **B3 — Mobile backup-status banner** — small; export/import currently give
+1. **B3 — Mobile backup-status banner** — small; export/import currently give
    mobile users no feedback.
 
 **P3 — polish**
@@ -176,9 +179,16 @@ Save commits to `:sets`. Edit-set reuses the same view seeded from an existing s
 
 ---
 
-## Item #4. Set action sheet — `kihYP` · P2
+## Item #4. Set action sheet — `kihYP` · P2 · ✓ SHIPPED
 
-Gap **G4**. **Now:** no set-level action menu at all. `set-detail-view` has a "⋮"
+**Shipped:** bottom sheet on the set-detail `⋮`, gated on a new
+`:context-menu-set-id` state key, reusing the `.as-*` action-sheet shell.
+Rows Play set / Edit set (`:set-editor/open-edit` → Item #3) / Duplicate
+(`:set/duplicate`, reuses `ed/unique-copy-name`) / Delete (routes through the
+B2 `:confirm/open` modal). The refactor commit extracts a shared
+`mobile-bottom-sheet` shell across the tune + set sheets.
+
+Gap **G4**. **Now (original):** no set-level action menu at all. `set-detail-view` has a "⋮"
 button that dispatches nothing. Sets cannot be edited / duplicated / deleted from a
 sheet.
 

@@ -130,5 +130,8 @@ scripts/
   edit-seed, cancel) + synthetic-touch grip drag-to-reorder — passes. The drag
   *pixel* behaviour on real iOS still needs a device pass; the gesture wiring
   and reorder action are covered headless.
+- `item4` — mobile set action sheet — passes. Clicks the real `.as-row` buttons
+  (Edit/Duplicate/Delete) to cover the view→dispatch wiring end-to-end; Delete
+  routes through the B2 confirm. Play is asserted present (not clicked — audio).
 
 Add a row when you ship a new B-item with a scenario.

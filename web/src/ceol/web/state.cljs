@@ -95,6 +95,7 @@
 ;; Sets
 ;;   :sets              {set-id → set-map}  set-map: {:id :name :tune-ids [...]}
 ;;   :active-set-id     set-id | nil       expanded/selected set
+;;   :context-menu-set-id set-id | nil     set whose mobile action sheet is open
 ;;
 ;; Set creation wizard
 ;;   :creating-set?       bool
@@ -155,6 +156,7 @@
            ;; Sets
            :sets            {}
            :active-set-id   nil
+           :context-menu-set-id nil
            :set-playing?    false
            :set-tune-index  0
            ;; Set creation
