@@ -1,9 +1,9 @@
 (ns ceol.web.handlers.tune
-  "Tune CRUD action handlers: select, add, update fields, delete, and
-  add-to-set. Pure dispatch targets — each function takes the [args] vec
-  from the action and performs the state mutation + persistence side
-  effects. inject-chords-if-needed lives here because it is only used by
-  select! when annotating freshly-loaded ABC."
+  "Tune CRUD + mobile tune-details editor action handlers. Each fn takes the
+  [args] vec from dispatch-action! and performs state mutation + persistence
+  side effects. Pure helpers behind the mobile editor live in
+  ceol.web.handlers.tune-editor. inject-chords-if-needed sits here because
+  it is only used by select! when annotating freshly-loaded ABC."
   (:require [ceol.web.state :as state]
             [ceol.web.chords :as chords]
             [ceol.web.persist :as persist]

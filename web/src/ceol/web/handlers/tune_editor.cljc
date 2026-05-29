@@ -7,24 +7,38 @@
    the atom or localStorage."
   (:require [clojure.string :as str]))
 
+(def ^:private default-fields
+  "Single source for new-tune defaults. Used by `blank-draft` (initial form
+   state on :new) and `tune->draft` (fallback fill when an existing tune
+   is missing a field on :edit)."
+  {:type :polka :time-sig "2/4" :key "G" :mode-name "Ionian"})
+
+(def TuneDraft
+  "Schema for the :tune-editor draft map. Closed shape — every field has a
+   string representation suitable for direct binding to form inputs. The
+   :session-id is held as a string and parsed to int (or nil) at save time."
+  [:map {:closed true}
+   [:name :string]
+   [:type [:enum :polka :jig :reel :hornpipe :slip-jig :slide :mazourka :other]]
+   [:time-sig :string]
+   [:key :string]
+   [:mode-name :string]
+   [:session-id :string]])
+
 (def blank-draft
   "Default draft used when opening the editor for a brand-new tune."
-  {:name       ""
-   :type       :polka
-   :time-sig   "2/4"
-   :key        "G"
-   :mode-name  "Ionian"
-   :session-id ""})
+  (merge default-fields {:name "" :session-id ""}))
 
 (defn tune->draft
-  "Clone an existing tune into a draft. Used when opening :edit mode."
+  "Clone an existing tune into a draft. Used when opening :edit mode.
+   Missing or nil tune fields fall back to `default-fields`."
   [tune]
-  {:name       (or (:name tune) "")
-   :type       (or (:type tune) :polka)
-   :time-sig   (or (:time-sig tune) "2/4")
-   :key        (or (:key tune) "G")
-   :mode-name  (or (:mode-name tune) "Ionian")
-   :session-id (if-let [sid (:session-id tune)] (str sid) "")})
+  (merge default-fields
+         (into {}
+               (filter (fn [[_ v]] (some? v)))
+               (select-keys tune (keys default-fields)))
+         {:name       (or (:name tune) "")
+          :session-id (if-let [sid (:session-id tune)] (str sid) "")}))
 
 (defn parse-session-id
   "Convert the session-id draft string to an int, or nil if blank/invalid."
