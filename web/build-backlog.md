@@ -73,7 +73,7 @@ editing kept.
 
 ---
 
-## B1. Mobile tune-details editor — `FvkOu` + `kMKsH` · P1 · large
+## B1. Mobile tune-details editor — `FvkOu` + `kMKsH` · P1 · large · ✓ SHIPPED
 
 Gap **G2**. The mobile `.tune-header` — the only UI that sets a tune's
 name/type/key/mode/time-sig (click-to-cycle fields) — is `display:none` at ≤720px
@@ -92,7 +92,7 @@ details" row (pre-filled). New view + state; existing `:tune/update-field` /
 
 ---
 
-## Item #1. Tune action sheet — `qgF2n` · P1
+## Item #1. Tune action sheet — `qgF2n` · P1 · ✓ SHIPPED
 
 **Now:** `.tune-context-menu` is a desktop dropdown, `display:none` at ≤720px. On
 mobile the per-tune actions are only reachable via swipe-left (Edit/Delete) — "Add
@@ -138,7 +138,7 @@ chosen mobile dark value if desired.
 
 ---
 
-## B2. Confirm dialogs — P2
+## B2. Confirm dialogs — P2 · ✓ SHIPPED
 
 Gap **G6**. Three destructive actions fire with no styled confirmation:
 
@@ -244,7 +244,7 @@ export or import.
 
 ---
 
-## B4. "Duplicate tune" handler — P2 · small
+## B4. "Duplicate tune" handler — P2 · small · ✓ SHIPPED
 
 Gap **G8**. A "Duplicate tune" handler **does not exist anywhere** in the codebase.
 Item #1's design includes a "Duplicate" action row; that row needs this handler.
@@ -256,7 +256,7 @@ assumed this handler already existed.
 
 ---
 
-## B5. Reduce web seed 54 → 3 deletable starter tunes — P2 · small
+## B5. Reduce web seed 54 → 3 deletable starter tunes — P2 · small · ✓ SHIPPED
 
 Gap **G3**. The app always seeds **54** catalog tunes, so a zero-tunes state is
 **unreachable** and the designed first-run / "No tunes yet" empty state (`DEMlt`) is
