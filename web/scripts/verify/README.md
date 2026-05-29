@@ -133,5 +133,8 @@ scripts/
 - `item4` — mobile set action sheet — passes. Clicks the real `.as-row` buttons
   (Edit/Duplicate/Delete) to cover the view→dispatch wiring end-to-end; Delete
   routes through the B2 confirm. Play is asserted present (not clicked — audio).
+- `b3` — mobile backup-status toast — passes. Drives `backup/set-status!`
+  directly (export/import can't run headless) and asserts the success/error
+  banner renders in the fixed `.mobile-backup-status` toast.
 
 Add a row when you ship a new B-item with a scenario.

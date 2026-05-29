@@ -307,6 +307,15 @@
     (session-tab-active state)
     (session-tab-pre state)))
 
+(defn backup-status-banner
+  "Transient export/import feedback (set/cleared by backup/set-status!). Shared
+   by the desktop sidebar and the mobile toast wrapper (B3)."
+  [state]
+  (when-let [status (:backup-status state)]
+    [:div.backup-status {:class (str "kind-" (name (:kind status)))}
+     [:span.backup-status-icon (if (= :success (:kind status)) "✓" "!")]
+     [:span.backup-status-msg (:message status)]]))
+
 (defn sidebar [state]
   (let [current-filter (:filter state)
         selected-id (:selected-tune-id state)
@@ -338,10 +347,7 @@
          [:span.new-tune-icon "+"] "New tune"]
         [:div.tune-list
          (map (fn [t] (tune-row t state)) tunes)]])
-     (when-let [status (:backup-status state)]
-       [:div.backup-status {:class (str "kind-" (name (:kind status)))}
-        [:span.backup-status-icon (if (= :success (:kind status)) "✓" "!")]
-        [:span.backup-status-msg (:message status)]])
+     (backup-status-banner state)
      [:div.sidebar-footer
       [:button.sidebar-footer-btn.sidebar-settings-btn
        {:class (when (= :settings (:main-view state)) "active")
@@ -1189,6 +1195,14 @@
             [:span.se-add-tune-icon "+"]
             [:span "Add tune"]])]]])))
 
+(defn mobile-backup-status
+  "Mobile toast wrapper for the backup-status banner (B3). The desktop banner
+   lives in the sidebar, which is display:none on mobile — so mobile users got
+   no export/import feedback. Fixed-position, mobile-only via CSS."
+  [state]
+  (when (:backup-status state)
+    [:div.mobile-backup-status (backup-status-banner state)]))
+
 (defn app [state]
   [:div.app-layout
    {:class (cond-> []
@@ -1204,4 +1218,5 @@
    (mobile-set-action-sheet state)
    (mobile-tune-editor state)
    (set-editor state)
+   (mobile-backup-status state)
    (onboarding-coachmark state)])

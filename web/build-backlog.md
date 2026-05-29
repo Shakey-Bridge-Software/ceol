@@ -49,10 +49,11 @@ Re-prioritized 2026-05-22 after the Wave 2 audit.
   / Duplicate (`:set/duplicate`, " (copy)" name) / Delete (→ B2 confirm). Reuses
   the `.as-*` action-sheet shell. Verify `web/scripts/verify/item4.mjs`.
 
-**P2 — works via an off-design fallback**
-
-1. **B3 — Mobile backup-status banner** — small; export/import currently give
-   mobile users no feedback.
+- ✓ **B3 — Mobile backup-status banner** (gap **G9**) — the export/import
+  feedback banner rendered only in the desktop sidebar (`display:none` ≤720px).
+  Extracted `backup-status-banner`; mobile now shows it as a fixed bottom toast
+  (`mobile-backup-status`, same `:backup-status` state). Verify
+  `web/scripts/verify/b3.mjs`.
 
 **P3 — polish**
 
@@ -218,9 +219,13 @@ would need a session start timestamp). New view branch in the session tab.
 
 ---
 
-## B3. Mobile backup-status banner — P2
+## B3. Mobile backup-status banner — P2 · ✓ SHIPPED
 
-Gap **G9**. The backup-status banner component exists, but it renders **only inside
+**Shipped:** extracted the inline sidebar banner into `backup-status-banner`
+and mounted a `mobile-backup-status` fixed bottom toast (mobile-only via CSS;
+desktop keeps the sidebar copy). Same `:backup-status` state, no new state.
+
+Gap **G9**. **Now (original):** The backup-status banner component exists, but it renders **only inside
 the desktop `sidebar`**. Mobile users get no success/error feedback after an
 export or import.
 

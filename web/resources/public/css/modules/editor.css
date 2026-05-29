@@ -207,6 +207,29 @@
   100% { opacity: 0; }
 }
 
+/* B3 — mobile backup-status toast. The desktop banner lives in the sidebar,
+   which is display:none on mobile, so mobile got no export/import feedback.
+   Render the same banner in a fixed bottom toast on mobile only (hidden on
+   desktop to avoid doubling with the sidebar copy). */
+.mobile-backup-status { display: none; }
+@media (max-width: 720px) {
+  .mobile-backup-status {
+    display: block;
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    /* clear the 56px FAB (bottom:24px) so the toast doesn't sit on top of it */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+    z-index: 85; /* transient toast — above tune-editor (80) so feedback always shows */
+  }
+  .mobile-backup-status .backup-status {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+  }
+}
+
 /* Notes drawer — desktop. Element always in the DOM when a tune is selected;
    .open class toggles its visibility. (Mobile overrides below use position
    fixed + transform transitions.) */
