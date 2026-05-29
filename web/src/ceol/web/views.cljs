@@ -5,6 +5,7 @@
   (:require [ceol.web.state :as state]
             [ceol.web.handlers.set-editor :as se]
             [ceol.web.handlers.session-summary :as ss]
+            [ceol.web.handlers.session-nav :as nav]
             [ceol.abc :as abc]
             [clojure.string :as str]))
 
@@ -30,6 +31,17 @@
   (let [match (first (filter #(and (= (:key %) key-name) (= (:mode-name %) mode-name))
                              key-mode-options))]
     (or (:label match) (str key-name " " mode-name))))
+
+(defn- tune-bpm [tune]
+  (second (re-find #"=(\d+)" (abc/tempo-for-type (:type tune) (:time-sig tune)))))
+
+(defn- tune-meta-line
+  "Mono meta string for a tune: 'Reel · 4/4 · E Dorian', plus ' · 130 BPM' when
+   bpm? is set. Used by the session-live now-playing and next-up cards."
+  [tune bpm?]
+  (str (get tune-type-labels (:type tune)) " · " (:time-sig tune)
+       " · " (key-mode-label (:key tune) (:mode-name tune))
+       (when bpm? (str " · " (tune-bpm tune) " BPM"))))
 
 (defn- type-plural
   "Lowercase plural for the filter empty-state heading. Special-case slip-jig
@@ -276,33 +288,49 @@
         [:div.empty-subtitle "Mark tunes as learned to start a session"]])]))
 
 (defn session-tab-active [state]
-  (let [queue (:session-queue state)
-        idx (:session-index state)
-        total (count queue)
-        current (nth queue idx nil)
-        progress (if (pos? total) (/ (inc idx) total) 0)]
+  (let [queue     (:session-queue state)
+        idx       (:session-index state)
+        set-index (:session-set-index state)
+        total     (count queue)
+        progress  (if (pos? total) (/ (inc idx) total) 0)
+        paused?   (:session-paused? state)
+        cur       (nav/current-ref queue idx set-index)
+        cur-tune  (when cur (state/tune-by-id state (:tune-id cur)))
+        nxt       (nav/next-ref queue idx set-index)
+        nxt-tune  (when nxt (state/tune-by-id state (:tune-id nxt)))]
     [:div.session-content
      [:div.session-active-header
       [:span.session-active-label "SESSION ACTIVE"]
       [:span.session-active-count (str (inc idx) " of " total)]]
      [:div.session-progress-bar
       [:div.session-progress-fill {:style {:width (str (* progress 100) "%")}}]]
+     ;; Wave 1 C — now-playing card (XwIFG): meta line + Skip / Pause transport.
      [:div.session-now-playing
-      [:div.session-now-label "NOW PLAYING"]
-      (case (:type current)
-        :set [:div.session-now-info
-              [:div.session-now-name (:name current)]
-              [:div.session-now-meta (str (inc (:session-set-index state)) "/"
-                                          (count (:tune-ids current)))]]
-        :tune (let [tune (state/tune-by-id state (:tune-id current))]
-                [:div.session-now-info
-                 [:div.session-now-name (:name tune)]])
-        nil)]
+      [:div.session-now-label [:span.session-now-dot] "NOW PLAYING"]
+      (when (:set-name cur) [:div.session-now-set (:set-name cur)])
+      [:div.session-now-name (or (:name cur-tune) "Unknown")]
+      (when cur-tune [:div.session-now-meta (tune-meta-line cur-tune true)])
+      [:div.session-now-controls
+       [:button.session-skip {:on {:click [[:session/skip]]}}
+        [:svg.session-skip-icon {:width 12 :height 12 :viewBox "0 0 24 24" :fill "none"
+                                 :stroke "currentColor" :stroke-width 2
+                                 :stroke-linecap "round" :stroke-linejoin "round"}
+         [:polygon {:points "5 4 15 12 5 20 5 4"}]
+         [:line {:x1 19 :y1 5 :x2 19 :y2 19}]]
+        [:span "Skip"]]
+       [:button.session-pause {:on {:click [[:session/pause]]}
+                               :aria-label (if paused? "Resume" "Pause")}
+        (if paused?
+          [:svg.session-pause-icon {:width 18 :height 18 :viewBox "0 0 24 24" :fill "currentColor"}
+           [:polygon {:points "6 3 20 12 6 21 6 3"}]]
+          [:svg.session-pause-icon {:width 18 :height 18 :viewBox "0 0 24 24" :fill "currentColor"}
+           [:rect {:x 6 :y 4 :width 4 :height 16 :rx 1}]
+           [:rect {:x 14 :y 4 :width 4 :height 16 :rx 1}]])]]]
+     ;; Wave 1 C — resolved next-up card (was a "?" teaser).
      [:div.session-next
-      [:div.session-next-label "NEXT"]
-      [:div.session-next-val.session-next-teaser
-       (let [last? (= (inc idx) total)]
-         (if last? "—" "?"))]]
+      [:div.session-next-label "NEXT UP"]
+      [:div.session-next-name (or (:name nxt-tune) "—")]
+      (when nxt-tune [:div.session-next-meta (tune-meta-line nxt-tune false)])]
      (when (seq (:session-played state))
        [:div.session-history
         [:div.session-history-label "PLAYED"]

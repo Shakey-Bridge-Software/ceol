@@ -115,6 +115,8 @@
 ;;   :learned/toggle      [tune-id]                  toggle learned flag
 ;;   :session/start       []                          build queue and start session (also "Practice again")
 ;;   :session/play-current []                         play current session item (internal)
+;;   :session/skip        []                          skip to the next queue item (Wave 1 C)
+;;   :session/pause       []                          toggle pause/resume playback (Wave 1 C)
 ;;   :session/stop        []                          end session
 ;;   :session/dismiss-summary []                      clear the session-complete summary ("Done")
 ;;
@@ -288,13 +290,15 @@
 
     :session/start        (session/session-start!)
     :session/play-current (session/session-play-current!)
+    :session/skip         (session/session-skip!)
+    :session/pause        (session/session-pause!)
     :session/stop
     (do (playback/stop!)
         ;; Clear :session-result too — a manual stop shows no summary, and this
         ;; makes that contract self-contained rather than relying on the
         ;; start-always-clears invariant.
         (swap! state/app-state assoc :session-mode? false :session-pausing? false
-               :session-result nil))
+               :session-paused? false :session-result nil))
 
     ;; Item #5 — dismiss the session-complete summary ("Done").
     :session/dismiss-summary

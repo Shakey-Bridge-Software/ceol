@@ -116,6 +116,8 @@
 ;;   :session-index       int              current position in queue
 ;;   :session-set-index   int              current tune index within a set item
 ;;   :session-pausing?    bool             true during the 2s gap between queue items
+;;   :session-paused?     bool             true while the user has paused playback (Wave 1 C);
+;;                                         audio is stopped, the now-playing button shows Play
 ;;   :session-within-set? bool             true while advancing through tunes inside a set;
 ;;                                         suppresses count-in for mid-set transitions
 ;;   :session-played      [queue-index ...] indices of completed queue items (for history)
@@ -183,6 +185,7 @@
            :session-index       0
            :session-set-index   0
            :session-pausing?    false
+           :session-paused?     false
            :session-within-set? false
            :session-played      []
            ;; Item #5 — session-complete summary

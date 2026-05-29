@@ -305,7 +305,7 @@ sub-lines, and the Start button *inside* the card — is absent.
 **Scope:** new `hero-card` component wrapping the existing `:session/start` button;
 the big number binds to the learned-tune count. View + CSS; no new state.
 
-### C. Session-live — now-playing detail + controls — `XwIFG` · P2
+### C. Session-live — now-playing detail + controls — `XwIFG` · P2 · ✓ SHIPPED
 
 **Now:** `.session-now-playing` card theming is fixed (Wave 1) but it shows only a
 small name. Missing: the `nowMeta` line (type/key/bpm), the `nowSkip` + `nowPause`

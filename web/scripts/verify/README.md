@@ -146,5 +146,11 @@ scripts/
   the empty state with no learned tunes, then learns 1 / 3 tunes and asserts the
   hero card's big number, singular/plural sub-lines, the in-card Start button +
   shuffle icon, and that clicking Start flips `:session-mode?`.
+- `waveC` — session-live now-playing + controls — passes. Starts a live session
+  (audio is a headless no-op — session dispatches are fire-and-forget since they
+  return the play promise), asserts the now-playing meta line (type · time · key ·
+  BPM), the resolved NEXT UP card, and the Skip/Pause transport. Skip advances the
+  index and the previous NEXT becomes NOW (next-ref invariant); Pause toggles
+  `:session-paused?` and swaps the button icon.
 
 Add a row when you ship a new B-item with a scenario.

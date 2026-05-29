@@ -87,14 +87,65 @@
 .session-active-count { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--fg-inverse); }
 .session-progress-bar { width: 100%; height: 4px; border-radius: 2px; background: #333; }
 .session-progress-fill { height: 4px; border-radius: 2px; background: var(--accent); transition: width 0.3s; }
-.session-now-playing { padding: 12px; border-radius: 4px; background: var(--dark-hover); display: flex; flex-direction: column; gap: 6px; }
-.session-now-label { font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim); letter-spacing: 1px; }
-.session-now-info { display: flex; flex-direction: column; gap: 2px; }
-.session-now-name { font-size: 14px; font-weight: 500; color: var(--fg-inverse); }
-.session-now-meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
-.session-next { padding: 10px 12px; border-radius: 4px; border: 1px solid #333; display: flex; flex-direction: column; gap: 4px; }
-.session-next-label { font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim); letter-spacing: 1px; }
-.session-next-val { font-family: var(--font-heading); font-size: 24px; font-weight: 300; color: #444; }
+/* Wave 1 C — session-live now-playing card (design XwIFG): accent-bordered card
+   with a labelled dot, big tune title, type/key/bpm meta, and Skip / Pause. */
+.session-now-playing {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #2A2A2A;
+  border: 1px solid var(--accent);
+}
+.session-now-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+.session-now-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.session-now-set { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-muted); margin-bottom: -8px; }
+.session-now-name { font-family: var(--font-heading); font-size: 22px; font-weight: 500; color: var(--fg-inverse); }
+.session-now-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px; color: var(--fg-muted); }
+.session-now-controls { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; }
+.session-skip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #444;
+  border-radius: 14px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.session-skip:hover { border-color: var(--fg-muted); color: var(--fg-inverse); }
+.session-skip-icon { flex-shrink: 0; }
+.session-pause {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+.session-pause:active { opacity: 0.85; }
+.session-next { padding: 12px 16px; border-radius: 8px; border: 1px solid #333; display: flex; flex-direction: column; gap: 4px; }
+.session-next-label { font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim); letter-spacing: 2px; }
+.session-next-name { font-family: var(--font-heading); font-size: 15px; color: #D4D2CC; }
+.session-next-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-secondary); }
 .session-history { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
 .session-history-label { font-family: var(--font-mono); font-size: 9px; color: #444; letter-spacing: 1px; }
 .session-history-item { display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 11px; color: var(--fg-dim); }

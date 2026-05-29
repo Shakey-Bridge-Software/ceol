@@ -147,6 +147,7 @@
                :session-set-index   0
                :session-played      []
                :session-pausing?    false
+               :session-paused?     false
                :session-within-set? false
                :selected-tune-id    first-tune-id
                :tab                 :session
@@ -155,3 +156,91 @@
         ;; Wait for render before playing — tune must be rendered before abc.js can prime
         (-> (render/wait-for-render!)
             (.then #(session-play-current!)))))))
+
+(defn session-skip!
+  "User-triggered Skip (Wave 1 C): stop the current tune and advance immediately
+   to the next queue position with no inter-tune gap, then play it — or finish the
+   session if that was the last item.
+
+   The 4-branch advance below mirrors the natural end-of-tune handling in
+   session-play-current!'s on-end, minus the 500ms/2s pauses. It is duplicated
+   here on purpose (2nd occurrence); a later refactor may extract a shared
+   apply-advance! once Skip is covered by a scenario and the shape has settled."
+  []
+  (when (:session-mode? @state/app-state)
+    (abc-bridge/stop!)
+    (guitar/stop!)
+    (let [s      @state/app-state
+          result (state/advance-session (:session-queue s)
+                                        (:session-index s)
+                                        (:session-set-index s)
+                                        (:loop? s))
+          play!  (fn [] (-> (render/wait-for-render!)
+                            (.then #(session-play-current!))))]
+      (swap! state/app-state assoc :session-paused? false)
+      (case (:action result)
+        :advance-in-set
+        (do (swap! state/app-state assoc
+                   :session-set-index   (:session-set-index result)
+                   :session-within-set? true
+                   :selected-tune-id    (:tune-id result))
+            (play!))
+
+        :next-item
+        (let [next-idx  (:session-index result)
+              next-item (nth (:session-queue s) next-idx)
+              next-tid  (case (:type next-item)
+                          :tune (:tune-id next-item)
+                          :set  (first (:tune-ids next-item)))]
+          (swap! state/app-state assoc
+                 :session-index       next-idx
+                 :session-set-index   0
+                 :session-within-set? false
+                 :session-pausing?    false
+                 :selected-tune-id    next-tid
+                 :session-played      (conj (:session-played s) (:session-index s)))
+          (play!))
+
+        :reshuffle
+        (let [new-queue (state/shuffle-queue
+                         (state/build-session-queue (:learned-tune-ids s) (:sets s)))]
+          (when (seq new-queue)
+            (let [first-item (first new-queue)
+                  first-tid  (case (:type first-item)
+                               :tune (:tune-id first-item)
+                               :set  (first (:tune-ids first-item)))]
+              (swap! state/app-state assoc
+                     :session-queue       new-queue
+                     :session-index       0
+                     :session-set-index   0
+                     :session-played      []
+                     :session-pausing?    false
+                     :session-within-set? false
+                     :selected-tune-id    first-tid)
+              (play!))))
+
+        :done
+        (let [now (js/Date.now)]
+          (swap! state/app-state assoc
+                 :playing?       false
+                 :session-mode?  false
+                 :session-played (conj (:session-played s) (:session-index s))
+                 :session-result (ss/result (:session-queue s)
+                                            (- now (or (:session-started-at s) now))))
+          (metro/stop!))))))
+
+(defn session-pause!
+  "Toggle playback pause during a live session (Wave 1 C). Pausing stops audio
+   (abcjs/Tone can't resume mid-tune) and flips the now-playing button to Play;
+   resuming replays the current tune from the top."
+  []
+  (let [s @state/app-state]
+    (when (:session-mode? s)
+      (if (:session-paused? s)
+        (do (swap! state/app-state assoc :session-paused? false)
+            (-> (render/wait-for-render!)
+                (.then #(session-play-current!))))
+        (do (abc-bridge/stop!)
+            (guitar/stop!)
+            (metro/stop!)
+            (swap! state/app-state assoc :session-paused? true :playing? false))))))
