@@ -140,5 +140,7 @@ scripts/
   directly (a real `:done` needs the full audio queue), asserts the summary +
   stat line, and the Done / Practice-again wiring (the latter's synchronous
   state effects only).
+- `waveA` — notes sheet title block + footer — passes. Opens the notes panel,
+  asserts the PRACTICE NOTES label, title/meta block, and the live char count.
 
 Add a row when you ship a new B-item with a scenario.

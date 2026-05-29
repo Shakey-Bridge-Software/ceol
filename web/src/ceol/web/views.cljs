@@ -481,14 +481,25 @@
             open? (:notes-open? state)]
         [:div.notes-panel {:class (when open? "open")}
          [:div.notes-header
-          [:span.notes-label "NOTES"]
+          [:span.notes-label "PRACTICE NOTES"]
           [:button.notes-close {:on {:click [[:notes/toggle]]}} "×"]]
+         [:div.notes-title-block
+          [:div.notes-tune-title (:name tune)]
+          [:div.notes-tune-meta
+           (str (get tune-type-labels (:type tune)) " · "
+                (:time-sig tune) " · "
+                (key-mode-label (:key tune) (:mode-name tune)))]]
          [:textarea.notes-textarea
           {:value (or notes "")
            :placeholder "Practice notes — BPM, ornaments, progress..."
            :spellcheck "false"
            :on {:input [[:notes/update tune-id :event/target.value]]
-                :keydown [[:notes/keydown :event/key]]}}]]))))
+                :keydown [[:notes/keydown :event/key]]}}]
+         [:div.notes-footer
+          [:span.notes-saved "Saved"]
+          [:span.notes-count
+           (let [n (count notes)]
+             (str n " character" (when (not= 1 n) "s")))]]]))))
 
 (defn playback-status [state]
   (when (:playing? state)

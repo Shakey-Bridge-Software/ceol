@@ -625,6 +625,11 @@
   .notes-textarea::placeholder { color: #444; }
   .notes-close { color: var(--fg-muted); }
   .notes-close:hover { background: #2A2A2A; color: var(--fg-inverse); }
+  /* Wave 1 A — title block + footer, dark */
+  .notes-tune-title { color: var(--fg-inverse); }
+  .notes-tune-meta { color: var(--fg-muted); }
+  .notes-saved { color: var(--fg-muted); }
+  .notes-count { color: var(--fg-muted); }
 
   /* delete-confirm modal — JyFJG (dark modal #262626) */
   .modal {

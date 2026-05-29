@@ -240,7 +240,7 @@
   border-top: 1px solid var(--border);
   padding: 12px 32px 14px;
   gap: 10px;
-  height: 200px;
+  height: 248px; /* room for the title block + footer (Wave 1 A) */
   flex-shrink: 0;
 }
 .notes-panel.open { display: flex; }
@@ -283,3 +283,36 @@
 }
 .notes-textarea:focus { border-color: var(--accent); }
 .notes-textarea::placeholder { color: var(--fg-dim); }
+
+/* Wave 1 A — notes title block + footer (design vWmaK) */
+.notes-title-block { display: flex; flex-direction: column; gap: 2px; }
+.notes-tune-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--fg);
+}
+.notes-tune-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fg-secondary);
+}
+.notes-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.notes-saved {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fg-secondary);
+}
+.notes-saved::before { content: "✓ "; }
+.notes-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+}

@@ -280,9 +280,13 @@ Discovered by the Wave 1 CSS fix pass (2026-05-21). The fix pass resolved every
 straightforward CSS mismatch; these five items were **waived** because they need new
 or restructured component markup, not restyling. Do opportunistically (P2/P3).
 
-### A. Notes sheet — title block + footer — `vWmaK` · P2
+### A. Notes sheet — title block + footer — `vWmaK` · P2 · ✓ SHIPPED
 
-**Now:** `.notes-panel` has only the label + textarea. Dark theming is fixed
+**Shipped:** added `.notes-title-block` (tune title + meta) above the textarea
+and `.notes-footer` (✓ Saved + live char count) below; relabelled NOTES →
+PRACTICE NOTES. View + CSS only. Verify `verify/waveA.mjs`.
+
+**Now (original):** `.notes-panel` has only the label + textarea. Dark theming is fixed
 (Wave 1), but the design's `nTitleBlock` (tune title fs=22 + meta line) and `nFoot`
 ("Saved" status + character count) have no markup. The label reads "NOTES"; design
 `nLabel` is "PRACTICE NOTES".
