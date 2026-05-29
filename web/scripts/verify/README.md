@@ -142,5 +142,9 @@ scripts/
   state effects only).
 - `waveA` — notes sheet title block + footer — passes. Opens the notes panel,
   asserts the PRACTICE NOTES label, title/meta block, and the live char count.
+- `waveB` — session-ready hero card — passes. Lands on the Session tab, asserts
+  the empty state with no learned tunes, then learns 1 / 3 tunes and asserts the
+  hero card's big number, singular/plural sub-lines, the in-card Start button +
+  shuffle icon, and that clicking Start flips `:session-mode?`.
 
 Add a row when you ship a new B-item with a scenario.

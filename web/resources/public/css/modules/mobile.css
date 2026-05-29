@@ -415,15 +415,6 @@
     padding: 16px;
     display: flex; flex-direction: column; gap: 16px;
   }
-  .session-summary { padding: 8px 0; }
-  .session-stats { font-family: var(--font-mono); font-size: 13px; color: var(--fg-muted); }
-  .session-start {
-    width: 100%; padding: 16px;
-    background: var(--accent); color: #fff;
-    border: none; border-radius: 10px;
-    font-family: var(--font-heading); font-size: 16px;
-    cursor: pointer;
-  }
   .session-preview-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-muted); padding: 8px 0; }
   .session-item, .session-set {
     display: flex; align-items: center; gap: 12px;

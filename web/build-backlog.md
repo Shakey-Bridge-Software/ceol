@@ -295,7 +295,7 @@ PRACTICE NOTES. View + CSS only. Verify `verify/waveA.mjs`.
 footer row below it (saved indicator + live char count); change the label text.
 View + CSS only.
 
-### B. Session-ready — hero card — `J8hkB` · P2
+### B. Session-ready — hero card — `J8hkB` · P2 · ✓ SHIPPED
 
 **Now:** the session-ready screen lists items but has no `heroCard`. CSS for the
 surrounding items is fixed (Wave 1); the design centrepiece — a `#2A2A2A` cr=12 card
