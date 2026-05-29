@@ -205,6 +205,18 @@
         (typeahead-results state)
         [:div.set-creation-hints "Enter to add \u00B7 Enter on empty = done \u00B7 Esc to cancel"]])]))
 
+(defn- sets-empty-state []
+  [:div.sets-empty
+   [:div.empty-icon
+    [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
+           :stroke "currentColor" :stroke-width 2
+           :stroke-linecap "round" :stroke-linejoin "round"}
+     [:polygon {:points "12 2 2 7 12 12 22 7 12 2"}]
+     [:polyline {:points "2 17 12 22 22 17"}]
+     [:polyline {:points "2 12 12 17 22 12"}]]]
+   [:div.empty-title "No sets yet"]
+   [:div.empty-subtitle "Tap New Set to get started"]])
+
 (defn sets-tab [state]
   [:div.sets-content
    (if (:creating-set? state)
@@ -219,16 +231,7 @@
     (let [sets (vals (:sets state))]
       (if (seq sets)
         (map (fn [s] (set-card s state)) (sort-by :name sets))
-        [:div.sets-empty
-         [:div.empty-icon
-          [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
-                 :stroke "currentColor" :stroke-width 2
-                 :stroke-linecap "round" :stroke-linejoin "round"}
-           [:polygon {:points "12 2 2 7 12 12 22 7 12 2"}]
-           [:polyline {:points "2 17 12 22 22 17"}]
-           [:polyline {:points "2 12 12 17 22 12"}]]]
-         [:div.empty-title "No sets yet"]
-         [:div.empty-subtitle "Tap New Set to get started"]]))]])
+        (sets-empty-state)))]])
 
 ;; --- Session tab ---
 
@@ -897,9 +900,10 @@
      [:ol.mset-tunes
       (map-indexed
        (fn [i t]
-         [:li.mset-tune
-          [:span.mset-num (str (inc i) ".")]
-          [:span.mset-tune-name (or (:name t) "Unknown")]])
+         (when t
+           [:li.mset-tune
+            [:span.mset-num (str (inc i) ".")]
+            [:span.mset-tune-name (:name t)]]))
        tunes)]
      [:div.mset-footer
       [:span.mset-progress {:class (if all? "all" "partial")}
@@ -919,16 +923,7 @@
    (let [sets (vals (:sets state))]
      (if (seq sets)
        [:div.mset-list (map (fn [s] (mobile-set-card s state)) (sort-by :name sets))]
-       [:div.sets-empty
-        [:div.empty-icon
-         [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
-                :stroke "currentColor" :stroke-width 2
-                :stroke-linecap "round" :stroke-linejoin "round"}
-          [:polygon {:points "12 2 2 7 12 12 22 7 12 2"}]
-          [:polyline {:points "2 17 12 22 22 17"}]
-          [:polyline {:points "2 12 12 17 22 12"}]]]
-        [:div.empty-title "No sets yet"]
-        [:div.empty-subtitle "Tap New Set to get started"]]))])
+       (sets-empty-state)))])
 
 (defn mobile-list-view [state]
   (let [tunes (state/filtered-tunes state)
