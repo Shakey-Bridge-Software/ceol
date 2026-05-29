@@ -77,6 +77,7 @@ question was deliberately settled — do not "fix" these to match the mockups.
 - **Sidebar `gap` = 20** — `design.pen` frames disagree (`d1p1` says 24; `d3p2`/`d4p1`/`d5p1` say 20). The app's 20 matches the majority; the `d1p1` frame's 24 is the design-side bug.
 - **Set editor is mobile-only** — the full-screen new/edit set editor (`he1dM`, `:set-editor` slot) clones the mobile-gated `.te-overlay`, so it renders only ≤720px. Desktop deliberately keeps the inline `.set-creation` sidebar wizard (`:creating-set?`). The two set-creation surfaces coexist by design; don't "unify" them onto the overlay without making it responsive first.
 - **`.tune-name` default colour `#D4D2CC`** — settled value for the base/unselected tune-row name (active `#F5F4F0`, learned `#A8A8A8`). The earlier `#aaa` was a bug.
+- **Session hero card is shared, not mobile-gated** — `session-tab-pre`'s `.session-hero-card` (Wave 1 B, design `J8hkB`) renders in both the 390px mobile layout and the 280px desktop sidebar, because `session-tab` is the single shared session view (no desktop variant). Verified the 56px `heroBig` number doesn't clip the sidebar. Don't gate it to mobile-only — the bold treatment is intentional on both surfaces.
 
 ## Data files
 

@@ -30,7 +30,7 @@
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 2px;
-  color: var(--fg-dim);
+  color: var(--fg-secondary); /* #666 — exact design J8hkB heroLabel shade */
 }
 .session-hero-num { display: flex; align-items: flex-end; gap: 8px; }
 .session-hero-big {
