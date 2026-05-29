@@ -91,6 +91,23 @@ await sleep(150);
 assert((await state("session-paused?")) === "false", "second press resumes (paused? false)");
 assert((await present(".session-pause rect")) === true, "pause bars return after resume");
 
+// Gap-timer cancellation (the bug fix): the natural-finish 2s gap can't run
+// headless, so simulate a pending gap timer, then verify Pause cancels it — both
+// clearing :session-gap-timer and stopping the orphaned callback from firing.
+await evalJs(`(function(){
+  window.__gapFired = false;
+  var id = setTimeout(function(){ window.__gapFired = true; }, 300);
+  cljs.core.swap_BANG_.call(null, ceol.web.state.app_state, cljs.core.assoc,
+    cljs.core.keyword.call(null, "session-gap-timer"), id);
+  return true;
+})()`);
+assert((await state("session-gap-timer")) !== null, "a pending gap timer is registered");
+await fire(kwExpr("session", "pause"));
+await sleep(120);
+assert((await state("session-gap-timer")) === null, "pause clears the pending gap timer");
+await sleep(300);
+assert((await evalJs("window.__gapFired")) === false, "the orphaned gap callback never fires");
+
 shutdown();
 process.exit(0);
 

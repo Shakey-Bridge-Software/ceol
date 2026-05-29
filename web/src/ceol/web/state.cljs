@@ -118,6 +118,8 @@
 ;;   :session-pausing?    bool             true during the 2s gap between queue items
 ;;   :session-paused?     bool             true while the user has paused playback (Wave 1 C);
 ;;                                         audio is stopped, the now-playing button shows Play
+;;   :session-gap-timer   timeout-id | nil id of the pending inter-tune gap setTimeout, so
+;;                                         skip/pause/stop can cancel it (Wave 1 C); nil when none
 ;;   :session-within-set? bool             true while advancing through tunes inside a set;
 ;;                                         suppresses count-in for mid-set transitions
 ;;   :session-played      [queue-index ...] indices of completed queue items (for history)
@@ -186,6 +188,7 @@
            :session-set-index   0
            :session-pausing?    false
            :session-paused?     false
+           :session-gap-timer   nil
            :session-within-set? false
            :session-played      []
            ;; Item #5 — session-complete summary
