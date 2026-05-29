@@ -60,3 +60,70 @@
 }
 .session-end:hover { border-color: #888; color: var(--fg-inverse); }
 .tab.session-live { background: var(--accent); }
+
+/* Item #5 — session-complete summary (design LQ3CL). Centred check / heading /
+   stat line / Practice-again + Done. Renders in the session tab on :done. */
+.session-complete {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  padding: 24px;
+}
+.session-complete-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(143, 90, 60, 0.16); /* accent @ 16% */
+  color: var(--accent);
+}
+.session-complete-title {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--fg-inverse);
+}
+.session-complete-stats {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+}
+.session-complete-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 8px;
+}
+.session-complete-again {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.session-complete-again:active { opacity: 0.85; }
+.session-complete-done {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dark-hover);
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.session-complete-done:active { background: #333; }

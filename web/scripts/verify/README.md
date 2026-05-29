@@ -136,5 +136,9 @@ scripts/
 - `b3` — mobile backup-status toast — passes. Drives `backup/set-status!`
   directly (export/import can't run headless) and asserts the success/error
   banner renders in the fixed `.mobile-backup-status` toast.
+- `item5` — session-complete summary — passes. Stows a `:session-result`
+  directly (a real `:done` needs the full audio queue), asserts the summary +
+  stat line, and the Done / Practice-again wiring (the latter's synchronous
+  state effects only).
 
 Add a row when you ship a new B-item with a scenario.

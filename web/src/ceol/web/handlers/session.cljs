@@ -10,7 +10,8 @@
             [ceol.web.metronome :as metro]
             [ceol.web.beat-engine :as beat]
             [ceol.web.render :as render]
-            [ceol.web.handlers.playback :as playback]))
+            [ceol.web.handlers.playback :as playback]
+            [ceol.web.handlers.session-summary :as ss]))
 
 (defn session-play-current!
   "Play the current item in the session queue. Handles set-within advances
@@ -94,7 +95,11 @@
                           (do (swap! state/app-state assoc
                                      :playing?       false
                                      :session-mode?  false
-                                     :session-played (conj (:session-played s) (:session-index s)))
+                                     :session-played (conj (:session-played s) (:session-index s))
+                                     ;; Item #5 — stow the completion summary.
+                                     :session-result (ss/result
+                                                      (:session-queue s)
+                                                      (- (js/Date.now) (or (:session-started-at s) (js/Date.now)))))
                               (metro/stop!)))))]
     ;; Set playing state and stop metronome if running
     (swap! state/app-state assoc :playing? true :selected-tune-id tune-id)
@@ -138,7 +143,10 @@
                :session-pausing?    false
                :session-within-set? false
                :selected-tune-id    first-tune-id
-               :tab                 :session)
+               :tab                 :session
+               ;; Item #5 — start the clock; clear any prior summary.
+               :session-started-at  (js/Date.now)
+               :session-result      nil)
         ;; Wait for render before playing — tune must be rendered before abc.js can prime
         (-> (render/wait-for-render!)
             (.then #(session-play-current!)))))))

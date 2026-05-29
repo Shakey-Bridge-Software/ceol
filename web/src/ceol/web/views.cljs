@@ -4,6 +4,7 @@
    r/set-dispatch! — components emit action vectors, never call functions."
   (:require [ceol.web.state :as state]
             [ceol.web.handlers.set-editor :as se]
+            [ceol.web.handlers.session-summary :as ss]
             [ceol.abc :as abc]
             [clojure.string :as str]))
 
@@ -302,10 +303,27 @@
              (:session-played state))])
      [:button.session-end {:on {:click [[:session/stop]]}} "End Session"]]))
 
+(defn session-complete-summary
+  "Centred end-of-session screen (Item #5, design LQ3CL). Shown when a session
+   finishes naturally (handlers.session :done stows :session-result)."
+  [state]
+  [:div.session-content.session-complete
+   [:div.session-complete-check
+    [:svg {:width 30 :height 30 :viewBox "0 0 24 24" :fill "none"
+           :stroke "currentColor" :stroke-width 2.5
+           :stroke-linecap "round" :stroke-linejoin "round"}
+     [:path {:d "M20 6 9 17l-5-5"}]]]
+   [:div.session-complete-title "Practice complete"]
+   [:div.session-complete-stats (ss/summary-line (:session-result state))]
+   [:div.session-complete-actions
+    [:button.session-complete-again {:on {:click [[:session/start]]}} "Practice again"]
+    [:button.session-complete-done {:on {:click [[:session/dismiss-summary]]}} "Done"]]])
+
 (defn session-tab [state]
-  (if (:session-mode? state)
-    (session-tab-active state)
-    (session-tab-pre state)))
+  (cond
+    (:session-mode? state)  (session-tab-active state)
+    (:session-result state) (session-complete-summary state)
+    :else                   (session-tab-pre state)))
 
 (defn backup-status-banner
   "Transient export/import feedback (set/cleared by backup/set-status!). Shared

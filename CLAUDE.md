@@ -129,7 +129,7 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 ./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test)"
 ```
 
-76 tests, 5247 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor / duplicate / set-editor.
+80 tests, 5260 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor / duplicate / set-editor / session-summary.
 
 ### Browser end-to-end verification
 
@@ -201,6 +201,7 @@ ceol/
         set_editor.cljc      — pure helpers behind mobile set editor
         playback.cljs        — play/stop orchestration
         session.cljs         — practice-session actions
+        session_summary.cljc — pure session-complete summary helpers
     scripts/
       cdp.mjs                — CDP harness (Node WebSocket → headless Chrome)
       verify.sh              — chrome launcher + scenario runner
@@ -220,6 +221,7 @@ ceol/
         actions_test.cljc    — action dispatch tests
         tune_editor_test.cljc — mobile tune-editor draft helpers
         set_editor_test.cljc  — mobile set-editor draft + reorder helpers
+        session_summary_test.cljc — session-complete count/format helpers
         generative_test.cljc — generative/property tests
         backup_test.cljs     — backup export/import tests
         runner.cljs          — CLJS test runner

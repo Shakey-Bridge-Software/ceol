@@ -113,9 +113,10 @@
 ;;
 ;; Learned & Session
 ;;   :learned/toggle      [tune-id]                  toggle learned flag
-;;   :session/start       []                          build queue and start session
+;;   :session/start       []                          build queue and start session (also "Practice again")
 ;;   :session/play-current []                         play current session item (internal)
 ;;   :session/stop        []                          end session
+;;   :session/dismiss-summary []                      clear the session-complete summary ("Done")
 ;;
 ;; Mobile UI
 ;;   :menu/open           [tune-id]                   open tune action menu / mobile action-sheet
@@ -290,6 +291,10 @@
     :session/stop
     (do (playback/stop!)
         (swap! state/app-state assoc :session-mode? false :session-pausing? false))
+
+    ;; Item #5 — dismiss the session-complete summary ("Done").
+    :session/dismiss-summary
+    (swap! state/app-state assoc :session-result nil)
 
     ;; Backup
     :backup/export (backup/export!)

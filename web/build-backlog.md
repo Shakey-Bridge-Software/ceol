@@ -57,8 +57,11 @@ Re-prioritized 2026-05-22 after the Wave 2 audit.
 
 **P3 — polish**
 
-5. **Item #5 — Session-complete summary** — independent, low effort (part of
-   gap **G9**).
+- ✓ **Item #5 — Session-complete summary** (`LQ3CL`, gap **G9**) — `:session-result`
+  {tune-count, duration} built on natural `:done` from a `:session-started-at`
+  stamp; centred summary (check / "Practice complete" / stat line) with
+  Practice again (`:session/start`) + Done (`:session/dismiss-summary`). Pure
+  count/format in `handlers/session_summary.cljc`. Verify `verify/item5.mjs`.
 6. Wave 1 markup gaps **A–E** — restructured component markup; do opportunistically.
 
 Item #4 (set action sheet) and B2 confirm dialogs share structure with item #1.
@@ -203,9 +206,16 @@ Delete-set need new handlers**. Set-delete should route through the **B2** confi
 
 ---
 
-## Item #5. Session-complete summary — `LQ3CL` · P3
+## Item #5. Session-complete summary — `LQ3CL` · P3 · ✓ SHIPPED
 
-Part of gap **G9**. **Now:** a session ends silently — `handlers/session.cljs`
+**Shipped:** session-start! stamps `:session-started-at`; the natural `:done`
+path builds `:session-result {:tune-count :duration-ms}` (pure helpers in
+`handlers/session_summary.cljc`). The session tab shows a centred summary when
+`:session-result` is set. Practice again → `:session/start`; Done →
+`:session/dismiss-summary`. A manual "End Session" (`:session/stop`) stays
+silent (no summary) — the summary is for natural completion only.
+
+Part of gap **G9**. **Now (original):** a session ends silently — `handlers/session.cljs`
 `:done` case sets `:session-mode? false` and stops playback; the view reverts to the
 pre-session screen. No summary is shown.
 

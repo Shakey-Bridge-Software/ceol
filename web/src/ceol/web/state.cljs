@@ -119,6 +119,9 @@
 ;;   :session-within-set? bool             true while advancing through tunes inside a set;
 ;;                                         suppresses count-in for mid-set transitions
 ;;   :session-played      [queue-index ...] indices of completed queue items (for history)
+;;   :session-started-at  ms | nil          js/Date.now() at session start (for duration)
+;;   :session-result      {:tune-count int :duration-ms int} | nil
+;;                                          set on :done, shown by the summary, cleared on Done/restart
 ;; ---------------------------------------------------------------------------
 
 (defonce app-state
@@ -181,7 +184,10 @@
            :session-set-index   0
            :session-pausing?    false
            :session-within-set? false
-           :session-played      []})))
+           :session-played      []
+           ;; Item #5 — session-complete summary
+           :session-started-at  nil
+           :session-result      nil})))
 
 ;; --- Tune queries ---
 
