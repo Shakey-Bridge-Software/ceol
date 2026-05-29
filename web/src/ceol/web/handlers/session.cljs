@@ -13,6 +13,87 @@
             [ceol.web.handlers.playback :as playback]
             [ceol.web.handlers.session-summary :as ss]))
 
+(declare session-play-current!)
+
+(defn- queue-item-first-tid
+  "The tune id to play first for a queue item: its own id for a :tune, the first
+   tune of a :set."
+  [item]
+  (case (:type item)
+    :tune (:tune-id item)
+    :set  (first (:tune-ids item))))
+
+(defn- apply-advance!
+  "Apply a state/advance-session result to app-state and schedule the next play.
+
+   immediate? = the user Skip path: advance the index AND :selected-tune-id
+   together and play at once, no gap. Otherwise the natural end-of-tune path:
+   keep the 500ms within-set / 2s between-item gaps, advancing :session-index at
+   once but deferring :selected-tune-id (and clearing :session-pausing?) across
+   the gap — that index-early / selected-late split is the inter-tune 'pausing'
+   visual. `s` is the app-state snapshot taken before advancing.
+
+   This is the single advance state machine shared by on-end (natural finish)
+   and session-skip! (user skip)."
+  [s result immediate?]
+  (let [play! #(-> (render/wait-for-render!) (.then session-play-current!))]
+    (case (:action result)
+      :advance-in-set
+      (do (swap! state/app-state assoc
+                 :session-set-index   (:session-set-index result)
+                 :session-within-set? true
+                 :selected-tune-id    (:tune-id result))
+          (if immediate? (play!) (js/setTimeout play! 500)))
+
+      :next-item
+      (let [next-idx (:session-index result)
+            next-tid (queue-item-first-tid (nth (:session-queue s) next-idx))]
+        (swap! state/app-state assoc
+               :session-index       next-idx
+               :session-set-index   0
+               :session-within-set? false
+               :session-pausing?    (not immediate?)
+               :session-played      (conj (:session-played s) (:session-index s)))
+        (if immediate?
+          (do (swap! state/app-state assoc :selected-tune-id next-tid) (play!))
+          (js/setTimeout
+           (fn []
+             (swap! state/app-state assoc :selected-tune-id next-tid :session-pausing? false)
+             (play!))
+           2000)))
+
+      :reshuffle
+      (let [new-queue (state/shuffle-queue
+                       (state/build-session-queue (:learned-tune-ids s) (:sets s)))]
+        (when (seq new-queue)
+          (let [first-tid (queue-item-first-tid (first new-queue))]
+            (swap! state/app-state assoc
+                   :session-queue       new-queue
+                   :session-index       0
+                   :session-set-index   0
+                   :session-played      []
+                   :session-pausing?    (not immediate?)
+                   :session-within-set? false)
+            (if immediate?
+              (do (swap! state/app-state assoc :selected-tune-id first-tid) (play!))
+              (js/setTimeout
+               (fn []
+                 (swap! state/app-state assoc :selected-tune-id first-tid :session-pausing? false)
+                 (play!))
+               2000)))))
+
+      :done
+      (let [now (js/Date.now)]
+        (swap! state/app-state assoc
+               :playing?       false
+               :session-mode?  false
+               :session-played (conj (:session-played s) (:session-index s))
+               ;; Item #5 — stow the completion summary. Elapsed is 0 if the
+               ;; start was never stamped.
+               :session-result (ss/result (:session-queue s)
+                                          (- now (or (:session-started-at s) now))))
+        (metro/stop!)))))
+
 (defn session-play-current!
   "Play the current item in the session queue. Handles set-within advances
    (no count-in, 500ms gap) and queue-item advances (count-in, 2s gap).
@@ -31,78 +112,7 @@
                                                           (:session-index s)
                                                           (:session-set-index s)
                                                           (:loop? s))]
-                        (case (:action result)
-                          :advance-in-set
-                          (do (swap! state/app-state assoc
-                                     :session-set-index   (:session-set-index result)
-                                     :session-within-set? true
-                                     :selected-tune-id    (:tune-id result))
-                              ;; 500ms gap between tunes within a set
-                              (js/setTimeout
-                               (fn []
-                                 (-> (render/wait-for-render!)
-                                     (.then #(session-play-current!))))
-                               500))
-
-                          :next-item
-                          (let [next-idx  (:session-index result)
-                                queue     (:session-queue s)
-                                next-item (nth queue next-idx)
-                                next-tid  (case (:type next-item)
-                                            :tune (:tune-id next-item)
-                                            :set  (first (:tune-ids next-item)))]
-                            (swap! state/app-state assoc
-                                   :session-index       next-idx
-                                   :session-set-index   0
-                                   :session-within-set? false
-                                   :session-pausing?    true
-                                   :session-played      (conj (:session-played s) (:session-index s)))
-                            ;; 2s pause between queue items
-                            (js/setTimeout
-                             (fn []
-                               (swap! state/app-state assoc
-                                      :selected-tune-id next-tid
-                                      :session-pausing? false)
-                               (-> (render/wait-for-render!)
-                                   (.then #(session-play-current!))))
-                             2000))
-
-                          :reshuffle
-                          (let [new-queue (state/shuffle-queue
-                                           (state/build-session-queue (:learned-tune-ids s) (:sets s)))]
-                            (when (seq new-queue)
-                              (let [first-item (first new-queue)
-                                    first-tid  (case (:type first-item)
-                                                 :tune (:tune-id first-item)
-                                                 :set  (first (:tune-ids first-item)))]
-                                (swap! state/app-state assoc
-                                       :session-queue       new-queue
-                                       :session-index       0
-                                       :session-set-index   0
-                                       :session-played      []
-                                       :session-pausing?    true
-                                       :session-within-set? false)
-                                (js/setTimeout
-                                 (fn []
-                                   (swap! state/app-state assoc
-                                          :selected-tune-id first-tid
-                                          :session-pausing? false)
-                                   (-> (render/wait-for-render!)
-                                       (.then #(session-play-current!))))
-                                 2000))))
-
-                          :done
-                          (let [now (js/Date.now)]
-                            (swap! state/app-state assoc
-                                   :playing?       false
-                                   :session-mode?  false
-                                   :session-played (conj (:session-played s) (:session-index s))
-                                   ;; Item #5 — stow the completion summary.
-                                   ;; Elapsed is 0 if the start was never stamped.
-                                   :session-result (ss/result
-                                                    (:session-queue s)
-                                                    (- now (or (:session-started-at s) now))))
-                            (metro/stop!)))))]
+                        (apply-advance! s result false)))]
     ;; Set playing state and stop metronome if running
     (swap! state/app-state assoc :playing? true :selected-tune-id tune-id)
     (when (metro/running?)
@@ -136,10 +146,7 @@
     ;; would no-op while the stale summary kept showing — a dead-end.
     (swap! state/app-state assoc :session-result nil)
     (when (seq shuffled)
-      (let [first-item   (first shuffled)
-            first-tune-id (case (:type first-item)
-                            :tune (:tune-id first-item)
-                            :set  (first (:tune-ids first-item)))]
+      (let [first-tune-id (queue-item-first-tid (first shuffled))]
         (swap! state/app-state assoc
                :session-mode?       true
                :session-queue       shuffled
@@ -160,12 +167,8 @@
 (defn session-skip!
   "User-triggered Skip (Wave 1 C): stop the current tune and advance immediately
    to the next queue position with no inter-tune gap, then play it — or finish the
-   session if that was the last item.
-
-   The 4-branch advance below mirrors the natural end-of-tune handling in
-   session-play-current!'s on-end, minus the 500ms/2s pauses. It is duplicated
-   here on purpose (2nd occurrence); a later refactor may extract a shared
-   apply-advance! once Skip is covered by a scenario and the shape has settled."
+   session if that was the last item. Shares the advance state machine with the
+   natural finish via apply-advance! (immediate? = true)."
   []
   (when (:session-mode? @state/app-state)
     (abc-bridge/stop!)
@@ -174,60 +177,9 @@
           result (state/advance-session (:session-queue s)
                                         (:session-index s)
                                         (:session-set-index s)
-                                        (:loop? s))
-          play!  (fn [] (-> (render/wait-for-render!)
-                            (.then #(session-play-current!))))]
+                                        (:loop? s))]
       (swap! state/app-state assoc :session-paused? false)
-      (case (:action result)
-        :advance-in-set
-        (do (swap! state/app-state assoc
-                   :session-set-index   (:session-set-index result)
-                   :session-within-set? true
-                   :selected-tune-id    (:tune-id result))
-            (play!))
-
-        :next-item
-        (let [next-idx  (:session-index result)
-              next-item (nth (:session-queue s) next-idx)
-              next-tid  (case (:type next-item)
-                          :tune (:tune-id next-item)
-                          :set  (first (:tune-ids next-item)))]
-          (swap! state/app-state assoc
-                 :session-index       next-idx
-                 :session-set-index   0
-                 :session-within-set? false
-                 :session-pausing?    false
-                 :selected-tune-id    next-tid
-                 :session-played      (conj (:session-played s) (:session-index s)))
-          (play!))
-
-        :reshuffle
-        (let [new-queue (state/shuffle-queue
-                         (state/build-session-queue (:learned-tune-ids s) (:sets s)))]
-          (when (seq new-queue)
-            (let [first-item (first new-queue)
-                  first-tid  (case (:type first-item)
-                               :tune (:tune-id first-item)
-                               :set  (first (:tune-ids first-item)))]
-              (swap! state/app-state assoc
-                     :session-queue       new-queue
-                     :session-index       0
-                     :session-set-index   0
-                     :session-played      []
-                     :session-pausing?    false
-                     :session-within-set? false
-                     :selected-tune-id    first-tid)
-              (play!))))
-
-        :done
-        (let [now (js/Date.now)]
-          (swap! state/app-state assoc
-                 :playing?       false
-                 :session-mode?  false
-                 :session-played (conj (:session-played s) (:session-index s))
-                 :session-result (ss/result (:session-queue s)
-                                            (- now (or (:session-started-at s) now))))
-          (metro/stop!))))))
+      (apply-advance! s result true))))
 
 (defn session-pause!
   "Toggle playback pause during a live session (Wave 1 C). Pausing stops audio

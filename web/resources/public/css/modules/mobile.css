@@ -689,10 +689,4 @@
     letter-spacing: 2px;
     color: var(--fg-dim);
   }
-  .session-now-playing {
-    border-radius: 12px;
-    padding: 18px;
-    border: 1px solid var(--accent);
-  }
-  .session-now-name { font-size: 22px; font-family: var(--font-heading); }
 }

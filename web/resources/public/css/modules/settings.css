@@ -70,10 +70,3 @@
 }
 .sidebar-settings-btn.active { background: var(--dark-hover); color: var(--fg-inverse); }
 .settings-gear { font-size: 14px; }
-
-.session-next-teaser {
-  font-family: var(--font-heading);
-  font-size: 24px;
-  color: #555;
-  font-weight: 300;
-}
