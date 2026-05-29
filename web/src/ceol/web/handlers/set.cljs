@@ -1,10 +1,12 @@
 (ns ceol.web.handlers.set
   "Set CRUD and creation-wizard action handlers. Covers the multi-step
-   set creation typeahead, set toggle/select/delete, and inline tune
-   addition into existing sets via typeahead. All persistence routes
-   through ceol.web.persist."
+   set creation typeahead, set toggle/select/delete, inline tune addition
+   into existing sets via typeahead, and the mobile full-screen set editor.
+   Pure helpers behind the editor live in ceol.web.handlers.set-editor.
+   All persistence routes through ceol.web.persist."
   (:require [ceol.web.state :as state]
-            [ceol.web.persist :as persist]))
+            [ceol.web.persist :as persist]
+            [ceol.web.handlers.set-editor :as se]))
 
 ;; --- Creation wizard ---
 
@@ -151,3 +153,65 @@
                                (cond-> (= set-id (:active-set-id s))
                                  (assoc :active-set-id nil)))))
   (persist/save-sets!))
+
+;; --- Mobile full-screen set editor ------------------------------------------
+;; Draft-based editor (Cancel discards, Save commits) mirroring the tune
+;; editor. Pure helpers live in ceol.web.handlers.set-editor (`se/`); side
+;; effects stay here. The desktop inline creation wizard above is untouched —
+;; this overlay is mobile-only (see CSS @media gate). The tune picker reuses
+;; the shared :typeahead-query state and the :set/typeahead handler.
+
+(defn editor-open-new! [_args]
+  (swap! state/app-state assoc
+         :set-editor {:mode :new :set-id nil :draft se/blank-draft :picking? false}
+         :typeahead-query "" :typeahead-index 0))
+
+(defn editor-open-edit! [[set-id]]
+  (when-let [set-data (get (:sets @state/app-state) set-id)]
+    (swap! state/app-state assoc
+           :set-editor {:mode :edit :set-id set-id
+                        :draft (se/set->draft set-data) :picking? false}
+           :typeahead-query "" :typeahead-index 0)))
+
+(defn editor-cancel! [_args]
+  (swap! state/app-state assoc :set-editor nil :typeahead-query "" :typeahead-index 0))
+
+(defn editor-update-draft! [[field value]]
+  (swap! state/app-state assoc-in [:set-editor :draft field] value))
+
+(defn editor-start-pick! [_args]
+  (swap! state/app-state assoc-in [:set-editor :picking?] true)
+  (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
+
+(defn editor-stop-pick! [_args]
+  (swap! state/app-state assoc-in [:set-editor :picking?] false)
+  (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
+
+(defn editor-add-tune! [[tune-id]]
+  ;; Adds to the draft only — no persist until Save. Picker stays open so
+  ;; several tunes can be added in a row; the query resets each time.
+  (swap! state/app-state update-in [:set-editor :draft :tune-ids] se/add-tune tune-id)
+  (swap! state/app-state assoc :typeahead-query "" :typeahead-index 0))
+
+(defn editor-remove-tune! [[tune-id]]
+  (swap! state/app-state update-in [:set-editor :draft :tune-ids] se/remove-tune tune-id))
+
+(defn editor-reorder! [[from to]]
+  (swap! state/app-state update-in [:set-editor :draft :tune-ids] se/reorder from to))
+
+(defn editor-save! [_args]
+  (let [s (deref state/app-state)
+        {:keys [mode set-id draft]} (:set-editor s)]
+    (when (and draft (se/can-save? draft))
+      (let [id      (or set-id (state/next-set-id s))
+            new-set (se/draft->set id draft)]
+        (swap! state/app-state
+               (fn [s']
+                 (-> s'
+                     (assoc-in [:sets id] new-set)
+                     (assoc :active-set-id id
+                            :main-view :set
+                            :set-editor nil
+                            :typeahead-query ""
+                            :typeahead-index 0))))
+        (persist/save-sets!)))))

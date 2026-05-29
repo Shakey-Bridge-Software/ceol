@@ -96,6 +96,18 @@
 ;;   :set/add-tune-keydown [set-id key]              handle keydown in set's add-tune input
 ;;   :set/delete          [set-id]                   delete set
 ;;
+;; Mobile set editor (full-screen overlay)
+;;   :set-editor/open-new     []                     open editor for a new set
+;;   :set-editor/open-edit    [set-id]               open editor seeded from a set
+;;   :set-editor/cancel       []                     discard draft, close
+;;   :set-editor/save         []                     commit draft → :sets, close
+;;   :set-editor/update-draft [field value]          edit a draft field (name)
+;;   :set-editor/start-pick   []                     reveal the add-tune picker
+;;   :set-editor/stop-pick    []                     hide the add-tune picker
+;;   :set-editor/add-tune     [tune-id]              add a tune to the draft
+;;   :set-editor/remove-tune  [tune-id]              remove a tune from the draft
+;;   :set-editor/reorder      [from to]              move a draft tune by index
+;;
 ;; Learned & Session
 ;;   :learned/toggle      [tune-id]                  toggle learned flag
 ;;   :session/start       []                          build queue and start session
@@ -245,6 +257,18 @@
     :set/start-adding     (set-h/start-adding! args)
     :set/add-tune-keydown (set-h/add-tune-keydown! args)
     :set/delete           (set-h/delete! args)
+
+    ;; Mobile full-screen set editor (draft-based overlay)
+    :set-editor/open-new     (set-h/editor-open-new! args)
+    :set-editor/open-edit    (set-h/editor-open-edit! args)
+    :set-editor/cancel       (set-h/editor-cancel! args)
+    :set-editor/save         (set-h/editor-save! args)
+    :set-editor/update-draft (set-h/editor-update-draft! args)
+    :set-editor/start-pick   (set-h/editor-start-pick! args)
+    :set-editor/stop-pick    (set-h/editor-stop-pick! args)
+    :set-editor/add-tune     (set-h/editor-add-tune! args)
+    :set-editor/remove-tune  (set-h/editor-remove-tune! args)
+    :set-editor/reorder      (set-h/editor-reorder! args)
 
     ;; Learned + Session
     :learned/toggle

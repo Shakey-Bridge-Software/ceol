@@ -31,14 +31,24 @@ Re-prioritized 2026-05-22 after the Wave 2 audit.
 - ✓ **B2 — Confirm dialogs** — generic `:confirm/open` action + `confirm-modal`
   view. Wired into import-overwrite ("Replace all data?") and set-delete
   ("Delete set?"). Reuses existing `.modal` CSS. Verify `web/scripts/verify/b2.mjs`.
+- **B5 — Reduce web seed 54 → 3 deletable starter tunes** — superseded, not
+  shipped as speced. PR #9 ("Allow deletion of catalog tunes") solved the same
+  empty-state-reachability gap differently: the full catalog stays as the seed,
+  but every tune (catalog or custom) is deletable, so the empty state is
+  reached by deleting rather than by starting small. Adopted that direction
+  instead.
+- ✓ **Item #3 — New / edit set editor** — mobile full-screen editor
+  (`:set-editor` draft slot, design `he1dM`): NAME input, reorderable tune
+  rows (grip drag + ✕ remove), add-tune picker, Cancel/Save. Pure helpers in
+  `handlers/set_editor.cljc`; drag-to-reorder in `gesture.cljs`. **Mobile-only**
+  — desktop keeps the inline `.set-creation` wizard. Reached from the mobile
+  "+ New Set" button and the set-detail `⋮`. Verify `web/scripts/verify/item3.mjs`.
 
 **P2 — works via an off-design fallback**
 
-1. **B5 — Reduce web seed 54 → 3 deletable starter tunes** — small; fixes the
-   onboarding flow (zero-tunes state is currently unreachable).
-2. **Item #3 — New / edit set editor**, then **Item #4 — Set action sheet** —
-   #4's "Edit set" routes into #3. #4 is gap **G4**.
-3. **B3 — Mobile backup-status banner** — small; export/import currently give
+1. **Item #4 — Set action sheet** — clones item #1; its "Edit set" routes into
+   the Item #3 editor (`:set-editor/open-edit`). Gap **G4**.
+2. **B3 — Mobile backup-status banner** — small; export/import currently give
    mobile users no feedback.
 
 **P3 — polish**
@@ -139,9 +149,18 @@ title / body / destructive-label.
 
 ---
 
-## Item #3. New / edit set editor — `he1dM` · P2
+## Item #3. New / edit set editor — `he1dM` · P2 · ✓ SHIPPED
 
-**Now:** `.set-creation` is an inline bordered mini-form (`#2A2A2A` box, brown
+**Shipped (mobile-only):** a full-screen editor over a dedicated `:set-editor`
+draft slot (mirrors `:tune-editor`), reusing the `.te-*` overlay shell. NAME
+input + reorderable tune rows (grip drag-to-reorder + ✕ remove) + add-tune
+picker + Cancel/Save. Pure helpers (`draft`, `reorder`, `can-save?`,
+`drop-target-index`) in `handlers/set_editor.cljc`; touch drag in `gesture.cljs`.
+**Decision:** mobile-only — desktop keeps the inline `.set-creation` wizard
+(the editor clones the mobile-gated `.te-overlay`). Reached from the mobile
+"+ New Set" button (`.add-set-btn--mobile`) and the set-detail `⋮`.
+
+**Now (original):** `.set-creation` is an inline bordered mini-form (`#2A2A2A` box, brown
 border, `cr=4`) with only a single name input. No Save button, no TUNES section, no
 tune management at create time.
 

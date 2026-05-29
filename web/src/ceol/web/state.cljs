@@ -104,6 +104,10 @@
 ;;   :typeahead-index     int              highlighted result index
 ;;   :adding-to-set       set-id | nil     set currently being added to (post-creation)
 ;;
+;; Mobile set editor (full-screen overlay; nil = closed)
+;;   :set-editor          {:mode :new|:edit :set-id <str|nil>
+;;                         :draft {:name str :tune-ids [int ...]} :picking? bool}
+;;
 ;; Learned & Session
 ;;   :learned-tune-ids    #{id ...}        persisted to localStorage
 ;;   :session-mode?       bool             session active (read-only main panel)
@@ -160,6 +164,10 @@
            :typeahead-query     ""
            :typeahead-index     0
            :adding-to-set       nil
+           ;; Mobile full-screen set editor (nil = closed). Shape when open:
+           ;; {:mode :new|:edit :set-id <str|nil>
+           ;;  :draft {:name str :tune-ids [int ...]} :picking? bool}
+           :set-editor          nil
            :metronome?          false
            :count-in?           false
            :current-beat        nil

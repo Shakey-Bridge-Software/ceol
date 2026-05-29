@@ -3,6 +3,7 @@
    No side effects, no state mutation. Actions are dispatched via Replicant's
    r/set-dispatch! — components emit action vectors, never call functions."
   (:require [ceol.web.state :as state]
+            [ceol.web.handlers.set-editor :as se]
             [ceol.abc :as abc]
             [clojure.string :as str]))
 
@@ -195,7 +196,12 @@
   [:div.sets-content
    (if (:creating-set? state)
      (set-creation-form state)
-     [:button.add-set-btn {:on {:click [[:set/start-create]]}} "+ New Set"])
+     ;; Desktop opens the inline wizard; mobile opens the full-screen editor
+     ;; (Item #3). Visibility is CSS-gated per viewport — see set-editor.css.
+     (list
+      [:button.add-set-btn {:on {:click [[:set/start-create]]}} "+ New Set"]
+      [:button.add-set-btn--mobile {:on {:click [[:set-editor/open-new]]}}
+       "+ New Set"]))
    [:div.set-list
     (let [sets (vals (:sets state))]
       (if (seq sets)
@@ -707,7 +713,8 @@
           {:on {:click [[:set/select-tune set-id (first (:tune-ids s))]
                         [:playback/play]]}}
           "\u25b6 Play set"]
-         [:button.set-detail-more "\u22ee"]]]
+         [:button.set-detail-more
+          {:on {:click [[:set-editor/open-edit set-id]]}} "\u22ee"]]]
        [:div.divider]
        [:div.set-detail-list-label "TUNES"]
        [:div.set-detail-list
@@ -1056,6 +1063,78 @@
      [:div.coachmark-cap2 "swipe left for Edit / Delete"]
      [:button.coachmark-ok {:on {:click [[:onboarding/dismiss]]}} "Got it"]]))
 
+;; --- Mobile full-screen set editor (Item #3, design he1dM) ------------------
+;; Reuses the .te-* overlay shell (Cancel / Title / Save + scroll body) shared
+;; with the tune editor — that shell is already mobile-only via @media. Set
+;; rows, grip, remove and the add-tune picker carry .se-* classes. The grip
+;; (data-idx / data-tune-id) is the drag-reorder handle wired in gesture.cljs;
+;; the reorder itself is the pure :set-editor/reorder action.
+
+(defn- se-tune-row [state idx tune]
+  [:div.se-tune-row {:data-idx idx :data-tune-id (:id tune)}
+   [:span.se-grip "⠿"]
+   [:div.se-tune-info
+    [:div.se-tune-name (:name tune)]
+    [:div.se-tune-meta
+     (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · "
+          (key-mode-label (:key tune) (:mode-name tune)))]]
+   [:button.se-tune-remove
+    {:on {:click [[:set-editor/remove-tune (:id tune)]]}} "×"]])
+
+(defn- se-picker
+  "Tune search inside the editor — results exclude tunes already in the draft."
+  [state draft-tune-ids]
+  (let [in-draft? (set draft-tune-ids)
+        query     (:typeahead-query state)
+        results   (->> (state/search-tunes state query 12)
+                       (remove #(in-draft? (:id %)))
+                       (take 6))]
+    [:div.se-picker
+     [:div.se-picker-bar
+      [:input.se-picker-input
+       {:type "text" :placeholder "Search tunes..." :value query :auto-focus true
+        :on {:input [[:set/typeahead :event/target.value]]}}]
+      [:button.se-picker-done {:on {:click [[:set-editor/stop-pick]]}} "Done"]]
+     (when (seq results)
+       [:div.se-picker-results
+        (map (fn [tune]
+               [:div.se-picker-item {:on {:click [[:set-editor/add-tune (:id tune)]]}}
+                [:span.se-picker-name (:name tune)]
+                [:span.se-picker-type (get tune-type-labels (:type tune))]])
+             results)])]))
+
+(defn set-editor [state]
+  (when-let [{:keys [mode draft picking?]} (:set-editor state)]
+    (let [tune-ids (:tune-ids draft)
+          title    (if (= mode :new) "New set" "Edit set")
+          saveable? (se/can-save? draft)]
+      [:div.te-overlay.se-overlay
+       [:div.te-top
+        [:button.te-cancel {:on {:click [[:set-editor/cancel]]}} "Cancel"]
+        [:div.te-title title]
+        [:button.te-save {:class (when-not saveable? "disabled")
+                          :on {:click [[:set-editor/save]]}} "Save"]]
+       [:div.te-body
+        [:div.te-section
+         [:div.te-label "NAME"]
+         [:input.te-input
+          {:type "text" :value (:name draft) :placeholder "Set name..."
+           :on {:input [[:set-editor/update-draft :name :event/target.value]]}}]]
+        [:div.te-section
+         [:div.se-tunes-header
+          [:div.te-label "TUNES"]
+          [:div.se-tunes-count (str (count tune-ids))]]
+         [:div.se-tune-list
+          (map-indexed (fn [i tid]
+                         (when-let [t (state/tune-by-id state tid)]
+                           (se-tune-row state i t)))
+                       tune-ids)]
+         (if picking?
+           (se-picker state tune-ids)
+           [:button.se-add-tune {:on {:click [[:set-editor/start-pick]]}}
+            [:span.se-add-tune-icon "+"]
+            [:span "Add tune"]])]]])))
+
 (defn app [state]
   [:div.app-layout
    {:class (cond-> []
@@ -1069,4 +1148,5 @@
    (confirm-modal state)
    (mobile-tune-action-sheet state)
    (mobile-tune-editor state)
+   (set-editor state)
    (onboarding-coachmark state)])

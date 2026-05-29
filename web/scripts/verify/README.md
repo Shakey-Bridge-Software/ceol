@@ -126,5 +126,9 @@ scripts/
 - `b1` — Mobile tune-details editor — passes (commit `150b0e4`).
 - `item1` — Tune action sheet + B4 duplicate — passes (commit `6aff231`).
 - `b2` — Generic confirm modal (set-delete + import) — passes.
+- `item3` — mobile new/edit set editor (draft slot, add/remove/reorder, save,
+  edit-seed, cancel) + synthetic-touch grip drag-to-reorder — passes. The drag
+  *pixel* behaviour on real iOS still needs a device pass; the gesture wiring
+  and reorder action are covered headless.
 
 Add a row when you ship a new B-item with a scenario.

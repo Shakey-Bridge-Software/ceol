@@ -75,6 +75,7 @@ question was deliberately settled — do not "fix" these to match the mockups.
 - **Inline notation editing kept** — the full-screen ABC notation editor (`design.pen` frame `rT1yT`) is rejected. The app keeps the inline `.editor-panel` textarea so edits drive live sheet-music re-renders in place; a separate editor would break that.
 - **Full-swipe-left → delete-confirm modal** — a left swipe past the 140px threshold opens the styled delete-confirm modal directly. The design's intermediate "Release to delete" reveal (`qkOww`) is not implemented; the confirm-modal flow is the chosen gesture.
 - **Sidebar `gap` = 20** — `design.pen` frames disagree (`d1p1` says 24; `d3p2`/`d4p1`/`d5p1` say 20). The app's 20 matches the majority; the `d1p1` frame's 24 is the design-side bug.
+- **Set editor is mobile-only** — the full-screen new/edit set editor (`he1dM`, `:set-editor` slot) clones the mobile-gated `.te-overlay`, so it renders only ≤720px. Desktop deliberately keeps the inline `.set-creation` sidebar wizard (`:creating-set?`). The two set-creation surfaces coexist by design; don't "unify" them onto the overlay without making it responsive first.
 - **`.tune-name` default colour `#D4D2CC`** — settled value for the base/unselected tune-row name (active `#F5F4F0`, learned `#A8A8A8`). The earlier `#aaa` was a bug.
 
 ## Data files
@@ -128,7 +129,7 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 ./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test)"
 ```
 
-68 tests, 5207 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor / duplicate.
+76 tests, 5247 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor / duplicate / set-editor.
 
 ### Browser end-to-end verification
 
@@ -196,7 +197,8 @@ ceol/
         tune.cljs            — tune CRUD + mobile tune-editor wrappers
         tune_editor.cljc     — pure helpers behind mobile tune-editor
         editor.cljs          — ABC editor + inline-field actions
-        set.cljs             — set actions
+        set.cljs             — set actions + mobile set-editor wrappers
+        set_editor.cljc      — pure helpers behind mobile set editor
         playback.cljs        — play/stop orchestration
         session.cljs         — practice-session actions
     scripts/
@@ -217,6 +219,7 @@ ceol/
         session_test.cljc    — session logic tests
         actions_test.cljc    — action dispatch tests
         tune_editor_test.cljc — mobile tune-editor draft helpers
+        set_editor_test.cljc  — mobile set-editor draft + reorder helpers
         generative_test.cljc — generative/property tests
         backup_test.cljs     — backup export/import tests
         runner.cljs          — CLJS test runner

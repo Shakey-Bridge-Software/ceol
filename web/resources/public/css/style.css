@@ -22,3 +22,4 @@
 @import url('modules/tune-editor.css');  /* mobile full-screen tune-details editor */
 @import url('modules/action-sheet.css'); /* mobile bottom action sheet (tune row ⋮) */
 @import url('modules/mobile.css');       /* mobile shell, modals, swipe, all @media blocks */
+@import url('modules/set-editor.css');   /* mobile full-screen set editor (Item #3) */

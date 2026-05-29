@@ -1,0 +1,204 @@
+/* ===========================================================================
+   Mobile full-screen set editor — Item #3, design.pen frame he1dM.
+   Reuses the .te-* overlay shell (tune-editor.css): .te-overlay/.te-top/
+   .te-body/.te-section/.te-label/.te-input + the desktop-hide @media. This
+   module adds the set-specific .se-* rows, the add-tune picker, the Save
+   disabled state, and the viewport-gated "+ New Set" buttons. Imported last
+   so its visibility rules win source-order ties over sets/mobile modules.
+   --------------------------------------------------------------------------- */
+
+/* Save pill is disabled until the draft has a name + ≥1 tune. */
+.te-save.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* TUNES section header — label left, live count right (he1dM stTunesSec). */
+.se-tunes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.se-tunes-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fg-secondary);
+}
+
+.se-tune-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Draggable tune row — grip · title/meta · remove (he1dM stT1). */
+.se-tune-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--dark-hover);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.se-grip {
+  flex: 0 0 auto;
+  color: var(--fg-secondary);
+  font-size: 14px;
+  cursor: grab;
+  touch-action: none; /* let the drag handler own vertical movement */
+  user-select: none;
+}
+.se-tune-row.se-dragging {
+  opacity: 0.9;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.se-tune-info {
+  flex: 1;
+  min-width: 0; /* enables ellipsis truncation */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.se-tune-name {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--fg-inverse);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.se-tune-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.se-tune-remove {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  color: var(--fg-secondary);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+}
+.se-tune-remove:active { color: #D9534F; }
+
+/* Dashed "Add tune" button (he1dM stAddBtn). */
+.se-add-tune {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: 1px dashed #3A3A3A;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.se-add-tune:active { border-color: var(--accent); color: var(--accent); }
+.se-add-tune-icon { font-size: 14px; }
+
+/* Inline tune picker — revealed by the Add tune button. */
+.se-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.se-picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.se-picker-input {
+  flex: 1;
+  background: var(--dark-hover);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--fg-inverse);
+  outline: none;
+}
+.se-picker-input::placeholder { color: #555; }
+.se-picker-input:focus { outline: 1px solid var(--accent); }
+.se-picker-done {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.se-picker-results {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.se-picker-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #1F1F1F;
+  cursor: pointer;
+}
+.se-picker-item:active { background: var(--dark-hover); }
+.se-picker-name {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--fg-inverse);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.se-picker-type {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fg-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Viewport-gated "+ New Set" buttons. Desktop keeps the inline-wizard button
+   (.add-set-btn → :set/start-create); mobile shows .add-set-btn--mobile →
+   :set-editor/open-new. Both render; CSS picks one per viewport.
+   --------------------------------------------------------------------------- */
+.add-set-btn--mobile { display: none; }
+
+@media (max-width: 720px) {
+  .sets-content > .add-set-btn { display: none; }
+  .add-set-btn--mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 8px 0;
+    padding: 14px 12px;
+    background: transparent;
+    border: 1px solid #3A3A3A;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--fg-muted);
+    cursor: pointer;
+  }
+  .add-set-btn--mobile:active { border-color: var(--accent); color: var(--accent); }
+}
