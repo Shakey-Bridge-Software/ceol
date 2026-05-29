@@ -290,7 +290,11 @@
     :session/play-current (session/session-play-current!)
     :session/stop
     (do (playback/stop!)
-        (swap! state/app-state assoc :session-mode? false :session-pausing? false))
+        ;; Clear :session-result too — a manual stop shows no summary, and this
+        ;; makes that contract self-contained rather than relying on the
+        ;; start-always-clears invariant.
+        (swap! state/app-state assoc :session-mode? false :session-pausing? false
+               :session-result nil))
 
     ;; Item #5 — dismiss the session-complete summary ("Done").
     :session/dismiss-summary

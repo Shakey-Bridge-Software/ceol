@@ -78,6 +78,34 @@ await dispatch(kwExpr("session", "stop"));
 await sleep(150);
 await shot(`${OUT}/02-after-again.png`);
 
+// 4) A manual End Session clears any stale summary (self-contained contract).
+await setResult(3, 200000);
+await sleep(120);
+assert((await present(".session-complete")) === true, "summary shown before stop");
+await dispatch(kwExpr("session", "stop"));
+await sleep(150);
+assert(JSON.parse(await evalJs(getInExpr(["session-result"]))) == null,
+       ":session/stop clears :session-result");
+assert((await present(".session-complete")) === false, "no stale summary after End Session");
+
+// 5) Practice again with an EMPTY queue (all tunes unlearned) is not a dead-end:
+//    it clears the stale summary and drops back to the pre-session screen.
+for (const id of [1, 3, 7]) {
+  await dispatch(kwExpr("learned", "toggle"), vecExpr([id])); // unlearn
+}
+await sleep(120);
+await setResult(1, 30000);
+await sleep(120);
+assert((await present(".session-complete")) === true, "summary shown with empty library");
+assert((await click(".session-complete-again")) === true, "Practice again clickable");
+await sleep(200);
+assert(JSON.parse(await evalJs(getInExpr(["session-result"]))) == null,
+       "empty-queue Practice again clears the stale summary (no dead-end)");
+assert(JSON.parse(await evalJs(getInExpr(["session-mode?"]))) === false,
+       "empty queue does not enter session mode");
+assert((await present(".session-empty, .session-content")) === true,
+       "falls back to the pre-session screen");
+
 shutdown();
 process.exit(0);
 

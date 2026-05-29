@@ -92,15 +92,17 @@
                                  2000))))
 
                           :done
-                          (do (swap! state/app-state assoc
-                                     :playing?       false
-                                     :session-mode?  false
-                                     :session-played (conj (:session-played s) (:session-index s))
-                                     ;; Item #5 — stow the completion summary.
-                                     :session-result (ss/result
-                                                      (:session-queue s)
-                                                      (- (js/Date.now) (or (:session-started-at s) (js/Date.now)))))
-                              (metro/stop!)))))]
+                          (let [now (js/Date.now)]
+                            (swap! state/app-state assoc
+                                   :playing?       false
+                                   :session-mode?  false
+                                   :session-played (conj (:session-played s) (:session-index s))
+                                   ;; Item #5 — stow the completion summary.
+                                   ;; Elapsed is 0 if the start was never stamped.
+                                   :session-result (ss/result
+                                                    (:session-queue s)
+                                                    (- now (or (:session-started-at s) now))))
+                            (metro/stop!)))))]
     ;; Set playing state and stop metronome if running
     (swap! state/app-state assoc :playing? true :selected-tune-id tune-id)
     (when (metro/running?)
@@ -129,6 +131,10 @@
   (let [s        @state/app-state
         queue    (state/build-session-queue (:learned-tune-ids s) (:sets s))
         shuffled (state/shuffle-queue queue)]
+    ;; Item #5 — clear a prior summary on every restart attempt, even when the
+    ;; queue is now empty (e.g. all tunes unlearned). Otherwise "Practice again"
+    ;; would no-op while the stale summary kept showing — a dead-end.
+    (swap! state/app-state assoc :session-result nil)
     (when (seq shuffled)
       (let [first-item   (first shuffled)
             first-tune-id (case (:type first-item)
@@ -144,9 +150,8 @@
                :session-within-set? false
                :selected-tune-id    first-tune-id
                :tab                 :session
-               ;; Item #5 — start the clock; clear any prior summary.
-               :session-started-at  (js/Date.now)
-               :session-result      nil)
+               ;; Item #5 — start the clock for the duration stat.
+               :session-started-at  (js/Date.now))
         ;; Wait for render before playing — tune must be rendered before abc.js can prime
         (-> (render/wait-for-render!)
             (.then #(session-play-current!)))))))
