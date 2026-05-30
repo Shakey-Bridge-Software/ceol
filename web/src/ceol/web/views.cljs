@@ -491,9 +491,13 @@
   (let [tune (state/selected-tune state)
         abc-str (when tune (state/edited-abc-for-tune state (:id tune)))]
     [:div.sheet-area
+     ;; abc.js imperatively injects an <svg> + inline style into #sheet-music.
+     ;; Distinct :replicant/keys stop Replicant from reusing that managed node
+     ;; for the empty-state branch — otherwise the foreign SVG lingers inside
+     ;; the morphed div (see verify/newtune-render).
      (if (and tune abc-str)
-       [:div#sheet-music]
-       [:div.sheet-empty
+       [:div#sheet-music {:replicant/key :sheet-music}]
+       [:div.sheet-empty {:replicant/key :sheet-empty}
         (if tune
           "Select tune and open editor to add ABC notation"
           "Select a tune to view sheet music")])]))

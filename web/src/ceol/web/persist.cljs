@@ -64,7 +64,10 @@
     (-> (js/fetch "/data/default-abc-edits.edn")
         (.then #(.text %))
         (.then (fn [text]
-                 (let [defaults (reader/read-string text)
+                 ;; Validate the bundled defaults too (not just the localStorage
+                 ;; copy): next-tune-id does (apply max (keys :abc-edits)), so a
+                 ;; malformed non-int key here would throw and brick tune creation.
+                 (let [defaults (or (read-validated "default-abc-edits.edn" text AbcEdits) {})
                        merged   (merge defaults local-edits)]
                    (swap! state/app-state assoc :abc-edits merged))))
         (.catch (fn [e]

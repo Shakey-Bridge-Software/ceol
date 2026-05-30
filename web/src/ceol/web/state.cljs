@@ -45,11 +45,14 @@
 ;; App state shape
 ;;
 ;; Tune data
-;;   :tunes            {id → tune-map}   all tunes, base catalog merged with custom
-;;   :tune-order       [id ...]          display order (catalog order + custom appended)
-;;   :custom-tunes     {id → tune-map}   user-added/edited tunes, persisted to localStorage
-;;   :abc-data         {id → abc-body}   raw ABC bodies loaded from local-abc.edn
+;;   :tunes            {id → tune-map}   all tunes: catalog + user-added, all deletable
+;;   :tune-order       [id ...]          display order
+;;   :abc-data         {id → abc-body}   raw ABC bodies loaded from local-abc.edn (catalog range)
 ;;   :abc-edits        {id → abc-body}   user-edited ABC (with chords), persisted to localStorage
+;;     NB: :abc-edits/:tune-notes/:learned-tune-ids key by tune ID independently of
+;;     :tunes, so a deleted tune's entry can outlive it there (e.g. via a merged
+;;     backup import) — next-tune-id must clear all of them, not just :tunes, or a
+;;     new tune inherits a leftover ABC edit, note, or learned flag.
 ;;
 ;; Selection & UI
 ;;   :selected-tune-id  id | nil
@@ -241,7 +244,9 @@
   tune's entry can outlive it there (e.g. via a merged backup import) — so
   we also reserve space above every one of those keyspaces. Reusing an id
   that still has another map's data attached would silently hand a new tune
-  a stranger's ABC edit, note, or learned flag."
+  a stranger's ABC edit, note, or learned flag. (:abc-data isn't included —
+  it's read-only, fetched once from the bundled catalog, so its keys never
+  exceed the catalog floor already covered above.)"
   [state]
   (let [known-ids (concat (keys (:tunes state))
                          (keys (:abc-edits state))

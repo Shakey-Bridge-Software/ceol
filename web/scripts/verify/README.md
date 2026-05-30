@@ -161,4 +161,16 @@ scripts/
   index and the previous NEXT becomes NOW (next-ref invariant); Pause toggles
   `:session-paused?` and swaps the button icon.
 
+- `newtune-render` — new tune must not inherit a catalog tune's sheet music —
+  passes. Selects a seed tune (abc.js renders an SVG), creates a brand-new
+  ABC-less tune, and asserts the new id clears the catalog keyspace (57, not the
+  colliding 8), the empty-state shows, no stale SVG lingers in `.sheet-area`, and
+  re-selecting a tune-with-ABC re-mounts `#sheet-music` with one fresh SVG. Guards
+  both the `next-tune-id` keyspace-collision fix and the `:replicant/key` node-reuse fix.
+- `newtune-orphan` — a re-used tune id must not inherit a deleted tune's note or
+  learned flag — passes. Creates a tune, attaches a note + marks it learned,
+  deletes it (asserts both keyspaces scrubbed), then creates another tune and
+  asserts the re-used id (57) carries no orphan note or learned flag. Guards the
+  `delete!` scrub + the `next-tune-id` notes/learned keyspace union.
+
 Add a row when you ship a new B-item with a scenario.
