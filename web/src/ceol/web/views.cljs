@@ -4,6 +4,7 @@
    r/set-dispatch! — components emit action vectors, never call functions."
   (:require [ceol.web.state :as state]
             [ceol.abc :as abc]
+            [ceol.tunes :as tunes]
             [clojure.string :as str]))
 
 (def tune-type-labels
@@ -51,36 +52,46 @@
    (get tune-type-labels type-key)])
 
 (defn tune-context-menu [tune-id]
-  [:div.tune-context-menu {:on {:click [[:event/stop]]}}
-   [:button.cm-item {:on {:click [[:menu/close] [:learned/toggle tune-id]]}}
-    [:span.cm-icon "○"] "Mark as Learned"]
-   [:div.cm-divider]
-   [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:tune/add-to-set tune-id]]}}
-    [:span.cm-icon "≡"] "Add to Set…"]
-   [:div.cm-divider]
-   [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:playback/play]]}}
-    [:span.cm-icon "▶"] "Play"]
-   [:div.cm-divider]
-   [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}}
-    [:span.cm-icon "✎"] "Edit"]
-   (list [:div.cm-divider]
-         [:button.cm-item.cm-item-danger
-          {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
-          [:span.cm-icon "✕"] "Delete"])])
+  (let [catalog-tune? (contains? (-> tunes/catalog keys set)
+                                 tune-id)]
+    [:div.tune-context-menu {:on {:click [[:event/stop]]}}
+     [:button.cm-item {:on {:click [[:menu/close] [:learned/toggle tune-id]]}}
+      [:span.cm-icon "○"] "Mark as Learned"]
+     [:div.cm-divider]
+     [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:tune/add-to-set tune-id]]}}
+      [:span.cm-icon "≡"] "Add to Set…"]
+     [:div.cm-divider]
+     [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:playback/play]]}}
+      [:span.cm-icon "▶"] "Play"]
+     [:div.cm-divider]
+     [:button.cm-item {:on       {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}
+                       :disabled catalog-tune?}
+      [:span.cm-icon "✎"] (if catalog-tune?
+                            "Cannot edit catalog tune"
+                            "Edit")]
+     (list [:div.cm-divider]
+           [:button.cm-item.cm-item-danger
+            {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
+            [:span.cm-icon "✕"] "Delete"])]))
 
 (defn tune-row [tune state]
   (let [active? (= (:id tune) (:selected-tune-id state))
         learned? (state/learned? state (:id tune))
         menu-open? (= (:context-menu-tune-id state) (:id tune))
-        peek? (= (:swipe-peek-tune-id state) (:id tune))]
+        peek? (= (:swipe-peek-tune-id state) (:id tune))
+        _ (cljs.pprint/pprint (contains? (-> tunes/catalog keys set)
+                                         (:id tune)))
+        catalog-tune? (contains? (-> tunes/catalog keys set)
+                                 (:id tune))]
     [:div.tune-row-wrap {:class (when peek? "peek")}
      [:div.tune-row-learn-hint
       [:span.tune-row-learn-check "✓"]
       [:span.tune-row-learn-label (if learned? "Unlearn" "Learned")]]
      [:div.tune-row-peek-actions
-      [:button.tune-row-peek-edit
-       {:on {:click [[:swipe/clear] [:tune/select (:id tune)] [:editor/open]]}}
-       "Edit"]
+      (when-not catalog-tune?                               ;;Catalog tunes are 'immutable' in the sense that they cannot be changed, only deleted.
+        [:button.tune-row-peek-edit
+         {:on {:click [[:swipe/clear] [:tune/select (:id tune)] [:editor/open]]}}
+         "Edit"])
       [:button.tune-row-peek-delete
        {:on {:click [[:swipe/clear] [:tune/delete (:id tune)]]}}
        "Delete"]]
@@ -325,7 +336,9 @@
           editor-open? (:editor-open? state)
           editing (:editing-field state)
           tune-id (:id tune)
-          session? (:session-mode? state)]
+          session? (:session-mode? state)
+          catalog-tune? (contains? (-> tunes/catalog keys set)
+                                   (:id tune))]
       [:div.tune-header
        [:div.title-block
         ;; Editable title
@@ -373,7 +386,10 @@
              [:button.section-btn {:class (when (nil? section) "active")
                                    :on {:click [[:section/set nil]]}} "All"]])
           [:button.edit-toggle {:class (when editor-open? "active")
-                                :on {:click [[:editor/toggle]]}}
+                                :on {:click [[:editor/toggle]]}
+                                :disabled catalog-tune?
+                                :title (when catalog-tune?
+                                             "Cannot edit catalog tunes")}
            (if editor-open? "✓ Done" "✎ Edit")]
           (let [is-learned? (state/learned? state tune-id)]
             [:button.learned-toggle {:class (when is-learned? "active")
@@ -617,14 +633,17 @@
          [:button.cs-toggle {:class (when (:metronome? state) "active") :on {:click [[:metronome/toggle]]}}
           [:span.cs-toggle-icon "♪"] [:span "Metronome"]]]
         (when tune
-          (let [tune-id (:id tune)]
+          (let [tune-id (:id tune)
+                catalog-tune? (contains? (-> tunes/catalog keys set)
+                                         tune-id)]
             [:div.controls-sheet-grid
-             [:button.cs-toggle {:on {:click [[:controls/close] [:editor/open]]}}
-              [:span.cs-toggle-icon
-               [:svg {:width 22 :height 22 :viewBox "0 0 24 24" :fill "none"
-                      :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
-                [:path {:d "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"}]]]
-              [:span "Edit"]]
+             (when-not catalog-tune?
+               [:button.cs-toggle {:on {:click [[:controls/close] [:editor/open]]}}
+                [:span.cs-toggle-icon
+                  [:svg {:width  22 :height 22 :viewBox "0 0 24 24" :fill "none"
+                        :stroke "currentColor" :stroke-width 2 :stroke-linecap "round" :stroke-linejoin "round"}
+                  [:path {:d "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"}]]]
+                [:span "Edit"]])
              [:button.cs-toggle {:on {:click [[:controls/close] [:tune/add-to-set tune-id]]}}
               [:span.cs-toggle-icon
                [:svg {:width 22 :height 22 :viewBox "0 0 24 24" :fill "none"
@@ -728,11 +747,16 @@
        "Clear all data"]]]]])
 
 (defn tune-main-view [state]
-  (let [editor-open? (and (:editor-open? state) (not (:session-mode? state)))
+  (let [selected-tune (state/selected-tune state)
+        catalog-tune? (contains? (-> tunes/catalog keys set)
+                                 (:id selected-tune))
+        editor-open? (and (:editor-open? state)
+                          (not (:session-mode? state))
+                          (not catalog-tune?))
         session? (:session-mode? state)]
     [:div.tune-main
      (when editor-open? (editing-strip))
-     (tune-header (state/selected-tune state) state)
+     (tune-header selected-tune state)
      [:div.divider]
      (sheet-music state)
      (when editor-open?
