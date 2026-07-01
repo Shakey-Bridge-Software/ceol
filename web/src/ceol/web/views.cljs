@@ -50,7 +50,7 @@
     :on {:click [[:filter/set type-key]]}}
    (get tune-type-labels type-key)])
 
-(defn tune-context-menu [tune-id custom?]
+(defn tune-context-menu [tune-id]
   [:div.tune-context-menu {:on {:click [[:event/stop]]}}
    [:button.cm-item {:on {:click [[:menu/close] [:learned/toggle tune-id]]}}
     [:span.cm-icon "○"] "Mark as Learned"]
@@ -63,18 +63,16 @@
    [:div.cm-divider]
    [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}}
     [:span.cm-icon "✎"] "Edit"]
-   (when custom?
-     (list [:div.cm-divider]
-           [:button.cm-item.cm-item-danger
-            {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
-            [:span.cm-icon "✕"] "Delete"]))])
+   (list [:div.cm-divider]
+         [:button.cm-item.cm-item-danger
+          {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
+          [:span.cm-icon "✕"] "Delete"])])
 
 (defn tune-row [tune state]
   (let [active? (= (:id tune) (:selected-tune-id state))
         learned? (state/learned? state (:id tune))
         menu-open? (= (:context-menu-tune-id state) (:id tune))
-        peek? (= (:swipe-peek-tune-id state) (:id tune))
-        custom? (state/custom-tune? (:id tune))]
+        peek? (= (:swipe-peek-tune-id state) (:id tune))]
     [:div.tune-row-wrap {:class (when peek? "peek")}
      [:div.tune-row-learn-hint
       [:span.tune-row-learn-check "✓"]
@@ -99,7 +97,7 @@
        {:on {:click [[:event/stop] [:menu/open (:id tune)]]}}
        "\u22ee"]]
      (when menu-open?
-       (tune-context-menu (:id tune) custom?))]))
+       (tune-context-menu (:id tune)))]))
 
 ;; --- Sets tab components ---
 
@@ -381,9 +379,8 @@
             [:button.learned-toggle {:class (when is-learned? "active")
                                      :on {:click [[:learned/toggle tune-id]]}}
              (if is-learned? "\u2713 Learned" "Learned")])
-          (when (state/custom-tune? tune-id)
-            [:button.delete-tune {:on {:click [[:tune/delete tune-id]]}}
-             "Delete"])])])))
+          [:button.delete-tune {:on {:click [[:tune/delete tune-id]]}}
+           "Delete"]])])))
 
 (defn sheet-music [state]
   (let [tune (state/selected-tune state)

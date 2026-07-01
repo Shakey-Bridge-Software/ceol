@@ -110,27 +110,33 @@
 
 ;; --- Custom tunes ---
 
-(defn save-custom-tunes!
-  "Save custom tunes to localStorage."
-  []
-  (let [custom (:custom-tunes @state/app-state)]
-    (.setItem js/localStorage "ceol-custom-tunes" (pr-str custom))))
+(defn save-tunes!
+      "Save tunes to localStorage."
+      []
+      (let [tunes (:tunes @state/app-state)]
+           (.setItem js/localStorage "ceol-custom-tunes" (pr-str tunes))))
 
-(def CustomTunes [:map-of :int tunes/Tune])
+(def PersistedTunes [:map-of :int tunes/Tune])
 
-(defn load-custom-tunes!
-  "Load custom tunes from localStorage and merge into state."
-  []
-  (when-let [raw (.getItem js/localStorage "ceol-custom-tunes")]
-    (when-let [custom (read-validated "ceol-custom-tunes" raw CustomTunes)]
-      (swap! state/app-state (fn [s]
-                               (merge s {:custom-tunes custom}
-                                      (state/merge-tunes state/base-tunes custom)))))))
+(defn load-tunes!
+      "Load tunes from localStorage and merge into state."
+      []
+      (let [update-tunes #(swap! state/app-state merge (state/prepare-tunes %))]
+           (if-let [custom (some-> (.getItem js/localStorage "ceol-custom-tunes")
+                                   (#(read-validated "ceol-custom-tunes" % PersistedTunes)))]
+                   (update-tunes custom)
+                   ;If there's nothing in localStorage,
+                   ;we're visiting the app for the first time,
+                   ;or at least with a clean cache.
+                   ;We will instead load the initial tunes catalog
+                   ;to showcase the app and give the user
+                   ;some initial tunes to play along to.
+                   (update-tunes tunes/catalog))))
 
-(defn- tune-by-id-from-base [tune-id]
+#_(defn- tune-by-id-from-base [tune-id]
   (first (filter #(= tune-id (:id %)) state/base-tunes)))
 
-(defn update-tune-field!
+#_(defn update-tune-field!
   "Update a field on a tune and persist."
   [tune-id field value]
   (swap! state/app-state
@@ -141,7 +147,19 @@
                                          {:id tune-id field value})))
                  merged (state/merge-tunes state/base-tunes custom)]
              (merge s {:custom-tunes custom} merged))))
-  (save-custom-tunes!))
+  (save-tunes!))
+
+(defn update-tune-field!
+      "Update a field on a tune and persist."
+      [tune-id field value]
+      (swap! state/app-state
+             (fn [s]
+                 (let [updated (update (:tunes s) tune-id
+                                       #(merge %
+                                               {:id   tune-id
+                                                field value}))]
+                      (merge s (state/prepare-tunes updated)))))
+      (save-tunes!))
 
 ;; --- Tune notes ---
 

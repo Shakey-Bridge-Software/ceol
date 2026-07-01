@@ -17,7 +17,6 @@
                {:id 3 :name "Crowley's Reel"      :type :reel  :time-sig "4/4" :key "D" :mode-name "Ionian"}]]
     {:tunes          (into {} (map (juxt :id identity)) tunes)
      :tune-order     (mapv :id tunes)
-     :custom-tunes   {}
      :abc-data       {}
      :abc-edits      {}
      :selected-tune-id nil

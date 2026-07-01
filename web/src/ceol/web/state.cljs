@@ -31,30 +31,15 @@
            [:name :string]
            [:tune-ids [:vector :int]]]]])
 
-(def base-tunes
-  (mapv #(select-keys % [:id :name :type :time-sig :key :mode-name :session-id])
-        tunes/catalog))
-
-(def ^:private base-tune-ids
-  "Set of IDs from the base catalog. Used for O(1) custom-tune? checks."
-  (set (map :id base-tunes)))
-
-(defn merge-tunes
-  "Merge base catalog with custom tunes (custom overrides by ID).
-   Returns a partial state map {:tunes {id→tune} :tune-order [ids]}
-   suitable for merging directly into app-state."
-  [base custom]
-  (let [updated-base (mapv (fn [t]
-                             (if-let [overrides (get custom (:id t))]
-                               (merge t overrides)
-                               t))
-                           base)
-        new-tunes    (->> (vals custom)
-                          (remove #(some (fn [bt] (= (:id bt) (:id %))) base))
-                          vec)
-        all-tunes    (into updated-base new-tunes)]
-    {:tunes      (into {} (map (juxt :id identity)) all-tunes)
-     :tune-order (mapv :id all-tunes)}))
+(defn prepare-tunes
+      "New tunes. Does not preserve base catalog.
+       Returns a partial state map {:tunes {id→tune} :tune-order [ids]}
+       suitable for merging directly into app-state."
+      [new]
+      (let [new-tunes    (->> (vals new)
+                              vec)]
+           {:tunes      (into {} (map (juxt :id identity)) new-tunes)
+            :tune-order (mapv :id new-tunes)}))
 
 ;; ---------------------------------------------------------------------------
 ;; App state shape
@@ -133,8 +118,7 @@
 
 (defonce app-state
   (atom (merge
-         {:custom-tunes    {}
-          :abc-data        {}
+         {:abc-data        {}
           :abc-edits       {}
           :selected-tune-id nil
           :filter          :all
@@ -180,8 +164,7 @@
           :session-set-index   0
           :session-pausing?    false
           :session-within-set? false
-          :session-played      []}
-         (merge-tunes base-tunes {}))))
+          :session-played      []})))
 
 ;; --- Tune queries ---
 
@@ -208,11 +191,6 @@
   [state tune-id]
   (or (get (:abc-edits state) tune-id)
       (get (:abc-data state) tune-id)))
-
-(defn custom-tune?
-  "Is this tune ID a custom (user-added) tune, not from the base catalog?"
-  [tune-id]
-  (not (contains? base-tune-ids tune-id)))
 
 (defn next-tune-id
   "Generate the next available tune ID."

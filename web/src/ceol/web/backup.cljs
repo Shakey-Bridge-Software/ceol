@@ -14,7 +14,7 @@
    [:data
     [:map {:closed true}
      [:abc-edits        {:optional true} persist/AbcEdits]
-     [:custom-tunes     {:optional true} persist/CustomTunes]
+     [:tunes            {:optional true} persist/PersistedTunes]
      [:sets             {:optional true} persist/SetsByID]
      [:learned-tune-ids {:optional true} persist/LearnedTuneIds]
      [:tune-notes       {:optional true} persist/TuneNotes]]]])
@@ -46,7 +46,7 @@
   [state]
   {:ceol/version 1
    :exported-at  (now-iso)
-   :data         (select-keys state [:abc-edits :custom-tunes
+   :data         (select-keys state [:abc-edits :tunes
                                      :sets :learned-tune-ids
                                      :tune-notes])})
 
@@ -100,20 +100,20 @@
       (js/console.warn "backup: export failed" e)
       (set-status! :error "Backup failed"))))
 
-(defn- merge-custom-tunes [s incoming]
-  (let [merged (merge (:custom-tunes s) incoming)]
-    (merge s {:custom-tunes merged}
-           (state/merge-tunes state/base-tunes merged))))
+(defn- merge-tunes [s incoming]
+       (let [merged (merge (:tunes s) incoming)]
+            (merge s
+                   (state/prepare-tunes merged))))
 
 (defn apply-to-state
   "Pure: fold a validated backup's :data into a state map. abc-edits and
    custom-tunes merge with existing state (incoming wins per key); sets
    and learned-tune-ids replace wholesale because they are collections
    the user manages as a whole."
-  [s {:keys [abc-edits custom-tunes sets learned-tune-ids tune-notes]}]
+  [s {:keys [abc-edits tunes sets learned-tune-ids tune-notes]}]
   (cond-> s
     abc-edits        (update :abc-edits merge abc-edits)
-    custom-tunes     (merge-custom-tunes custom-tunes)
+    tunes            (merge-tunes tunes)
     sets             (assoc :sets sets)
     learned-tune-ids (assoc :learned-tune-ids learned-tune-ids)
     tune-notes       (update :tune-notes merge tune-notes)))
@@ -123,7 +123,7 @@
   [{:keys [data]}]
   (swap! state/app-state apply-to-state data)
   (when (:abc-edits data) (persist/schedule-save!))
-  (when (:custom-tunes data) (persist/save-custom-tunes!))
+  (when (:tunes data) (persist/save-tunes!))
   (when (:sets data) (persist/save-sets!))
   (when (:learned-tune-ids data) (persist/save-learned!))
   (when (:tune-notes data) (persist/schedule-save-notes!)))
