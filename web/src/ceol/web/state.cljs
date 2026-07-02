@@ -195,10 +195,59 @@
 (defn next-tune-id
   "Generate the next available tune ID."
   [state]
-  (let [all-ids (keys (:tunes state))]
-    (if (seq all-ids)
-      (inc (apply max all-ids))
-      1000)))
+      ;;We have 4 situations to account for;
+      ;;
+      ;; A) The user has deleted all tunes.
+      ;; We'll make the id _much_ higher than the highest catalog tune id
+      ;; to leave some breathing space in case we, the developers,
+      ;; want to add more catalog tunes at a later date.
+      ;;
+      ;; B) The user has deleted some catalog tune and not added their own.
+      ;; We'll make the id _much_ higher than the highest catalog tune id
+      ;; to leave some breathing space in case we, the developers,
+      ;; want to add more catalog tunes at a later date.
+      ;;
+      ;; C) The user is adding a new tune for the first time.
+      ;; We will use an id higher than the highest catalog tune id.
+      ;; This should work even if the user has deleted catalog tunes;
+      ;; the ids are immutable.
+      ;; We'll make the id _much_ higher than the highest catalog tune id
+      ;; to leave some breathing space in case we, the developers,
+      ;; want to add more catalog tunes at a later date.
+      ;;
+      ;; D) The user has added new tunes on top of the catalog tunes.
+      ;; We will use the id 1 higher than the highest current id.
+  (let [highest-known-id (some->> (:tunes state) keys (apply max))
+        highest-catalog-id (->> tunes/catalog keys (apply max))]
+    (cond
+      (nil? highest-known-id)
+      ;;A)
+      ;; The user has deleted all tunes.
+      ;; Seed with a high id.
+      1000
+
+      (> highest-catalog-id
+         highest-known-id)
+      ;;B)
+      ;; The user has deleted some catalog tunes,
+      ;; and not added their own.
+      ;; Seed with a high id.
+      1000
+
+      (= highest-known-id
+         highest-catalog-id)
+      ;;C)
+      ;; The user has not added any tunes,
+      ;; or has added tunes and then deleted them.
+      ;; Seed with a high id.
+      1000
+
+      (> highest-known-id
+         highest-catalog-id)
+      ;;D)
+      ;; The user has added tunes.
+      ;; Use an id higher than the highest known id.
+      (inc highest-known-id))))
 
 ;; --- Set queries ---
 
