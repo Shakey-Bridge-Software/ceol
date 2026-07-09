@@ -1,9 +1,9 @@
 (ns ceol.web.handlers.tune
   "Tune CRUD action handlers: select, add, update fields, delete, and
-   add-to-set. Pure dispatch targets — each function takes the [args] vec
-   from the action and performs the state mutation + persistence side
-   effects. inject-chords-if-needed lives here because it is only used by
-   select! when annotating freshly-loaded ABC."
+  add-to-set. Pure dispatch targets — each function takes the [args] vec
+  from the action and performs the state mutation + persistence side
+  effects. inject-chords-if-needed lives here because it is only used by
+  select! when annotating freshly-loaded ABC."
   (:require [ceol.web.state :as state]
             [ceol.web.chords :as chords]
             [ceol.web.persist :as persist]))
@@ -36,18 +36,18 @@
          :mobile-view :detail))
 
 (defn add! [_args]
-      (let [new-id (state/next-tune-id @state/app-state)
-            new-tune {:id new-id :name "Untitled tune" :type :polka :time-sig "2/4"
-                      :key "G" :mode-name "Ionian"}]
-           (swap! state/app-state
-                  #(merge %
-                          (state/prepare-tunes (assoc (:tunes %) new-id new-tune))
-                          {:selected-tune-id new-id
-                           :editing-field    :name
-                           :main-view        :tune
-                           :editor-open?     true
-                           :tab              :tunes}))
-           (persist/save-tunes!)))
+  (let [new-id (state/next-tune-id @state/app-state)
+        new-tune {:id new-id :name "Untitled tune" :type :polka :time-sig "2/4"
+                  :key "G" :mode-name "Ionian"}]
+    (swap! state/app-state
+           #(merge %
+                   (state/prepare-tunes (assoc (:tunes %) new-id new-tune))
+                   {:selected-tune-id new-id
+                    :editing-field    :name
+                    :main-view        :tune
+                    :editor-open?     true
+                    :tab              :tunes}))
+    (persist/save-tunes!)))
 
 (defn update-field! [[tune-id field value]]
   (persist/update-tune-field! tune-id field value)
@@ -59,11 +59,11 @@
   (swap! state/app-state assoc :editing-field nil))
 
 (defn delete! [[tune-id]]
-      (swap! state/app-state
-             #(merge %
-                     (state/prepare-tunes (dissoc (:tunes %) tune-id))
-                     {:selected-tune-id nil}))
-      (persist/save-tunes!))
+  (swap! state/app-state
+         #(merge %
+                 (state/prepare-tunes (dissoc (:tunes %) tune-id))
+                 {:selected-tune-id nil}))
+  (persist/save-tunes!))
 
 (defn add-to-set! [[tune-id]]
   (let [s    @state/app-state

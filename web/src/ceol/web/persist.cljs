@@ -1,11 +1,11 @@
 (ns ceol.web.persist
   "localStorage persistence and remote data loading.
-   All save!/load! functions read/write directly to app-state and localStorage.
-   update-tune-field! is here because it couples state mutation to save.
-   No rendering logic, no audio logic.
-   Loaded data is validated against the schemas in ceol.web.state and
-   ceol.tunes; invalid data is logged and discarded rather than silently
-   corrupting state."
+  All save!/load! functions read/write directly to app-state and localStorage.
+  update-tune-field! is here because it couples state mutation to save.
+  No rendering logic, no audio logic.
+  Loaded data is validated against the schemas in ceol.web.state and
+  ceol.tunes; invalid data is logged and discarded rather than silently
+  corrupting state."
   (:require [ceol.web.state :as state]
             [ceol.tunes :as tunes]
             [cljs.reader :as reader]
@@ -14,22 +14,22 @@
 
 (defn read-validated
   "Parse EDN from raw and validate against schema.
-   On parse failure or schema mismatch, log a console.warn and return nil.
-   Used at the localStorage boundary to prevent corrupt persisted state
-   from silently propagating into the app."
+  On parse failure or schema mismatch, log a console.warn and return nil.
+  Used at the localStorage boundary to prevent corrupt persisted state
+  from silently propagating into the app."
   [storage-key raw schema]
   (let [parsed (try (reader/read-string raw)
                     (catch :default e
                       (js/console.warn
-                       (str "persist: failed to parse EDN for " storage-key) e)
+                        (str "persist: failed to parse EDN for " storage-key) e)
                       nil))]
     (cond
       (nil? parsed) nil
       (m/validate schema parsed) parsed
       :else
       (do (js/console.warn
-           (str "persist: schema mismatch for " storage-key)
-           (clj->js (me/humanize (m/explain schema parsed))))
+            (str "persist: schema mismatch for " storage-key)
+            (clj->js (me/humanize (m/explain schema parsed))))
           nil))))
 
 ;; --- ABC edits ---
@@ -43,12 +43,12 @@
     (js/clearTimeout t))
   (reset! save-timer
           (js/setTimeout
-           (fn []
-             (let [edits (:abc-edits @state/app-state)]
-               (when (seq edits)
-                 (.setItem js/localStorage "ceol-abc-edits"
-                           (pr-str edits)))))
-           1000)))
+            (fn []
+              (let [edits (:abc-edits @state/app-state)]
+                (when (seq edits)
+                  (.setItem js/localStorage "ceol-abc-edits"
+                            (pr-str edits)))))
+            1000)))
 
 (def AbcEdits [:map-of :int :string])
 
@@ -111,55 +111,55 @@
 ;; --- Custom tunes ---
 
 (defn save-tunes!
-      "Save tunes to localStorage."
-      []
-      (let [tunes (:tunes @state/app-state)]
-           (.setItem js/localStorage "ceol-custom-tunes" (pr-str tunes))))
+  "Save tunes to localStorage."
+  []
+  (let [tunes (:tunes @state/app-state)]
+    (.setItem js/localStorage "ceol-custom-tunes" (pr-str tunes))))
 
 (def PersistedTunes [:map-of :int tunes/Tune])
 
 (defn load-tunes!
-      "Load tunes from localStorage and merge into state."
-      []
-      (let [update-tunes #(swap! state/app-state merge (state/prepare-tunes %))]
-           (if-let [custom (some-> (.getItem js/localStorage "ceol-custom-tunes")
-                                   (#(read-validated "ceol-custom-tunes" % PersistedTunes)))]
-                   (update-tunes custom)
-                   ;If there's nothing in localStorage,
-                   ;we're visiting the app for the first time,
-                   ;or at least with a clean cache.
-                   ;We will instead load the initial tunes catalog
-                   ;to showcase the app and give the user
-                   ;some initial tunes to play along to.
-                   (update-tunes tunes/catalog))))
+  "Load tunes from localStorage and merge into state."
+  []
+  (let [update-tunes #(swap! state/app-state merge (state/prepare-tunes %))]
+    (if-let [custom (some-> (.getItem js/localStorage "ceol-custom-tunes")
+                            (#(read-validated "ceol-custom-tunes" % PersistedTunes)))]
+      (update-tunes custom)
+      ;If there's nothing in localStorage,
+      ;we're visiting the app for the first time,
+      ;or at least with a clean cache.
+      ;We will instead load the initial tunes catalog
+      ;to showcase the app and give the user
+      ;some initial tunes to play along to.
+      (update-tunes tunes/catalog))))
 
 #_(defn- tune-by-id-from-base [tune-id]
-  (first (filter #(= tune-id (:id %)) state/base-tunes)))
+    (first (filter #(= tune-id (:id %)) state/base-tunes)))
 
 #_(defn update-tune-field!
+    "Update a field on a tune and persist."
+    [tune-id field value]
+    (swap! state/app-state
+           (fn [s]
+             (let [custom (update (:custom-tunes s) tune-id
+                                  (fn [existing]
+                                    (merge (or existing (tune-by-id-from-base tune-id))
+                                           {:id tune-id field value})))
+                   merged (state/merge-tunes state/base-tunes custom)]
+               (merge s {:custom-tunes custom} merged))))
+    (save-tunes!))
+
+(defn update-tune-field!
   "Update a field on a tune and persist."
   [tune-id field value]
   (swap! state/app-state
          (fn [s]
-           (let [custom (update (:custom-tunes s) tune-id
-                                (fn [existing]
-                                  (merge (or existing (tune-by-id-from-base tune-id))
-                                         {:id tune-id field value})))
-                 merged (state/merge-tunes state/base-tunes custom)]
-             (merge s {:custom-tunes custom} merged))))
+           (let [updated (update (:tunes s) tune-id
+                                 #(merge %
+                                         {:id   tune-id
+                                          field value}))]
+             (merge s (state/prepare-tunes updated)))))
   (save-tunes!))
-
-(defn update-tune-field!
-      "Update a field on a tune and persist."
-      [tune-id field value]
-      (swap! state/app-state
-             (fn [s]
-                 (let [updated (update (:tunes s) tune-id
-                                       #(merge %
-                                               {:id   tune-id
-                                                field value}))]
-                      (merge s (state/prepare-tunes updated)))))
-      (save-tunes!))
 
 ;; --- Tune notes ---
 
@@ -174,10 +174,10 @@
     (js/clearTimeout t))
   (reset! notes-save-timer
           (js/setTimeout
-           (fn []
-             (let [notes (:tune-notes @state/app-state)]
-               (.setItem js/localStorage "ceol-tune-notes" (pr-str notes))))
-           500)))
+            (fn []
+              (let [notes (:tune-notes @state/app-state)]
+                (.setItem js/localStorage "ceol-tune-notes" (pr-str notes))))
+            500)))
 
 (defn load-notes!
   "Load tune notes from localStorage."
@@ -188,8 +188,8 @@
 
 (defn update-tune-notes!
   "Update notes for a tune and schedule a debounced save. Empty strings
-   are stored as-is so the user can clear notes without the row vanishing
-   between keystrokes; load-notes! treats empty strings the same as absent."
+  are stored as-is so the user can clear notes without the row vanishing
+  between keystrokes; load-notes! treats empty strings the same as absent."
   [tune-id text]
   (swap! state/app-state assoc-in [:tune-notes tune-id] text)
   (schedule-save-notes!))

@@ -1,8 +1,8 @@
 (ns ceol.web.state
   "App state atom, query functions, and pure domain logic.
-   The single source of truth for all UI state. Query functions are pure
-   and take the state map as their first argument. Side-effectful mutations
-   live in core.cljs via dispatch-action!."
+  The single source of truth for all UI state. Query functions are pure
+  and take the state map as their first argument. Side-effectful mutations
+  live in core.cljs via dispatch-action!."
   (:require [ceol.tunes :as tunes]
             [clojure.string :as str]))
 
@@ -32,14 +32,14 @@
            [:tune-ids [:vector :int]]]]])
 
 (defn prepare-tunes
-      "New tunes. Does not preserve base catalog.
-       Returns a partial state map {:tunes {id→tune} :tune-order [ids]}
-       suitable for merging directly into app-state."
-      [new]
-      (let [new-tunes    (->> (vals new)
-                              vec)]
-           {:tunes      (into {} (map (juxt :id identity)) new-tunes)
-            :tune-order (mapv :id new-tunes)}))
+  "New tunes. Does not preserve base catalog.
+  Returns a partial state map {:tunes {id→tune} :tune-order [ids]}
+  suitable for merging directly into app-state."
+  [new]
+  (let [new-tunes    (->> (vals new)
+                          vec)]
+    {:tunes      (into {} (map (juxt :id identity)) new-tunes)
+     :tune-order (mapv :id new-tunes)}))
 
 ;; ---------------------------------------------------------------------------
 ;; App state shape
@@ -118,53 +118,53 @@
 
 (defonce app-state
   (atom (merge
-         {:abc-data        {}
-          :abc-edits       {}
-          :selected-tune-id nil
-          :filter          :all
-          :tab             :tunes
-          :editor-open?    false
-          :notes-open?     false
-          :tune-notes      {}
-          ;; Mobile UI
-          :main-view            :tune
-          :mobile-view          :list
-          :controls-sheet-open? false
-          :context-menu-tune-id nil
-          :swipe-peek-tune-id   nil
-          :delete-confirm-tune-id nil
-          :onboarded?           false
-          :guitar?         false
-          :editing-field   nil
-          :playing?        false
-          :playing-section nil
-          :section         nil
-          :loop?           false
-          :tempo-offset    0
-          ;; Sets
-          :sets            {}
-          :active-set-id   nil
-          :set-playing?    false
-          :set-tune-index  0
-          ;; Set creation
-          :creating-set?       false
-          :creating-set-name   nil
-          :creating-set-tunes  []
-          :typeahead-query     ""
-          :typeahead-index     0
-          :adding-to-set       nil
-          :metronome?          false
-          :count-in?           false
-          :current-beat        nil
-          ;; Learned + Session
-          :learned-tune-ids    #{}
-          :session-mode?       false
-          :session-queue       []
-          :session-index       0
-          :session-set-index   0
-          :session-pausing?    false
-          :session-within-set? false
-          :session-played      []})))
+          {:abc-data        {}
+           :abc-edits       {}
+           :selected-tune-id nil
+           :filter          :all
+           :tab             :tunes
+           :editor-open?    false
+           :notes-open?     false
+           :tune-notes      {}
+           ;; Mobile UI
+           :main-view            :tune
+           :mobile-view          :list
+           :controls-sheet-open? false
+           :context-menu-tune-id nil
+           :swipe-peek-tune-id   nil
+           :delete-confirm-tune-id nil
+           :onboarded?           false
+           :guitar?         false
+           :editing-field   nil
+           :playing?        false
+           :playing-section nil
+           :section         nil
+           :loop?           false
+           :tempo-offset    0
+           ;; Sets
+           :sets            {}
+           :active-set-id   nil
+           :set-playing?    false
+           :set-tune-index  0
+           ;; Set creation
+           :creating-set?       false
+           :creating-set-name   nil
+           :creating-set-tunes  []
+           :typeahead-query     ""
+           :typeahead-index     0
+           :adding-to-set       nil
+           :metronome?          false
+           :count-in?           false
+           :current-beat        nil
+           ;; Learned + Session
+           :learned-tune-ids    #{}
+           :session-mode?       false
+           :session-queue       []
+           :session-index       0
+           :session-set-index   0
+           :session-pausing?    false
+           :session-within-set? false
+           :session-played      []})))
 
 ;; --- Tune queries ---
 
@@ -195,59 +195,59 @@
 (defn next-tune-id
   "Generate the next available tune ID."
   [state]
-      ;;We have 4 situations to account for;
-      ;;
-      ;; A) The user has deleted all tunes.
-      ;; We'll make the id _much_ higher than the highest catalog tune id
-      ;; to leave some breathing space in case we, the developers,
-      ;; want to add more catalog tunes at a later date.
-      ;;
-      ;; B) The user has deleted some catalog tune and not added their own.
-      ;; We'll make the id _much_ higher than the highest catalog tune id
-      ;; to leave some breathing space in case we, the developers,
-      ;; want to add more catalog tunes at a later date.
-      ;;
-      ;; C) The user is adding a new tune for the first time.
-      ;; We will use an id higher than the highest catalog tune id.
-      ;; This should work even if the user has deleted catalog tunes;
-      ;; the ids are immutable.
-      ;; We'll make the id _much_ higher than the highest catalog tune id
-      ;; to leave some breathing space in case we, the developers,
-      ;; want to add more catalog tunes at a later date.
-      ;;
-      ;; D) The user has added new tunes on top of the catalog tunes.
-      ;; We will use the id 1 higher than the highest current id.
-  (let [highest-known-id (some->> (:tunes state) keys (apply max))
-        highest-catalog-id (->> tunes/catalog keys (apply max))]
-    (cond
-      (nil? highest-known-id)
-      ;;A)
-      ;; The user has deleted all tunes.
-      ;; Seed with a high id.
-      1000
+  ;;We have 4 situations to account for;
+  ;;
+  ;; A) The user has deleted all tunes.
+;; We'll make the id _much_ higher than the highest catalog tune id
+;; to leave some breathing space in case we, the developers,
+;; want to add more catalog tunes at a later date.
+;;
+;; B) The user has deleted some catalog tune and not added their own.
+;; We'll make the id _much_ higher than the highest catalog tune id
+;; to leave some breathing space in case we, the developers,
+;; want to add more catalog tunes at a later date.
+;;
+;; C) The user is adding a new tune for the first time.
+;; We will use an id higher than the highest catalog tune id.
+;; This should work even if the user has deleted catalog tunes;
+;; the ids are immutable.
+;; We'll make the id _much_ higher than the highest catalog tune id
+;; to leave some breathing space in case we, the developers,
+;; want to add more catalog tunes at a later date.
+;;
+;; D) The user has added new tunes on top of the catalog tunes.
+;; We will use the id 1 higher than the highest current id.
+(let [highest-known-id (some->> (:tunes state) keys (apply max))
+      highest-catalog-id (->> tunes/catalog keys (apply max))]
+  (cond
+    (nil? highest-known-id)
+    ;;A)
+  ;; The user has deleted all tunes.
+  ;; Seed with a high id.
+  1000
 
-      (> highest-catalog-id
-         highest-known-id)
-      ;;B)
-      ;; The user has deleted some catalog tunes,
-      ;; and not added their own.
-      ;; Seed with a high id.
-      1000
+  (> highest-catalog-id
+     highest-known-id)
+  ;;B)
+;; The user has deleted some catalog tunes,
+;; and not added their own.
+;; Seed with a high id.
+1000
 
-      (= highest-known-id
-         highest-catalog-id)
-      ;;C)
-      ;; The user has not added any tunes,
-      ;; or has added tunes and then deleted them.
-      ;; Seed with a high id.
-      1000
+(= highest-known-id
+   highest-catalog-id)
+;;C)
+;; The user has not added any tunes,
+;; or has added tunes and then deleted them.
+;; Seed with a high id.
+1000
 
-      (> highest-known-id
-         highest-catalog-id)
-      ;;D)
-      ;; The user has added tunes.
-      ;; Use an id higher than the highest known id.
-      (inc highest-known-id))))
+(> highest-known-id
+   highest-catalog-id)
+;;D)
+;; The user has added tunes.
+;; Use an id higher than the highest known id.
+(inc highest-known-id))))
 
 ;; --- Set queries ---
 
@@ -287,7 +287,7 @@
 
 (defn advance-set
   "Given current set state, compute the next state after a tune finishes.
-   Returns {:action :play/:stop/:loop, :tune-id <id>, :index <n>} or nil."
+  Returns {:action :play/:stop/:loop, :tune-id <id>, :index <n>} or nil."
   [sets active-set-id set-tune-index loop?]
   (when-let [s (get sets active-set-id)]
     (let [next-idx (inc set-tune-index)
@@ -316,7 +316,7 @@
 
 (defn build-session-queue
   "Build the session queue from learned tunes and sets.
-   Returns unshuffled vector of {:type :tune/:set ...} items."
+  Returns unshuffled vector of {:type :tune/:set ...} items."
   [learned-ids sets]
   (let [complete-sets  (filter (fn [[_ s]]
                                  (and (seq (:tune-ids s))
@@ -334,7 +334,7 @@
 
 (defn advance-session
   "Given session state, compute next action after a tune finishes.
-   Returns {:action :advance-in-set/:next-item/:done/:reshuffle, ...}"
+  Returns {:action :advance-in-set/:next-item/:done/:reshuffle, ...}"
   [queue session-index session-set-index loop?]
   (when (seq queue)
     (let [current (nth queue session-index nil)]
