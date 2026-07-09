@@ -133,22 +133,6 @@
       ;some initial tunes to play along to.
       (update-tunes tunes/catalog))))
 
-#_(defn- tune-by-id-from-base [tune-id]
-    (first (filter #(= tune-id (:id %)) state/base-tunes)))
-
-#_(defn update-tune-field!
-    "Update a field on a tune and persist."
-    [tune-id field value]
-    (swap! state/app-state
-           (fn [s]
-             (let [custom (update (:custom-tunes s) tune-id
-                                  (fn [existing]
-                                    (merge (or existing (tune-by-id-from-base tune-id))
-                                           {:id tune-id field value})))
-                   merged (state/merge-tunes state/base-tunes custom)]
-               (merge s {:custom-tunes custom} merged))))
-    (save-tunes!))
-
 (defn update-tune-field!
   "Update a field on a tune and persist."
   [tune-id field value]
