@@ -171,6 +171,12 @@
 (defn tune-by-id [state id]
   (get (:tunes state) id))
 
+(defn catalog-tune?
+  "Is this tune ID one of the static bundled catalog entries? Catalog
+  tunes are deletable but not editable."
+  [tune-id]
+  (contains? tunes/catalog tune-id))
+
 (defn filtered-tunes [state]
   (let [tunes (:tunes state)
         order (:tune-order state)

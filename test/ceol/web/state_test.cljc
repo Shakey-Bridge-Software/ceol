@@ -1,6 +1,14 @@
 (ns ceol.web.state-test
   (:require [clojure.test :refer [deftest testing is]]
-            [ceol.web.state :as state]))
+            [ceol.web.state :as state]
+            [ceol.tunes :as tunes]))
+
+(deftest catalog-tune-test
+  (testing "an id present in the static catalog is a catalog tune"
+    (is (state/catalog-tune? (first (keys tunes/catalog)))))
+
+  (testing "an id outside the catalog is not"
+    (is (not (state/catalog-tune? 999999)))))
 
 (deftest prepare-tunes-test
   (testing "builds :tunes and :tune-order from the given map"

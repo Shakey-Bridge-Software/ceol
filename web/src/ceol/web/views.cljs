@@ -4,7 +4,6 @@
    r/set-dispatch! — components emit action vectors, never call functions."
   (:require [ceol.web.state :as state]
             [ceol.abc :as abc]
-            [ceol.tunes :as tunes]
             [clojure.string :as str]))
 
 (def tune-type-labels
@@ -52,8 +51,7 @@
    (get tune-type-labels type-key)])
 
 (defn tune-context-menu [tune-id]
-  (let [catalog-tune? (contains? (-> tunes/catalog keys set)
-                                 tune-id)]
+  (let [catalog-tune? (state/catalog-tune? tune-id)]
     [:div.tune-context-menu {:on {:click [[:event/stop]]}}
      [:button.cm-item {:on {:click [[:menu/close] [:learned/toggle tune-id]]}}
       [:span.cm-icon "○"] "Mark as Learned"]
@@ -79,10 +77,7 @@
         learned? (state/learned? state (:id tune))
         menu-open? (= (:context-menu-tune-id state) (:id tune))
         peek? (= (:swipe-peek-tune-id state) (:id tune))
-        _ (cljs.pprint/pprint (contains? (-> tunes/catalog keys set)
-                                         (:id tune)))
-        catalog-tune? (contains? (-> tunes/catalog keys set)
-                                 (:id tune))]
+        catalog-tune? (state/catalog-tune? (:id tune))]
     [:div.tune-row-wrap {:class (when peek? "peek")}
      [:div.tune-row-learn-hint
       [:span.tune-row-learn-check "✓"]
@@ -337,8 +332,7 @@
           editing (:editing-field state)
           tune-id (:id tune)
           session? (:session-mode? state)
-          catalog-tune? (contains? (-> tunes/catalog keys set)
-                                   (:id tune))]
+          catalog-tune? (state/catalog-tune? (:id tune))]
       [:div.tune-header
        [:div.title-block
         ;; Editable title
@@ -634,8 +628,7 @@
           [:span.cs-toggle-icon "♪"] [:span "Metronome"]]]
         (when tune
           (let [tune-id (:id tune)
-                catalog-tune? (contains? (-> tunes/catalog keys set)
-                                         tune-id)]
+                catalog-tune? (state/catalog-tune? tune-id)]
             [:div.controls-sheet-grid
              (when-not catalog-tune?
                [:button.cs-toggle {:on {:click [[:controls/close] [:editor/open]]}}
@@ -748,8 +741,7 @@
 
 (defn tune-main-view [state]
   (let [selected-tune (state/selected-tune state)
-        catalog-tune? (contains? (-> tunes/catalog keys set)
-                                 (:id selected-tune))
+        catalog-tune? (state/catalog-tune? (:id selected-tune))
         editor-open? (and (:editor-open? state)
                           (not (:session-mode? state))
                           (not catalog-tune?))
