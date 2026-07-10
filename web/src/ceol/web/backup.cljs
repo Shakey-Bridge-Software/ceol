@@ -100,20 +100,17 @@
       (js/console.warn "backup: export failed" e)
       (set-status! :error "Backup failed"))))
 
-(defn- merge-tunes [s incoming]
-  (let [merged (merge (:tunes s) incoming)]
-    (merge s
-           (state/prepare-tunes merged))))
-
 (defn apply-to-state
   "Pure: fold a validated backup's :data into a state map. abc-edits and
-  custom-tunes merge with existing state (incoming wins per key); sets
-  and learned-tune-ids replace wholesale because they are collections
-  the user manages as a whole."
+  tune-notes merge with existing state (incoming wins per key); tunes, sets,
+  and learned-tune-ids replace wholesale because they are collections the
+  user manages as a whole — a plain merge could never un-delete a tune (or
+  a set, or a learned flag) the backup no longer has, since merge only adds
+  or overwrites keys present in the incoming map."
   [s {:keys [abc-edits tunes sets learned-tune-ids tune-notes]}]
   (cond-> s
     abc-edits        (update :abc-edits merge abc-edits)
-    tunes            (merge-tunes tunes)
+    tunes            (merge (state/prepare-tunes tunes))
     sets             (assoc :sets sets)
     learned-tune-ids (assoc :learned-tune-ids learned-tune-ids)
     tune-notes       (update :tune-notes merge tune-notes)))
