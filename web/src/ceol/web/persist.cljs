@@ -111,27 +111,40 @@
 ;; --- Custom tunes ---
 
 (defn save-tunes!
-  "Save tunes to localStorage."
+  "Save tunes to localStorage. Also marks tune storage as migrated — any full
+  snapshot written here is authoritative, so a later load-tunes! must never
+  re-merge the base catalog underneath it (that would resurrect a tune the
+  user deleted)."
   []
   (let [tunes (:tunes @state/app-state)]
-    (.setItem js/localStorage "ceol-custom-tunes" (pr-str tunes))))
+    (.setItem js/localStorage "ceol-custom-tunes" (pr-str tunes))
+    (.setItem js/localStorage "ceol-tunes-migrated" "true")))
 
 (def PersistedTunes [:map-of :int tunes/Tune])
 
 (defn load-tunes!
-  "Load tunes from localStorage and merge into state."
+  "Load tunes from localStorage and merge into state.
+  Three cases: (1) no localStorage entry — first run, seed the base catalog.
+  (2) an entry exists but tune storage was never migrated — this is a
+  pre-existing user's sparse, custom-only blob from before catalog tunes
+  became deletable; merge the base catalog underneath it once and re-save
+  the full snapshot so future loads stop merging. (3) already migrated — the
+  stored map is itself a full, authoritative snapshot (save-tunes! always
+  writes one), load it as-is so a deleted catalog tune stays deleted."
   []
-  (let [update-tunes #(swap! state/app-state merge (state/prepare-tunes %))]
-    (if-let [custom (some-> (.getItem js/localStorage "ceol-custom-tunes")
-                            (#(read-validated "ceol-custom-tunes" % PersistedTunes)))]
-      (update-tunes custom)
-      ;If there's nothing in localStorage,
-      ;we're visiting the app for the first time,
-      ;or at least with a clean cache.
-      ;We will instead load the initial tunes catalog
-      ;to showcase the app and give the user
-      ;some initial tunes to play along to.
-      (update-tunes tunes/catalog))))
+  (let [migrated? (some? (.getItem js/localStorage "ceol-tunes-migrated"))
+        custom (some-> (.getItem js/localStorage "ceol-custom-tunes")
+                       (#(read-validated "ceol-custom-tunes" % PersistedTunes)))]
+    (cond
+      (nil? custom)
+      (swap! state/app-state merge (state/prepare-tunes tunes/catalog))
+
+      (not migrated?)
+      (do (swap! state/app-state merge (state/prepare-tunes (merge tunes/catalog custom)))
+          (save-tunes!))
+
+      :else
+      (swap! state/app-state merge (state/prepare-tunes custom)))))
 
 (defn update-tune-field!
   "Update a field on a tune and persist."
