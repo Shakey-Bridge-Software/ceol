@@ -136,11 +136,20 @@
                                (set-status! :error "Could not read file")))
     (.readAsText reader file)))
 
+(defn- migrate-backup-data
+  "Backups exported before catalog/custom-tunes were unified used
+  :custom-tunes as the key inside :data; alias it to :tunes so old backup
+  files still import instead of failing closed-map validation."
+  [backup]
+  (cond-> backup
+    (contains? (:data backup) :custom-tunes)
+    (update :data #(-> % (assoc :tunes (:custom-tunes %)) (dissoc :custom-tunes)))))
+
 (defn import-text!
   "Parse EDN backup text, validate, and apply. Returns true on success,
   false if the file was unparseable or schema-invalid."
   [text]
-  (if-let [backup (persist/read-validated "backup-import" text Backup)]
+  (if-let [backup (persist/read-validated "backup-import" text Backup migrate-backup-data)]
     (do (apply-backup! backup) true)
     false))
 

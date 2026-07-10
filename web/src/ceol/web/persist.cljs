@@ -15,22 +15,25 @@
 (defn read-validated
   "Parse EDN from raw and validate against schema.
   On parse failure or schema mismatch, log a console.warn and return nil.
-  Used at the localStorage boundary to prevent corrupt persisted state
-  from silently propagating into the app."
-  [storage-key raw schema]
-  (let [parsed (try (reader/read-string raw)
-                    (catch :default e
-                      (js/console.warn
-                        (str "persist: failed to parse EDN for " storage-key) e)
-                      nil))]
-    (cond
-      (nil? parsed) nil
-      (m/validate schema parsed) parsed
-      :else
-      (do (js/console.warn
-            (str "persist: schema mismatch for " storage-key)
-            (clj->js (me/humanize (m/explain schema parsed))))
-          nil))))
+  Used at the localStorage/import boundary to prevent corrupt persisted
+  state from silently propagating into the app. An optional migrate-fn is
+  applied to the parsed value before validation, so older-shaped data can
+  be normalized to the current schema instead of failing closed."
+  ([storage-key raw schema] (read-validated storage-key raw schema identity))
+  ([storage-key raw schema migrate-fn]
+   (let [parsed (try (-> (reader/read-string raw) migrate-fn)
+                     (catch :default e
+                       (js/console.warn
+                         (str "persist: failed to parse EDN for " storage-key) e)
+                       nil))]
+     (cond
+       (nil? parsed) nil
+       (m/validate schema parsed) parsed
+       :else
+       (do (js/console.warn
+             (str "persist: schema mismatch for " storage-key)
+             (clj->js (me/humanize (m/explain schema parsed))))
+           nil)))))
 
 ;; --- ABC edits ---
 
