@@ -192,62 +192,30 @@
   (or (get (:abc-edits state) tune-id)
       (get (:abc-data state) tune-id)))
 
+(def ^:private highest-catalog-tune-id
+  "tunes/catalog is a compile-time constant; compute its max id once."
+  (->> tunes/catalog keys (apply max)))
+
 (defn next-tune-id
-  "Generate the next available tune ID."
+  "Generate a tune ID unused by every map keyed on tune ID.
+  Two invariants combine here: since catalog tunes are deletable, allocating
+  strictly off the current max known id can drop back to (or below) the
+  catalog's own id range once a high-numbered tune is removed — so we always
+  reserve space above the catalog's highest id. And :abc-edits/:tune-notes/
+  :learned-tune-ids key by tune ID independently of :tunes, so a deleted
+  tune's entry can outlive it there (e.g. via a merged backup import) — so
+  we also reserve space above every one of those keyspaces. Reusing an id
+  that still has another map's data attached would silently hand a new tune
+  a stranger's ABC edit, note, or learned flag."
   [state]
-  ;;We have 4 situations to account for;
-  ;;
-  ;; A) The user has deleted all tunes.
-;; We'll make the id _much_ higher than the highest catalog tune id
-;; to leave some breathing space in case we, the developers,
-;; want to add more catalog tunes at a later date.
-;;
-;; B) The user has deleted some catalog tune and not added their own.
-;; We'll make the id _much_ higher than the highest catalog tune id
-;; to leave some breathing space in case we, the developers,
-;; want to add more catalog tunes at a later date.
-;;
-;; C) The user is adding a new tune for the first time.
-;; We will use an id higher than the highest catalog tune id.
-;; This should work even if the user has deleted catalog tunes;
-;; the ids are immutable.
-;; We'll make the id _much_ higher than the highest catalog tune id
-;; to leave some breathing space in case we, the developers,
-;; want to add more catalog tunes at a later date.
-;;
-;; D) The user has added new tunes on top of the catalog tunes.
-;; We will use the id 1 higher than the highest current id.
-(let [highest-known-id (some->> (:tunes state) keys (apply max))
-      highest-catalog-id (->> tunes/catalog keys (apply max))]
-  (cond
-    (nil? highest-known-id)
-    ;;A)
-  ;; The user has deleted all tunes.
-  ;; Seed with a high id.
-  1000
-
-  (> highest-catalog-id
-     highest-known-id)
-  ;;B)
-;; The user has deleted some catalog tunes,
-;; and not added their own.
-;; Seed with a high id.
-1000
-
-(= highest-known-id
-   highest-catalog-id)
-;;C)
-;; The user has not added any tunes,
-;; or has added tunes and then deleted them.
-;; Seed with a high id.
-1000
-
-(> highest-known-id
-   highest-catalog-id)
-;;D)
-;; The user has added tunes.
-;; Use an id higher than the highest known id.
-(inc highest-known-id))))
+  (let [known-ids (concat (keys (:tunes state))
+                         (keys (:abc-edits state))
+                         (keys (:tune-notes state))
+                         (:learned-tune-ids state))
+        highest-known-id (when (seq known-ids) (apply max known-ids))]
+    (if (or (nil? highest-known-id) (<= highest-known-id highest-catalog-tune-id))
+      1000
+      (inc highest-known-id))))
 
 ;; --- Set queries ---
 

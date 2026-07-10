@@ -59,11 +59,21 @@
   (swap! state/app-state assoc :editing-field nil))
 
 (defn delete! [[tune-id]]
+  ;; Scrub every per-tune keyspace, not just :tunes. :abc-edits, :tune-notes
+  ;; and :learned-tune-ids key by tune ID independently — leaving them
+  ;; orphaned both leaks the deleted tune's data and lets next-tune-id
+  ;; re-allocate the id with a stranger's note/learned flag attached.
   (swap! state/app-state
-         #(merge %
-                 (state/prepare-tunes (dissoc (:tunes %) tune-id))
-                 {:selected-tune-id nil}))
-  (persist/save-tunes!))
+         #(-> (merge %
+                     (state/prepare-tunes (dissoc (:tunes %) tune-id))
+                     {:selected-tune-id nil})
+              (update :abc-edits dissoc tune-id)
+              (update :tune-notes dissoc tune-id)
+              (update :learned-tune-ids disj tune-id)))
+  (persist/save-tunes!)
+  (persist/schedule-save!)
+  (persist/schedule-save-notes!)
+  (persist/save-learned!))
 
 (defn add-to-set! [[tune-id]]
   (let [s    @state/app-state
