@@ -113,41 +113,38 @@
 
 ;; --- Custom tunes ---
 
+(def ^:private tunes-key "ceol-tunes")
+(def ^:private legacy-tunes-key "ceol-custom-tunes")
+
 (defn save-tunes!
-  "Save tunes to localStorage. Also marks tune storage as migrated — any full
-  snapshot written here is authoritative, so a later load-tunes! must never
-  re-merge the base catalog underneath it (that would resurrect a tune the
-  user deleted)."
+  "Save tunes to localStorage under tunes-key. Any snapshot written here is
+  authoritative — a later load-tunes! must never re-merge the base catalog
+  underneath it (that would resurrect a tune the user deleted)."
   []
-  (let [tunes (:tunes @state/app-state)]
-    (.setItem js/localStorage "ceol-custom-tunes" (pr-str tunes))
-    (.setItem js/localStorage "ceol-tunes-migrated" "true")))
+  (.setItem js/localStorage tunes-key (pr-str (:tunes @state/app-state))))
 
 (def PersistedTunes [:map-of :int tunes/Tune])
 
 (defn load-tunes!
   "Load tunes from localStorage and merge into state.
-  Three cases: (1) no localStorage entry — first run, seed the base catalog.
-  (2) an entry exists but tune storage was never migrated — this is a
-  pre-existing user's sparse, custom-only blob from before catalog tunes
-  became deletable; merge the base catalog underneath it once and re-save
-  the full snapshot so future loads stop merging. (3) already migrated — the
-  stored map is itself a full, authoritative snapshot (save-tunes! always
-  writes one), load it as-is so a deleted catalog tune stays deleted."
+  tunes-key holds an authoritative full snapshot (save-tunes! always writes
+  one) — load it as-is, so a deleted catalog tune stays deleted. Its
+  presence/absence is itself the migration marker, no separate flag needed.
+  legacy-tunes-key is the pre-unification key: a sparse, custom-only blob.
+  If only that exists, this is a user upgrading across the catalog-tunes-
+  deletable change — merge the base catalog underneath it once, save the
+  result under tunes-key, and drop the legacy key. Neither key present =
+  first run, seed the base catalog."
   []
-  (let [migrated? (some? (.getItem js/localStorage "ceol-tunes-migrated"))
-        custom (some-> (.getItem js/localStorage "ceol-custom-tunes")
-                       (#(read-validated "ceol-custom-tunes" % PersistedTunes)))]
-    (cond
-      (nil? custom)
-      (swap! state/app-state merge (state/prepare-tunes tunes/catalog))
-
-      (not migrated?)
-      (do (swap! state/app-state merge (state/prepare-tunes (merge tunes/catalog custom)))
-          (save-tunes!))
-
-      :else
-      (swap! state/app-state merge (state/prepare-tunes custom)))))
+  (if-let [tunes (some-> (.getItem js/localStorage tunes-key)
+                         (#(read-validated tunes-key % PersistedTunes)))]
+    (swap! state/app-state merge (state/prepare-tunes tunes))
+    (if-let [legacy (some-> (.getItem js/localStorage legacy-tunes-key)
+                            (#(read-validated legacy-tunes-key % PersistedTunes)))]
+      (do (swap! state/app-state merge (state/prepare-tunes (merge tunes/catalog legacy)))
+          (save-tunes!)
+          (.removeItem js/localStorage legacy-tunes-key))
+      (swap! state/app-state merge (state/prepare-tunes tunes/catalog)))))
 
 (defn update-tune-field!
   "Update a field on a tune and persist."
