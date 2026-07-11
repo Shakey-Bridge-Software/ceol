@@ -1,0 +1,86 @@
+/* Tune list */
+.tune-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tune-row-wrap { position: relative; }
+.tune-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 4px;
+  gap: 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  font-family: var(--font-heading);
+}
+.tune-row:hover { background: var(--dark-hover); }
+.tune-row:hover .tune-row-menu-btn { opacity: 1; }
+.tune-row.active { background: var(--dark-hover); border-left-color: var(--accent); }
+.tune-row.learned { border-left-color: #3B6B4F; }
+.tune-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tune-name {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: #D4D2CC;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tune-row.active .tune-name { color: var(--fg-inverse); font-weight: 500; }
+.tune-row.learned .tune-name { color: #A8A8A8; }
+.tune-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-secondary); text-transform: capitalize; }
+.tune-row.active .tune-meta { color: var(--fg-muted); }
+.tune-row-menu-btn {
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.tune-row-menu-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.tune-row.active .tune-row-menu-btn { opacity: 0.7; }
+
+.tune-context-menu {
+  position: absolute;
+  right: 8px;
+  top: 100%;
+  margin-top: 4px;
+  z-index: 20;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--dark-hover);
+  border: 1px solid var(--border-dark);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #EEEEEE;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.cm-item:hover { background: rgba(255,255,255,0.06); }
+.cm-icon { width: 14px; display: inline-flex; justify-content: center; color: #AAAAAA; }
+.cm-item-danger { color: #D9534F; }
+.cm-item-danger .cm-icon { color: #D9534F; }
+.cm-divider { height: 1px; background: #3A3A3A; margin: 0 4px; }

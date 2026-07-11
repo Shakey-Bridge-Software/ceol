@@ -1,12 +1,13 @@
 (ns ceol.web.handlers.tune
-  "Tune CRUD action handlers: select, add, update fields, delete, and
-  add-to-set. Pure dispatch targets — each function takes the [args] vec
-  from the action and performs the state mutation + persistence side
-  effects. inject-chords-if-needed lives here because it is only used by
-  select! when annotating freshly-loaded ABC."
+  "Tune CRUD + mobile tune-details editor action handlers. Each fn takes the
+  [args] vec from dispatch-action! and performs state mutation + persistence
+  side effects. Pure helpers behind the mobile editor live in
+  ceol.web.handlers.tune-editor. inject-chords-if-needed sits here because
+  it is only used by select! when annotating freshly-loaded ABC."
   (:require [ceol.web.state :as state]
             [ceol.web.chords :as chords]
-            [ceol.web.persist :as persist]))
+            [ceol.web.persist :as persist]
+            [ceol.web.handlers.tune-editor :as ed]))
 
 (defn- inject-chords-if-needed
   "If the ABC body has no chord annotations, suggest and inject them."
@@ -75,6 +76,35 @@
   (persist/schedule-save-notes!)
   (persist/save-learned!))
 
+
+(defn duplicate! [[tune-id]]
+  ;; Clone any tune (catalog or user-added) into a fresh tune with " (copy)"
+  ;; suffix. Carries the ABC body across (from :abc-edits, falling back to
+  ;; :abc-data) so the duplicate immediately renders. Selects the new tune.
+  (let [s        @state/app-state
+        src      (state/tune-by-id s tune-id)]
+    (when src
+      (let [new-id    (state/next-tune-id s)
+            all-names (mapv :name (vals (:tunes s)))
+            new-name  (ed/unique-copy-name (:name src) all-names)
+            new-tune  (-> src
+                          (assoc :id new-id :name new-name)
+                          ;; Drop session-id — a copy is no longer the canonical
+                          ;; thesession.org reference.
+                          (dissoc :session-id))
+            src-abc   (state/edited-abc-for-tune s tune-id)]
+        (swap! state/app-state
+               (fn [s]
+                 (cond-> (merge s
+                                (state/prepare-tunes (assoc (:tunes s) new-id new-tune))
+                                {:selected-tune-id new-id
+                                 :main-view :tune
+                                 :mobile-view :detail
+                                 :context-menu-tune-id nil})
+                   src-abc (assoc-in [:abc-edits new-id] src-abc))))
+        (persist/save-tunes!)
+        (when src-abc (persist/schedule-save!))))))
+
 (defn add-to-set! [[tune-id]]
   (let [s    @state/app-state
         sets (:sets s)]
@@ -96,3 +126,52 @@
 
       :else
       (js/console.warn "Multiple sets — select one first"))))
+
+;; --- Mobile tune-details editor ---------------------------------------------
+;; The desktop tune-header has click-to-cycle fields for name/type/key/etc, but
+;; the mobile layout hides it. These handlers drive a mobile-only full-screen
+;; editor with draft semantics (Cancel discards, Save commits). Pure helpers
+;; live in ceol.web.handlers.tune-editor (`ed/`); side effects stay here.
+
+(defn editor-open-new! [_args]
+  (swap! state/app-state assoc
+         :tune-editor {:mode :new :tune-id nil :draft ed/blank-draft}
+         :context-menu-tune-id nil))
+
+(defn editor-open-edit! [[tune-id]]
+  (let [tune (state/tune-by-id @state/app-state tune-id)]
+    (when tune
+      (swap! state/app-state assoc
+             :tune-editor {:mode :edit :tune-id tune-id :draft (ed/tune->draft tune)}
+             :context-menu-tune-id nil))))
+
+(defn editor-cancel! [_args]
+  (swap! state/app-state assoc :tune-editor nil))
+
+(defn editor-update-draft! [[field value]]
+  (swap! state/app-state assoc-in [:tune-editor :draft field] value))
+
+(defn- save-new! [draft]
+  (let [new-id   (state/next-tune-id @state/app-state)
+        new-tune (ed/draft->new-tune new-id draft)]
+    (swap! state/app-state
+           #(merge %
+                   (state/prepare-tunes (assoc (:tunes %) new-id new-tune))
+                   {:selected-tune-id new-id
+                    :main-view :tune
+                    :mobile-view :detail
+                    :tab :tunes
+                    :tune-editor nil}))
+    (persist/save-tunes!)))
+
+(defn- save-edit! [tune-id draft]
+  (doseq [[field value] (ed/draft->edit-updates draft)]
+    (persist/update-tune-field! tune-id field value))
+  (swap! state/app-state assoc :tune-editor nil :editing-field nil))
+
+(defn editor-save! [_args]
+  (when-let [{:keys [mode tune-id draft]} (:tune-editor @state/app-state)]
+    (case mode
+      :new  (save-new! draft)
+      :edit (save-edit! tune-id draft)
+      nil)))

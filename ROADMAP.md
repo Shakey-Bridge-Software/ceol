@@ -23,7 +23,11 @@
 - [x] Session mode: learned flag (k hotkey), queue building (sets as units when all tunes learned), shuffle, count-in between items, 2s pause, no lookahead, third sidebar tab
 - [x] Session UI: clean read-only main panel (no controls), progress bar, NOW PLAYING, PLAYED history
 - [x] Promise-based render sync: render-abc! synchronous, render-sheet-music! creates promise, wait-for-render! for session advance
-- [x] Tests: 43 tests, 183 assertions (chords, ABC, state, sets, beat engine, session)
+- [x] Tests: 67 tests, 5202 assertions (chords, ABC, state, sets, beat engine, session, actions, backup, mobile tune-editor; most assertions are generative)
+- [x] Delete-tune confirmation dialog (styled modal — covers tune deletion)
+- [x] Responsive mobile/tablet layout (mobile views, top bar, controls sheet, touch gestures)
+- [x] Import/export backup (export all user data as EDN, import + merge)
+- [x] Version-number display (v0.3.0 shown in sidebar + mobile list)
 
 ### Melody mute
 Practice rhythm guitar by silencing the melody.
@@ -66,10 +70,8 @@ Compact visual reference showing first 1-2 bars per tune. **Implementation note:
 ## Polish
 
 - [ ] Seamless transitions between set tunes (minimal gap on auto-advance)
-- [ ] Responsive layout (mobile/tablet — sidebar collapse, touch-friendly)
 - [ ] Hardcoded CSS colors → CSS variables (unblocks theming, print vs screen)
 - [ ] Accessibility audit (focus management, ARIA labels, screen reader)
-- [ ] Delete tune confirmation dialog
 - [ ] Editor panel drag handle (low priority)
 - [ ] Tune list scroll position preservation on filter change
 - [ ] Loading state for guitar samples (first play delay)
@@ -95,10 +97,8 @@ Compact visual reference showing first 1-2 bars per tune. **Implementation note:
 - Recording — record yourself playing along
 - Tune difficulty rating
 - Practice log / stats tracking
-- mobile friendly version
-- version number & changelog
 - multiple devices
-- import/export
+- changelog
 - transpose keys
 - hotkey / feature helper
 - tutorial mode

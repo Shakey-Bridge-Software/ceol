@@ -1,0 +1,151 @@
+.set-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.sets-empty { color: var(--fg-dim); font-size: 12px; text-align: center; padding: 20px 0; }
+
+.set-card { border-radius: 4px; overflow: hidden; padding: 12px; }
+.set-card.active { background: var(--dark-hover); }
+.set-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  cursor: pointer;
+}
+.set-card-header:hover { background: var(--dark-hover); }
+.set-info { display: flex; flex-direction: column; gap: 2px; }
+.set-name { font-size: 13px; color: #aaa; }
+.set-card.active .set-name { color: var(--fg-inverse); font-weight: 500; }
+.set-meta { font-family: var(--font-mono); font-size: 10px; color: var(--fg-dim); }
+.set-expand { color: var(--fg-dim); font-size: 12px; }
+
+.set-tunes { padding: 4px 12px 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.set-tune-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 4px 8px;
+  font-size: 12px;
+}
+.set-tune-num { font-family: var(--font-mono); font-size: 10px; color: var(--fg-dim); width: 16px; }
+.set-tune-name { color: #aaa; cursor: pointer; flex: 1; }
+.set-tune-name:hover { color: var(--fg-inverse); }
+.set-tune-remove {
+  border: none; background: transparent; color: var(--fg-dim); cursor: pointer;
+  font-size: 14px; opacity: 0;
+}
+.set-tune-row:hover .set-tune-remove { opacity: 1; }
+.set-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0 2px;
+}
+.set-add-btn {
+  border: 1px dashed #555; background: transparent; color: var(--fg-muted);
+  font-size: 14px; cursor: pointer; width: 24px; height: 24px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.set-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+.delete-set {
+  border: none; background: transparent; color: #666; font-size: 11px;
+  font-family: var(--font-body); cursor: pointer;
+}
+.delete-set:hover { color: #e55; }
+.set-add-inline { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; }
+
+/* Set creation form */
+.set-creation {
+  background: #222222;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  padding: 10px 12px;
+}
+.set-name-input { display: flex; }
+.set-input {
+  width: 100%;
+  background: var(--dark);
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 6px 8px;
+  color: var(--fg-inverse);
+  font-family: var(--font-body);
+  font-size: 12px;
+  outline: none;
+}
+.set-input:focus { border-color: var(--accent); }
+.set-input::placeholder { color: #555; }
+.set-creation-header {
+  font-size: 13px; font-weight: 500; color: var(--fg-inverse); margin-bottom: 8px;
+}
+.set-creation-tunes { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.set-creation-tune-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #aaa; }
+.set-creation-hints {
+  font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim);
+  text-align: center; margin-top: 8px;
+}
+.set-tune-picker { display: flex; flex-direction: column; gap: 4px; }
+
+/* Typeahead */
+.typeahead-dropdown {
+  background: var(--dark);
+  border: 1px solid #444;
+  border-radius: 3px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+.typeahead-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #aaa;
+  cursor: pointer;
+}
+.typeahead-item:hover, .typeahead-item.highlighted {
+  background: var(--accent);
+  color: var(--fg-inverse);
+}
+.typeahead-name { flex: 1; }
+.typeahead-item.highlighted .typeahead-name { font-weight: 500; }
+.typeahead-type { font-family: var(--font-mono); font-size: 10px; opacity: 0.7; text-transform: capitalize; }
+
+/* Wave 1 D — mobile always-expanded set cards (design 7VNKz). Replaces the
+   accordion on the mobile sets list; rendered only in mobile-list-view, which is
+   hidden on desktop, so no media query is needed. */
+.mset-list { display: flex; flex-direction: column; gap: 10px; }
+.mset-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #2A2A2A;
+  cursor: pointer;
+}
+.mset-header { display: flex; align-items: center; justify-content: space-between; }
+.mset-name { font-family: var(--font-heading); font-size: 16px; font-weight: 500; color: var(--fg-inverse); }
+.mset-count { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-muted); }
+.mset-tunes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.mset-tune { display: flex; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: #D4D2CC; }
+.mset-num { color: #D4D2CC; }
+.mset-tune-name { color: #D4D2CC; }
+.mset-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 6px; }
+.mset-progress { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; }
+.mset-progress.all { color: #3B6B4F; }
+.mset-progress.partial { color: #8F6F3C; }
+.mset-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mset-play {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.mset-play:active { opacity: 0.85; }
+.mset-play-icon { font-size: 11px; }

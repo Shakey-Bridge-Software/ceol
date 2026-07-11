@@ -45,11 +45,14 @@
 ;; App state shape
 ;;
 ;; Tune data
-;;   :tunes            {id → tune-map}   all tunes, base catalog merged with custom
-;;   :tune-order       [id ...]          display order (catalog order + custom appended)
-;;   :custom-tunes     {id → tune-map}   user-added/edited tunes, persisted to localStorage
-;;   :abc-data         {id → abc-body}   raw ABC bodies loaded from local-abc.edn
+;;   :tunes            {id → tune-map}   all tunes: catalog + user-added, all deletable
+;;   :tune-order       [id ...]          display order
+;;   :abc-data         {id → abc-body}   raw ABC bodies loaded from local-abc.edn (catalog range)
 ;;   :abc-edits        {id → abc-body}   user-edited ABC (with chords), persisted to localStorage
+;;     NB: :abc-edits/:tune-notes/:learned-tune-ids key by tune ID independently of
+;;     :tunes, so a deleted tune's entry can outlive it there (e.g. via a merged
+;;     backup import) — next-tune-id must clear all of them, not just :tunes, or a
+;;     new tune inherits a leftover ABC edit, note, or learned flag.
 ;;
 ;; Selection & UI
 ;;   :selected-tune-id  id | nil
@@ -63,9 +66,9 @@
 ;;   :main-view             :tune | :set | :settings   which main panel is showing
 ;;   :mobile-view           :list | :detail | :tune    push-nav level on the phone layout
 ;;   :controls-sheet-open?  bool          "NOW PLAYING" controls bottom sheet open (mobile playback)
-;;   :context-menu-tune-id  id | nil      tune whose action menu / mobile action-sheet is open
-;;   :swipe-peek-tune-id    id | nil      tune row currently peeked open by left-swipe
+;;   :context-menu-tune-id  id | nil      tune whose desktop dropdown / mobile action-sheet is open
 ;;   :delete-confirm-tune-id id | nil     tune pending delete-confirm modal
+;;   :confirm               map | nil     generic confirm modal payload (title, body, on-confirm)
 ;;   :onboarded?            bool          first-launch coachmark dismissed (persisted)
 ;;
 ;; Tune notes
@@ -95,6 +98,7 @@
 ;; Sets
 ;;   :sets              {set-id → set-map}  set-map: {:id :name :tune-ids [...]}
 ;;   :active-set-id     set-id | nil       expanded/selected set
+;;   :context-menu-set-id set-id | nil     set whose mobile action sheet is open
 ;;
 ;; Set creation wizard
 ;;   :creating-set?       bool
@@ -104,6 +108,10 @@
 ;;   :typeahead-index     int              highlighted result index
 ;;   :adding-to-set       set-id | nil     set currently being added to (post-creation)
 ;;
+;; Mobile set editor (full-screen overlay; nil = closed)
+;;   :set-editor          {:mode :new|:edit :set-id <str|nil>
+;;                         :draft {:name str :tune-ids [int ...]} :picking? bool}
+;;
 ;; Learned & Session
 ;;   :learned-tune-ids    #{id ...}        persisted to localStorage
 ;;   :session-mode?       bool             session active (read-only main panel)
@@ -111,9 +119,16 @@
 ;;   :session-index       int              current position in queue
 ;;   :session-set-index   int              current tune index within a set item
 ;;   :session-pausing?    bool             true during the 2s gap between queue items
+;;   :session-paused?     bool             true while the user has paused playback (Wave 1 C);
+;;                                         audio is stopped, the now-playing button shows Play
+;;   :session-gap-timer   timeout-id | nil id of the pending inter-tune gap setTimeout, so
+;;                                         skip/pause/stop can cancel it (Wave 1 C); nil when none
 ;;   :session-within-set? bool             true while advancing through tunes inside a set;
 ;;                                         suppresses count-in for mid-set transitions
 ;;   :session-played      [queue-index ...] indices of completed queue items (for history)
+;;   :session-started-at  ms | nil          js/Date.now() at session start (for duration)
+;;   :session-result      {:tune-count int :duration-ms int} | nil
+;;                                          set on :done, shown by the summary, cleared on Done/restart
 ;; ---------------------------------------------------------------------------
 
 (defonce app-state
@@ -131,8 +146,15 @@
            :mobile-view          :list
            :controls-sheet-open? false
            :context-menu-tune-id nil
-           :swipe-peek-tune-id   nil
            :delete-confirm-tune-id nil
+           ;; Generic confirm modal (nil = closed). Shape when open:
+           ;; {:title "..." :body "..." :destructive-label "..."
+           ;;  :on-confirm [[:some/action arg ...] ...]}
+           :confirm nil
+           ;; Mobile tune-details editor (nil = closed)
+           ;; {:mode :new|:edit :tune-id <id-or-nil>
+           ;;  :draft {:name :type :time-sig :key :mode-name :session-id}}
+           :tune-editor         nil
            :onboarded?           false
            :guitar?         false
            :editing-field   nil
@@ -144,6 +166,7 @@
            ;; Sets
            :sets            {}
            :active-set-id   nil
+           :context-menu-set-id nil
            :set-playing?    false
            :set-tune-index  0
            ;; Set creation
@@ -153,6 +176,10 @@
            :typeahead-query     ""
            :typeahead-index     0
            :adding-to-set       nil
+           ;; Mobile full-screen set editor (nil = closed). Shape when open:
+           ;; {:mode :new|:edit :set-id <str|nil>
+           ;;  :draft {:name str :tune-ids [int ...]} :picking? bool}
+           :set-editor          nil
            :metronome?          false
            :count-in?           false
            :current-beat        nil
@@ -163,8 +190,13 @@
            :session-index       0
            :session-set-index   0
            :session-pausing?    false
+           :session-paused?     false
+           :session-gap-timer   nil
            :session-within-set? false
-           :session-played      []})))
+           :session-played      []
+           ;; Item #5 — session-complete summary
+           :session-started-at  nil
+           :session-result      nil})))
 
 ;; --- Tune queries ---
 
@@ -212,7 +244,9 @@
   tune's entry can outlive it there (e.g. via a merged backup import) — so
   we also reserve space above every one of those keyspaces. Reusing an id
   that still has another map's data attached would silently hand a new tune
-  a stranger's ABC edit, note, or learned flag."
+  a stranger's ABC edit, note, or learned flag. (:abc-data isn't included —
+  it's read-only, fetched once from the bundled catalog, so its keys never
+  exceed the catalog floor already covered above.)"
   [state]
   (let [known-ids (concat (keys (:tunes state))
                          (keys (:abc-edits state))

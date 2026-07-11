@@ -3,6 +3,9 @@
    No side effects, no state mutation. Actions are dispatched via Replicant's
    r/set-dispatch! — components emit action vectors, never call functions."
   (:require [ceol.web.state :as state]
+            [ceol.web.handlers.set-editor :as se]
+            [ceol.web.handlers.session-summary :as ss]
+            [ceol.web.handlers.session-nav :as nav]
             [ceol.abc :as abc]
             [clojure.string :as str]))
 
@@ -28,6 +31,17 @@
   (let [match (first (filter #(and (= (:key %) key-name) (= (:mode-name %) mode-name))
                              key-mode-options))]
     (or (:label match) (str key-name " " mode-name))))
+
+(defn- tune-bpm [tune]
+  (second (re-find #"=(\d+)" (abc/tempo-for-type (:type tune) (:time-sig tune)))))
+
+(defn- tune-meta-line
+  "Mono meta string for a tune: 'Reel · 4/4 · E Dorian', plus ' · 130 BPM' when
+   bpm? is set. Used by the session-live now-playing and next-up cards."
+  [tune bpm?]
+  (str (get tune-type-labels (:type tune)) " · " (:time-sig tune)
+       " · " (key-mode-label (:key tune) (:mode-name tune))
+       (when bpm? (str " · " (tune-bpm tune) " BPM"))))
 
 (defn- type-plural
   "Lowercase plural for the filter empty-state heading. Special-case slip-jig
@@ -75,25 +89,15 @@
 (defn tune-row [tune state]
   (let [active? (= (:id tune) (:selected-tune-id state))
         learned? (state/learned? state (:id tune))
-        menu-open? (= (:context-menu-tune-id state) (:id tune))
-        peek? (= (:swipe-peek-tune-id state) (:id tune))
-        catalog-tune? (state/catalog-tune? (:id tune))]
-    [:div.tune-row-wrap {:class (when peek? "peek")}
+        menu-open? (= (:context-menu-tune-id state) (:id tune))]
+    [:div.tune-row-wrap
      [:div.tune-row-learn-hint
       [:span.tune-row-learn-check "✓"]
       [:span.tune-row-learn-label (if learned? "Unlearn" "Learned")]]
-     [:div.tune-row-peek-actions
-      (when-not catalog-tune?                               ;;Catalog tunes are 'immutable' in the sense that they cannot be changed, only deleted.
-        [:button.tune-row-peek-edit
-         {:on {:click [[:swipe/clear] [:tune/select (:id tune)] [:editor/open]]}}
-         "Edit"])
-      [:button.tune-row-peek-delete
-       {:on {:click [[:swipe/clear] [:tune/delete (:id tune)]]}}
-       "Delete"]]
      [:div.tune-row {:class (str (when active? "active")
                                  (when learned? " learned"))
                      :data-tune-id (:id tune)
-                     :on {:click [[:swipe/clear] [:tune/select (:id tune)]]
+                     :on {:click [[:tune/select (:id tune)]]
                           :contextmenu [[:event/prevent] [:menu/open (:id tune)]]}}
       [:div.tune-info
        [:div.tune-name (:name tune)]
@@ -101,7 +105,9 @@
         (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · " (key-mode-label (:key tune) (:mode-name tune)))]]
       [:button.tune-row-menu-btn
        {:on {:click [[:event/stop] [:menu/open (:id tune)]]}}
-       "\u22ee"]]
+       "⋮"]]
+     ;; Desktop dropdown still renders inline (CSS hides on mobile);
+     ;; mobile users get the bottom action sheet rendered from `app`.
      (when menu-open?
        (tune-context-menu (:id tune)))]))
 
@@ -154,7 +160,14 @@
              (typeahead-results state)]
             [:div.set-actions
              [:button.set-add-btn {:on {:click [[:set/start-adding set-id]]}} "+"]
-             [:button.delete-set {:on {:click [[:set/delete set-id]]}} "Delete"]])]))]))
+             [:button.delete-set
+              {:on {:click [[:confirm/open
+                             {:title "Delete set?"
+                              :body (str "“" (:name set-data) "” will be removed. "
+                                         "Its tunes stay in your library.")
+                              :destructive-label "Delete"
+                              :on-confirm [[:set/delete set-id]]}]]}}
+              "Delete"]])]))]))
 
 (defn set-creation-form [state]
   (let [name-confirmed? (:creating-set-name state)
@@ -192,16 +205,33 @@
         (typeahead-results state)
         [:div.set-creation-hints "Enter to add \u00B7 Enter on empty = done \u00B7 Esc to cancel"]])]))
 
+(defn- sets-empty-state []
+  [:div.sets-empty
+   [:div.empty-icon
+    [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
+           :stroke "currentColor" :stroke-width 2
+           :stroke-linecap "round" :stroke-linejoin "round"}
+     [:polygon {:points "12 2 2 7 12 12 22 7 12 2"}]
+     [:polyline {:points "2 17 12 22 22 17"}]
+     [:polyline {:points "2 12 12 17 22 12"}]]]
+   [:div.empty-title "No sets yet"]
+   [:div.empty-subtitle "Tap New Set to get started"]])
+
 (defn sets-tab [state]
   [:div.sets-content
    (if (:creating-set? state)
      (set-creation-form state)
-     [:button.add-set-btn {:on {:click [[:set/start-create]]}} "+ New Set"])
+     ;; Desktop opens the inline wizard; mobile opens the full-screen editor
+     ;; (Item #3). Visibility is CSS-gated per viewport — see set-editor.css.
+     (list
+      [:button.add-set-btn {:on {:click [[:set/start-create]]}} "+ New Set"]
+      [:button.add-set-btn--mobile {:on {:click [[:set-editor/open-new]]}}
+       "+ New Set"]))
    [:div.set-list
     (let [sets (vals (:sets state))]
       (if (seq sets)
         (map (fn [s] (set-card s state)) (sort-by :name sets))
-        [:div.sets-empty "No sets yet"]))]])
+        (sets-empty-state)))]])
 
 ;; --- Session tab ---
 
@@ -223,45 +253,87 @@
         ready-sets (state/count-ready-sets state)
         queue (state/build-session-queue (:learned-tune-ids state) (:sets state))]
     [:div.session-content
-     [:div.session-summary
-      [:span.session-stats (str learned-count " learned tune" (when (not= 1 learned-count) "s")
-                                " \u00b7 " ready-sets " set" (when (not= 1 ready-sets) "s") " ready")]]
      (if (pos? (count queue))
-       [:div.session-actions
-        [:button.session-start {:on {:click [[:session/start]]}} "Start Session"]
+       (list
+        ;; Wave 1 B — hero card (J8hkB): big learned count beside a two-line
+        ;; sub-label, Start button inside.
+        [:div.session-hero-card
+         [:div.session-hero-label "READY TO PRACTICE"]
+         [:div.session-hero-num
+          [:div.session-hero-big (str learned-count)]
+          [:div.session-hero-sub
+           [:div (str "learned tune" (when (not= 1 learned-count) "s"))]
+           [:div (str ready-sets " set" (when (not= 1 ready-sets) "s") " ready")]]]
+         [:button.session-start {:on {:click [[:session/start]]}}
+          [:svg.session-start-icon {:width 16 :height 16 :viewBox "0 0 24 24" :fill "none"
+                                    :stroke "currentColor" :stroke-width 2
+                                    :stroke-linecap "round" :stroke-linejoin "round"}
+           [:polyline {:points "16 3 21 3 21 8"}]
+           [:line {:x1 4 :y1 20 :x2 21 :y2 3}]
+           [:polyline {:points "21 16 21 21 16 21"}]
+           [:line {:x1 15 :y1 15 :x2 21 :y2 21}]
+           [:line {:x1 4 :y1 4 :x2 9 :y2 9}]]
+          [:span "Start session"]]]
         [:div.session-preview
          [:div.session-preview-label "SESSION QUEUE PREVIEW"]
-         (map (fn [item] (session-preview-item item state)) queue)]]
-       [:div.session-empty "Mark tunes as learned to start a session"])]))
+         (map (fn [item] (session-preview-item item state)) queue)])
+       [:div.session-empty
+        [:div.empty-icon
+         [:svg {:width 24 :height 24 :viewBox "0 0 24 24" :fill "none"
+                :stroke "currentColor" :stroke-width 2
+                :stroke-linecap "round" :stroke-linejoin "round"}
+          [:polyline {:points "16 3 21 3 21 8"}]
+          [:line {:x1 4 :y1 20 :x2 21 :y2 3}]
+          [:polyline {:points "21 16 21 21 16 21"}]
+          [:line {:x1 15 :y1 15 :x2 21 :y2 21}]
+          [:line {:x1 4 :y1 4 :x2 9 :y2 9}]]]
+        [:div.empty-title "No tunes ready yet"]
+        [:div.empty-subtitle "Mark tunes as learned to start a session"]])]))
 
 (defn session-tab-active [state]
-  (let [queue (:session-queue state)
-        idx (:session-index state)
-        total (count queue)
-        current (nth queue idx nil)
-        progress (if (pos? total) (/ (inc idx) total) 0)]
+  (let [queue     (:session-queue state)
+        idx       (:session-index state)
+        set-index (:session-set-index state)
+        total     (count queue)
+        progress  (if (pos? total) (/ (inc idx) total) 0)
+        paused?   (:session-paused? state)
+        cur       (nav/current-ref queue idx set-index)
+        cur-tune  (when cur (state/tune-by-id state (:tune-id cur)))
+        nxt       (nav/next-ref queue idx set-index)
+        nxt-tune  (when nxt (state/tune-by-id state (:tune-id nxt)))]
     [:div.session-content
      [:div.session-active-header
       [:span.session-active-label "SESSION ACTIVE"]
       [:span.session-active-count (str (inc idx) " of " total)]]
      [:div.session-progress-bar
       [:div.session-progress-fill {:style {:width (str (* progress 100) "%")}}]]
+     ;; Wave 1 C — now-playing card (XwIFG): meta line + Skip / Pause transport.
      [:div.session-now-playing
-      [:div.session-now-label "NOW PLAYING"]
-      (case (:type current)
-        :set [:div.session-now-info
-              [:div.session-now-name (:name current)]
-              [:div.session-now-meta (str (inc (:session-set-index state)) "/"
-                                          (count (:tune-ids current)))]]
-        :tune (let [tune (state/tune-by-id state (:tune-id current))]
-                [:div.session-now-info
-                 [:div.session-now-name (:name tune)]])
-        nil)]
+      [:div.session-now-label [:span.session-now-dot] "NOW PLAYING"]
+      (when (:set-name cur) [:div.session-now-set (:set-name cur)])
+      [:div.session-now-name (or (:name cur-tune) "Unknown")]
+      (when cur-tune [:div.session-now-meta (tune-meta-line cur-tune true)])
+      [:div.session-now-controls
+       [:button.session-skip {:on {:click [[:session/skip]]}}
+        [:svg.session-skip-icon {:width 12 :height 12 :viewBox "0 0 24 24" :fill "none"
+                                 :stroke "currentColor" :stroke-width 2
+                                 :stroke-linecap "round" :stroke-linejoin "round"}
+         [:polygon {:points "5 4 15 12 5 20 5 4"}]
+         [:line {:x1 19 :y1 5 :x2 19 :y2 19}]]
+        [:span "Skip"]]
+       [:button.session-pause {:on {:click [[:session/pause]]}
+                               :aria-label (if paused? "Resume" "Pause")}
+        (if paused?
+          [:svg.session-pause-icon {:width 18 :height 18 :viewBox "0 0 24 24" :fill "currentColor"}
+           [:polygon {:points "6 3 20 12 6 21 6 3"}]]
+          [:svg.session-pause-icon {:width 18 :height 18 :viewBox "0 0 24 24" :fill "currentColor"}
+           [:rect {:x 6 :y 4 :width 4 :height 16 :rx 1}]
+           [:rect {:x 14 :y 4 :width 4 :height 16 :rx 1}]])]]]
+     ;; Wave 1 C — resolved next-up card (was a "?" teaser).
      [:div.session-next
-      [:div.session-next-label "NEXT"]
-      [:div.session-next-val.session-next-teaser
-       (let [last? (= (inc idx) total)]
-         (if last? "—" "?"))]]
+      [:div.session-next-label "NEXT UP"]
+      [:div.session-next-name (or (:name nxt-tune) "—")]
+      (when nxt-tune [:div.session-next-meta (tune-meta-line nxt-tune false)])]
      (when (seq (:session-played state))
        [:div.session-history
         [:div.session-history-label "PLAYED"]
@@ -277,10 +349,36 @@
              (:session-played state))])
      [:button.session-end {:on {:click [[:session/stop]]}} "End Session"]]))
 
+(defn session-complete-summary
+  "Centred end-of-session screen (Item #5, design LQ3CL). Shown when a session
+   finishes naturally (handlers.session :done stows :session-result)."
+  [state]
+  [:div.session-content.session-complete
+   [:div.session-complete-check
+    [:svg {:width 30 :height 30 :viewBox "0 0 24 24" :fill "none"
+           :stroke "currentColor" :stroke-width 2.5
+           :stroke-linecap "round" :stroke-linejoin "round"}
+     [:path {:d "M20 6 9 17l-5-5"}]]]
+   [:div.session-complete-title "Practice complete"]
+   [:div.session-complete-stats (ss/summary-line (:session-result state))]
+   [:div.session-complete-actions
+    [:button.session-complete-again {:on {:click [[:session/start]]}} "Practice again"]
+    [:button.session-complete-done {:on {:click [[:session/dismiss-summary]]}} "Done"]]])
+
 (defn session-tab [state]
-  (if (:session-mode? state)
-    (session-tab-active state)
-    (session-tab-pre state)))
+  (cond
+    (:session-mode? state)  (session-tab-active state)
+    (:session-result state) (session-complete-summary state)
+    :else                   (session-tab-pre state)))
+
+(defn backup-status-banner
+  "Transient export/import feedback (set/cleared by backup/set-status!). Shared
+   by the desktop sidebar and the mobile toast wrapper (B3)."
+  [state]
+  (when-let [status (:backup-status state)]
+    [:div.backup-status {:class (str "kind-" (name (:kind status)))}
+     [:span.backup-status-icon (if (= :success (:kind status)) "✓" "!")]
+     [:span.backup-status-msg (:message status)]]))
 
 (defn sidebar [state]
   (let [current-filter (:filter state)
@@ -313,10 +411,7 @@
          [:span.new-tune-icon "+"] "New tune"]
         [:div.tune-list
          (map (fn [t] (tune-row t state)) tunes)]])
-     (when-let [status (:backup-status state)]
-       [:div.backup-status {:class (str "kind-" (name (:kind status)))}
-        [:span.backup-status-icon (if (= :success (:kind status)) "✓" "!")]
-        [:span.backup-status-msg (:message status)]])
+     (backup-status-banner state)
      [:div.sidebar-footer
       [:button.sidebar-footer-btn.sidebar-settings-btn
        {:class (when (= :settings (:main-view state)) "active")
@@ -396,9 +491,13 @@
   (let [tune (state/selected-tune state)
         abc-str (when tune (state/edited-abc-for-tune state (:id tune)))]
     [:div.sheet-area
+     ;; abc.js imperatively injects an <svg> + inline style into #sheet-music.
+     ;; Distinct :replicant/keys stop Replicant from reusing that managed node
+     ;; for the empty-state branch — otherwise the foreign SVG lingers inside
+     ;; the morphed div (see verify/newtune-render).
      (if (and tune abc-str)
-       [:div#sheet-music]
-       [:div.sheet-empty
+       [:div#sheet-music {:replicant/key :sheet-music}]
+       [:div.sheet-empty {:replicant/key :sheet-empty}
         (if tune
           "Select tune and open editor to add ABC notation"
           "Select a tune to view sheet music")])]))
@@ -432,14 +531,25 @@
             open? (:notes-open? state)]
         [:div.notes-panel {:class (when open? "open")}
          [:div.notes-header
-          [:span.notes-label "NOTES"]
+          [:span.notes-label "PRACTICE NOTES"]
           [:button.notes-close {:on {:click [[:notes/toggle]]}} "×"]]
+         [:div.notes-title-block
+          [:div.notes-tune-title (:name tune)]
+          [:div.notes-tune-meta
+           (str (get tune-type-labels (:type tune)) " · "
+                (:time-sig tune) " · "
+                (key-mode-label (:key tune) (:mode-name tune)))]]
          [:textarea.notes-textarea
           {:value (or notes "")
            :placeholder "Practice notes — BPM, ornaments, progress..."
            :spellcheck "false"
            :on {:input [[:notes/update tune-id :event/target.value]]
-                :keydown [[:notes/keydown :event/key]]}}]]))))
+                :keydown [[:notes/keydown :event/key]]}}]
+         [:div.notes-footer
+          [:span.notes-saved "Saved"]
+          [:span.notes-count
+           (let [n (count notes)]
+             (str n " character" (when (not= 1 n) "s")))]]]))))
 
 (defn playback-status [state]
   (when (:playing? state)
@@ -688,7 +798,8 @@
           {:on {:click [[:set/select-tune set-id (first (:tune-ids s))]
                         [:playback/play]]}}
           "\u25b6 Play set"]
-         [:button.set-detail-more "\u22ee"]]]
+         [:button.set-detail-more
+          {:on {:click [[:set-menu/open set-id]]}} "\u22ee"]]]
        [:div.divider]
        [:div.set-detail-list-label "TUNES"]
        [:div.set-detail-list
@@ -706,16 +817,41 @@
    [:div.settings-body
     [:div.settings-card
      [:div.settings-card-label "BACKUP"]
-     [:div.settings-row
-      [:div.settings-row-text "Export backup as .edn"]
-      [:button.settings-action
-       {:on {:click [[:backup/export]]}}
-       "Export"]]
-     [:div.settings-row
-      [:div.settings-row-text "Import backup from .edn"]
-      [:button.settings-action.settings-action-secondary
-       {:on {:click [[:backup/import]]}}
-       "Choose file"]]]
+     ;; Wave 1 E — Export/Import as tappable icon + text + chevron list rows
+     ;; (design ddeLd); same handlers as the old label+button rows.
+     [:button.settings-list-row {:on {:click [[:backup/export]]}}
+      [:span.settings-list-icon
+       [:svg {:width 18 :height 18 :viewBox "0 0 24 24" :fill "none"
+              :stroke "currentColor" :stroke-width 2
+              :stroke-linecap "round" :stroke-linejoin "round"}
+        [:path {:d "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}]
+        [:polyline {:points "7 10 12 15 17 10"}]
+        [:line {:x1 12 :y1 15 :x2 12 :y2 3}]]]
+      [:div.settings-list-body
+       [:div.settings-list-title "Export backup"]
+       [:div.settings-list-sub "Save all data as a .edn file"]]
+      [:span.settings-list-chevron "›"]]
+     [:div.settings-list-divider]
+     [:button.settings-list-row
+      {:on {:click [[:confirm/open
+                     {:title "Replace all data?"
+                      :body (str "Importing a backup overwrites every custom "
+                                 "tune, set, edit, and learned mark on this "
+                                 "device. Export your current data first if "
+                                 "you want to keep it.")
+                      :destructive-label "Choose file"
+                      :on-confirm [[:backup/import]]}]]}}
+      [:span.settings-list-icon
+       [:svg {:width 18 :height 18 :viewBox "0 0 24 24" :fill "none"
+              :stroke "currentColor" :stroke-width 2
+              :stroke-linecap "round" :stroke-linejoin "round"}
+        [:path {:d "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}]
+        [:polyline {:points "17 8 12 3 7 8"}]
+        [:line {:x1 12 :y1 3 :x2 12 :y2 15}]]]
+      [:div.settings-list-body
+       [:div.settings-list-title "Import backup"]
+       [:div.settings-list-sub "Restore from a .edn file"]]
+      [:span.settings-list-chevron "›"]]]
     [:div.settings-card
      [:div.settings-card-label "ABOUT"]
      [:div.settings-row
@@ -767,6 +903,50 @@
         ;; Mobile slim bar — hidden >720px
         (mobile-playback-bar state)))]))
 
+(defn- mobile-set-card
+  "Always-expanded set card for the mobile sets list (design 7VNKz): numbered
+   tune list, a learned-progress footer (one dot — green when all learned, amber
+   otherwise), and Play set. Tapping the card drills into the set detail (where
+   the ⋮ opens the action sheet); the Play button stops that bubble."
+  [set-data state]
+  (let [set-id    (:id set-data)
+        tune-ids  (:tune-ids set-data)
+        tunes     (state/set-tunes state set-data)
+        total     (count tune-ids)
+        learned-n (count (filter #(state/learned? state %) tune-ids))
+        all?      (and (pos? total) (= learned-n total))]
+    [:div.mset-card {:on {:click [[:set/toggle set-id]]}}
+     [:div.mset-header
+      [:div.mset-name (:name set-data)]
+      [:div.mset-count (str total " tune" (when (not= 1 total) "s"))]]
+     [:ol.mset-tunes
+      (map-indexed
+       (fn [i t]
+         (when t
+           [:li.mset-tune
+            [:span.mset-num (str (inc i) ".")]
+            [:span.mset-tune-name (:name t)]]))
+       tunes)]
+     [:div.mset-footer
+      [:span.mset-progress {:class (if all? "all" "partial")}
+       [:span.mset-dot]
+       (if all? "All learned" (str learned-n " of " total " learned"))]
+      (when (pos? total)
+        [:button.mset-play
+         {:on {:click [[:event/stop] [:set/select-tune set-id (first tune-ids)] [:playback/play]]}}
+         [:span.mset-play-icon "▶"] " Play set"])]]))
+
+(defn- mobile-sets-tab
+  "Mobile sets list (Wave 1 D): always-expanded cards, no accordion. New-set opens
+   the full-screen editor (Item #3); desktop's inline wizard stays in sets-tab."
+  [state]
+  [:div.sets-content
+   [:button.add-set-btn--mobile {:on {:click [[:set-editor/open-new]]}} "+ New Set"]
+   (let [sets (vals (:sets state))]
+     (if (seq sets)
+       [:div.mset-list (map (fn [s] (mobile-set-card s state)) (sort-by :name sets))]
+       (sets-empty-state)))])
+
 (defn mobile-list-view [state]
   (let [tunes (state/filtered-tunes state)
         current-filter (:filter state)
@@ -788,7 +968,7 @@
        [:button.mobile-tab {:class (when (= :session current-tab) "active")
                             :on {:click [[:tab/set :session]]}} "Session"]]]
      (case current-tab
-       :sets (sets-tab state)
+       :sets (mobile-sets-tab state)
        :session (session-tab state)
        (list
         [:div.mobile-filters
@@ -804,7 +984,7 @@
            [:div.empty-subtitle "Try another filter or add a tune"]]
           [:div.mobile-tune-list
            (map (fn [t] (tune-row t state)) tunes)])))
-     [:button.mobile-fab {:on {:click [[:tune/add]]}}
+     [:button.mobile-fab {:on {:click [[:tune-editor/open-new]]}}
       [:span.mobile-fab-icon "+"]]]))
 
 (defn main-area [state]
@@ -851,6 +1031,184 @@
                           :on {:click [[:section/set nil]]}} "All"]]
        [:span.mobile-top-bar-spacer])]))
 
+(def ^:private editor-types
+  ;; Types shown as chip row in the mobile editor. Matches the design (5 types
+  ;; fit cleanly on a 390-wide screen); the app's :slide :mazourka :other are
+  ;; still usable via desktop, but rare for hand-entered tunes.
+  [:polka :jig :reel :hornpipe :slip-jig])
+
+(def ^:private editor-keys ["C" "D" "E" "F" "G" "A" "B"])
+
+(def ^:private editor-modes
+  ;; Friendly labels for the mode dropdown; :value maps to :mode-name.
+  [{:value "Ionian"     :label "major"}
+   {:value "Dorian"     :label "dorian"}
+   {:value "Mixolydian" :label "mixolydian"}
+   {:value "Aeolian"    :label "minor"}])
+
+(defn- te-chip [{:keys [active? label on-click]}]
+  [:button.te-chip {:class (when active? "active")
+                    :on {:click on-click}} label])
+
+(def ^:private action-sheet-rows
+  ;; Order matches design qgF2n: Edit details / Edit notation / Add to set /
+  ;; Duplicate / Delete. Each row builds its dispatch from the tune-id.
+  [{:icon "✎" :label "Edit details"
+    :build (fn [id] [[:menu/close] [:tune-editor/open-edit id]])}
+   {:icon "♪" :label "Edit notation"
+    :build (fn [id] [[:menu/close] [:tune/select id] [:editor/open]])}
+   {:icon "≡" :label "Add to set"
+    :build (fn [id] [[:menu/close] [:tune/select id] [:tune/add-to-set id]])}
+   {:icon "⧉" :label "Duplicate"
+    :build (fn [id] [[:menu/close] [:tune/duplicate id]])}
+   {:icon "✕" :label "Delete" :danger? true
+    :build (fn [id] [[:menu/close] [:delete/request id]])}])
+
+(defn mobile-bottom-sheet
+  "Shared mobile bottom-sheet shell (design qgF2n / kihYP). `rows` is a seq of
+   {:icon :label :danger? :on-click}; `on-close` is the actions vector run by
+   both the backdrop and the Cancel button. Used by the tune + set action
+   sheets — the only thing that differs between them is the card + rows."
+  [{:keys [title subtitle rows on-close]}]
+  [:div.as-overlay {:on {:click on-close}}
+   [:div.as-sheet {:on {:click [[:event/stop]]}}
+    [:div.as-handle [:div.as-handle-bar]]
+    [:div.as-card
+     [:div.as-title title]
+     [:div.as-meta subtitle]]
+    [:div.as-divider]
+    [:div.as-actions
+     (map (fn [{:keys [icon label danger? on-click]}]
+            [:button.as-row {:class (when danger? "as-row-danger")
+                             :on {:click on-click}}
+             [:span.as-row-icon icon]
+             [:span.as-row-label label]])
+          rows)]
+    [:div.as-cancel-wrap
+     [:button.as-cancel {:on {:click on-close}} "Cancel"]]]])
+
+(defn- sheet-rows
+  "Resolve a row-spec table ({:icon :label :danger? :build}) against `arg` into
+   the {:icon :label :danger? :on-click} rows mobile-bottom-sheet renders."
+  [row-specs arg]
+  (map (fn [{:keys [icon label danger? build]}]
+         {:icon icon :label label :danger? danger? :on-click (build arg)})
+       row-specs))
+
+(defn mobile-tune-action-sheet [state]
+  (when-let [tune-id (:context-menu-tune-id state)]
+    (when-let [tune (state/tune-by-id state tune-id)]
+      (mobile-bottom-sheet
+       {:title    (:name tune)
+        :subtitle (str (get tune-type-labels (:type tune)) " · "
+                       (:time-sig tune) " · "
+                       (key-mode-label (:key tune) (:mode-name tune)))
+        :on-close [[:menu/close]]
+        :rows     (sheet-rows action-sheet-rows tune-id)}))))
+
+(def ^:private set-action-sheet-rows
+  ;; Order matches design kihYP: Play set / Edit set / Duplicate / Delete.
+  ;; Each row builds its dispatch from the set-data map.
+  [{:icon "▶" :label "Play set"
+    :build (fn [{:keys [id tune-ids]}]
+             [[:set-menu/close] [:set/select-tune id (first tune-ids)] [:playback/play]])}
+   {:icon "✎" :label "Edit set"
+    :build (fn [{:keys [id]}] [[:set-menu/close] [:set-editor/open-edit id]])}
+   {:icon "⧉" :label "Duplicate"
+    :build (fn [{:keys [id]}] [[:set-menu/close] [:set/duplicate id]])}
+   {:icon "✕" :label "Delete" :danger? true
+    :build (fn [{:keys [id name]}]
+             [[:set-menu/close]
+              [:confirm/open {:title "Delete set?"
+                              :body (str "“" name "” will be removed. "
+                                         "Its tunes stay in your library.")
+                              :destructive-label "Delete"
+                              :on-confirm [[:set/delete id]]}]])}])
+
+(defn mobile-set-action-sheet [state]
+  (when-let [set-id (:context-menu-set-id state)]
+    (when-let [set-data (get (:sets state) set-id)]
+      (let [n (count (:tune-ids set-data))
+            all-learned? (and (pos? n)
+                              (every? #(state/learned? state %) (:tune-ids set-data)))]
+        (mobile-bottom-sheet
+         {:title    (:name set-data)
+          :subtitle (str n " tune" (when (not= 1 n) "s")
+                         (when all-learned? " · all learned"))
+          :on-close [[:set-menu/close]]
+          :rows     (sheet-rows set-action-sheet-rows set-data)})))))
+
+(defn mobile-tune-editor [state]
+  (when-let [{:keys [mode draft]} (:tune-editor state)]
+    (let [title (if (= mode :new) "New tune" "Edit tune")]
+      [:div.te-overlay
+       [:div.te-top
+        [:button.te-cancel {:on {:click [[:tune-editor/cancel]]}} "Cancel"]
+        [:div.te-title title]
+        [:button.te-save {:on {:click [[:tune-editor/save]]}} "Save"]]
+       [:div.te-body
+        ;; NAME
+        [:div.te-section
+         [:div.te-label "NAME"]
+         [:input.te-input
+          {:type "text"
+           :value (:name draft)
+           :placeholder "Tune name"
+           :auto-focus (= mode :new)
+           :on {:input [[:tune-editor/update-draft :name :event/target.value]]}}]]
+        ;; TYPE
+        [:div.te-section
+         [:div.te-label "TYPE"]
+         [:div.te-chip-row
+          (map (fn [t]
+                 (te-chip {:active?  (= t (:type draft))
+                           :label    (get tune-type-labels t)
+                           :on-click [[:tune-editor/update-draft :type t]]}))
+               editor-types)]]
+        ;; KEY + MODE row — :selected on the matching option (HTML doesn't honour
+        ;; `value` on <select> directly; Replicant doesn't normalise this for us).
+        [:div.te-row
+         [:div.te-section
+          [:div.te-label "KEY"]
+          [:div.te-select-wrap
+           [:select.te-select
+            {:on {:change [[:tune-editor/update-draft :key :event/target.value]]}}
+            (map (fn [k]
+                   [:option (cond-> {:value k}
+                              (= k (:key draft)) (assoc :selected true))
+                    k])
+                 editor-keys)]
+           [:span.te-select-caret "›"]]]
+         [:div.te-section
+          [:div.te-label "MODE"]
+          [:div.te-select-wrap
+           [:select.te-select
+            {:on {:change [[:tune-editor/update-draft :mode-name :event/target.value]]}}
+            (map (fn [{:keys [value label]}]
+                   [:option (cond-> {:value value}
+                              (= value (:mode-name draft)) (assoc :selected true))
+                    label])
+                 editor-modes)]
+           [:span.te-select-caret "›"]]]]
+        ;; TIME SIGNATURE
+        [:div.te-section
+         [:div.te-label "TIME SIGNATURE"]
+         [:div.te-chip-row
+          (map (fn [ts]
+                 (te-chip {:active?  (= ts (:time-sig draft))
+                           :label    ts
+                           :on-click [[:tune-editor/update-draft :time-sig ts]]}))
+               time-sigs)]]
+        ;; SESSION ID
+        [:div.te-section
+         [:div.te-label "THESESSION.ORG ID  (optional)"]
+         [:input.te-input
+          {:type "text"
+           :inputmode "numeric"
+           :value (:session-id draft)
+           :placeholder "e.g. 1834"
+           :on {:input [[:tune-editor/update-draft :session-id :event/target.value]]}}]]]])))
+
 (defn delete-confirm-modal [state]
   (when-let [tune-id (:delete-confirm-tune-id state)]
     (let [tune (state/tune-by-id state tune-id)]
@@ -863,6 +1221,25 @@
          [:button.modal-cancel {:on {:click [[:delete/cancel]]}} "Cancel"]
          [:button.modal-destructive
           {:on {:click [[:delete/confirm tune-id]]}} "Delete"]]]])))
+
+
+(defn confirm-modal
+  "Generic confirm modal. State slot :confirm holds the payload:
+     {:title \"...\" :body \"...\" :destructive-label \"...\"
+      :on-confirm [[:action arg] ...]}
+   The destructive button fires the :on-confirm actions and then closes
+   the slot via [:confirm/cancel]."
+  [state]
+  (when-let [{:keys [title body destructive-label on-confirm]} (:confirm state)]
+    [:div.modal-backdrop {:on {:click [[:confirm/cancel]]}}
+     [:div.modal {:on {:click [[:event/stop]]}}
+      [:div.modal-title title]
+      [:div.modal-body body]
+      [:div.modal-actions
+       [:button.modal-cancel {:on {:click [[:confirm/cancel]]}} "Cancel"]
+       [:button.modal-destructive
+        {:on {:click (vec (concat on-confirm [[:confirm/cancel]]))}}
+        (or destructive-label "OK")]]]]))
 
 (defn onboarding-coachmark [state]
   (when (and (not (:onboarded? state))
@@ -884,6 +1261,89 @@
      [:div.coachmark-cap2 "swipe left for Edit / Delete"]
      [:button.coachmark-ok {:on {:click [[:onboarding/dismiss]]}} "Got it"]]))
 
+;; --- Mobile full-screen set editor (Item #3, design he1dM) ------------------
+;; Reuses the .te-* overlay shell (Cancel / Title / Save + scroll body) shared
+;; with the tune editor — that shell is already mobile-only via @media. Set
+;; rows, grip, remove and the add-tune picker carry .se-* classes. The grip
+;; (data-idx / data-tune-id) is the drag-reorder handle wired in gesture.cljs;
+;; the reorder itself is the pure :set-editor/reorder action.
+
+(defn- se-tune-row [idx tune]
+  [:div.se-tune-row {:data-idx idx}
+   [:span.se-grip "⠿"]
+   [:div.se-tune-info
+    [:div.se-tune-name (:name tune)]
+    [:div.se-tune-meta
+     (str (get tune-type-labels (:type tune)) " · " (:time-sig tune) " · "
+          (key-mode-label (:key tune) (:mode-name tune)))]]
+   [:button.se-tune-remove
+    {:on {:click [[:set-editor/remove-tune (:id tune)]]}} "×"]])
+
+(defn- se-picker
+  "Tune search inside the editor — results exclude tunes already in the draft."
+  [state draft-tune-ids]
+  (let [in-draft? (set draft-tune-ids)
+        query     (:typeahead-query state)
+        ;; Pull a generous candidate set, exclude already-added tunes, THEN
+        ;; cap — capping first could hide matches when the top hits are all
+        ;; already in the draft.
+        results   (->> (state/search-tunes state query 50)
+                       (remove #(in-draft? (:id %)))
+                       (take 6))]
+    [:div.se-picker
+     [:div.se-picker-bar
+      [:input.se-picker-input
+       {:type "text" :placeholder "Search tunes..." :value query :auto-focus true
+        :on {:input [[:set/typeahead :event/target.value]]}}]
+      [:button.se-picker-done {:on {:click [[:set-editor/stop-pick]]}} "Done"]]
+     (when (seq results)
+       [:div.se-picker-results
+        (map (fn [tune]
+               [:div.se-picker-item {:on {:click [[:set-editor/add-tune (:id tune)]]}}
+                [:span.se-picker-name (:name tune)]
+                [:span.se-picker-type (get tune-type-labels (:type tune))]])
+             results)])]))
+
+(defn set-editor [state]
+  (when-let [{:keys [mode draft picking?]} (:set-editor state)]
+    (let [tune-ids (:tune-ids draft)
+          title    (if (= mode :new) "New set" "Edit set")
+          saveable? (se/can-save? draft)]
+      [:div.te-overlay.se-overlay
+       [:div.te-top
+        [:button.te-cancel {:on {:click [[:set-editor/cancel]]}} "Cancel"]
+        [:div.te-title title]
+        [:button.te-save {:class (when-not saveable? "disabled")
+                          :on {:click [[:set-editor/save]]}} "Save"]]
+       [:div.te-body
+        [:div.te-section
+         [:div.te-label "NAME"]
+         [:input.te-input
+          {:type "text" :value (:name draft) :placeholder "Set name..."
+           :on {:input [[:set-editor/update-draft :name :event/target.value]]}}]]
+        [:div.te-section
+         [:div.se-tunes-header
+          [:div.te-label "TUNES"]
+          [:div.se-tunes-count (str (count tune-ids))]]
+         [:div.se-tune-list
+          (map-indexed (fn [i tid]
+                         (when-let [t (state/tune-by-id state tid)]
+                           (se-tune-row i t)))
+                       tune-ids)]
+         (if picking?
+           (se-picker state tune-ids)
+           [:button.se-add-tune {:on {:click [[:set-editor/start-pick]]}}
+            [:span.se-add-tune-icon "+"]
+            [:span "Add tune"]])]]])))
+
+(defn mobile-backup-status
+  "Mobile toast wrapper for the backup-status banner (B3). The desktop banner
+   lives in the sidebar, which is display:none on mobile — so mobile users got
+   no export/import feedback. Fixed-position, mobile-only via CSS."
+  [state]
+  (when (:backup-status state)
+    [:div.mobile-backup-status (backup-status-banner state)]))
+
 (defn app [state]
   [:div.app-layout
    {:class (cond-> []
@@ -894,4 +1354,10 @@
    (main-area state)
    (controls-sheet state)
    (delete-confirm-modal state)
+   (confirm-modal state)
+   (mobile-tune-action-sheet state)
+   (mobile-set-action-sheet state)
+   (mobile-tune-editor state)
+   (set-editor state)
+   (mobile-backup-status state)
    (onboarding-coachmark state)])

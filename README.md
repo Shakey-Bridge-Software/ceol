@@ -79,6 +79,10 @@ npm install
 | `l` | Toggle loop |
 | `g` | Toggle guitar |
 | `e` | Toggle ABC editor |
+| `m` | Toggle metronome |
+| `c` | Toggle count-in |
+| `n` | Toggle notes drawer |
+| `k` | Toggle learned flag (selected tune) |
 | `=/-` | Tempo +5/-5 BPM |
 | `0` | Reset tempo |
 | `1/2/3` | Section A/B/All |
@@ -129,7 +133,7 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 ./bb -cp "src:web/src:test" -e "..."
 ```
 
-22 tests, 118 assertions covering chord algorithm, ABC processing, state queries, and set logic.
+68 tests, 5207 assertions (most are generative) covering chord algorithm, ABC processing, state queries, set logic, beat engine, session logic, actions, backup round-trip, and the mobile tune-editor / duplicate.
 
 ## Project structure
 
@@ -146,12 +150,19 @@ src/ceol/
   core.clj       — TUI: entry point
 
 web/src/ceol/web/
-  core.cljs       — Web: entry, dispatch
-  state.cljs      — Web: app state
-  views.cljs      — Web: UI components
+  core.cljs       — Web: entry, init, keyboard shortcuts, dispatch router
+  state.cljs      — Web: app state, queries, schemas
+  views.cljs      — Web: UI components (desktop + mobile)
+  persist.cljs    — Web: localStorage I/O + remote data loading
+  render.cljs     — Web: imperative abc.js sheet rendering
   abc_bridge.cljs — Web: abc.js interop
   guitar.cljs     — Web: Tone.js guitar
+  metronome.cljs  — Web: standalone metronome click
+  beat_engine.cljc — Web: shared beat math
+  backup.cljs     — Web: export/import user data
+  gesture.cljs    — Web: mobile touch gestures
   chords.cljc     — Web: chord algorithm
+  handlers/       — Web: action handlers (tune, editor, set, playback, session)
 
 test/ceol/web/   — Tests (.cljc + .cljs)
 design.pen       — UI mockups

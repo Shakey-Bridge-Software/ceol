@@ -1,0 +1,96 @@
+
+/* Settings view (main-view = :settings) */
+.settings-view { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
+.settings-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 32px; gap: 16px;
+}
+.settings-title { font-family: var(--font-heading); font-size: 24px; font-weight: 500; }
+.settings-back {
+  background: transparent; border: 1px solid var(--border);
+  padding: 8px 14px; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--fg-secondary); cursor: pointer;
+}
+.settings-back:hover { border-color: var(--fg-secondary); color: var(--fg); }
+.settings-body { padding: 0 32px 32px; display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.settings-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.settings-card-label {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  letter-spacing: 2px; color: var(--fg-secondary);
+  margin-bottom: 4px;
+}
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; gap: 16px;
+  border-top: 1px solid var(--border);
+}
+.settings-row:first-of-type { border-top: none; }
+.settings-row-text { font-family: var(--font-heading); font-size: 14px; }
+.settings-row-value { font-family: var(--font-mono); font-size: 12px; color: var(--fg-secondary); }
+.settings-row-link {
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--accent); text-decoration: none;
+}
+.settings-row-link:hover { text-decoration: underline; }
+.settings-action {
+  background: var(--accent); color: #fff;
+  border: none; padding: 8px 16px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px;
+  cursor: pointer;
+}
+.settings-action-danger { background: transparent; color: #D9534F; border: 1px solid #D9534F; }
+.settings-action-danger:hover { background: #D9534F; color: #fff; }
+
+/* Wave 1 E — Export/Import as icon + text + chevron list rows (design ddeLd).
+   The card supplies horizontal padding, so rows use vertical padding only.
+   Greys (--fg-muted/--fg-secondary) read on both the light desktop card and the
+   dark mobile card; the title flips to --fg-inverse on mobile (see mobile.css). */
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+/* Grey alpha reads on both the light desktop card and the dark mobile card. */
+.settings-list-row:hover { background: rgba(127, 127, 127, 0.08); }
+.settings-list-row:active { background: rgba(127, 127, 127, 0.14); }
+.settings-list-icon { display: flex; color: var(--fg-muted); flex-shrink: 0; }
+.settings-list-body { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.settings-list-title { font-family: var(--font-heading); font-size: 15px; color: var(--fg); }
+.settings-list-sub { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--fg-muted); }
+.settings-list-chevron { color: var(--fg-secondary); font-size: 18px; line-height: 1; flex-shrink: 0; }
+.settings-list-divider { height: 1px; background: var(--border); }
+
+.new-tune-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: transparent;
+  color: var(--fg-muted);
+  border: 1px solid #3A3A3A;
+  border-radius: 4px;
+  padding: 10px 0;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+}
+.new-tune-btn:hover { border-color: var(--fg-muted); color: var(--fg-inverse); }
+.new-tune-icon { font-size: 14px; }
+
+.sidebar-settings-btn {
+  display: flex !important; align-items: center; justify-content: center; gap: 6px;
+}
+.sidebar-settings-btn.active { background: var(--dark-hover); color: var(--fg-inverse); }
+.settings-gear { font-size: 14px; }

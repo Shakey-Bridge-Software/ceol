@@ -48,6 +48,7 @@
 ;;   :tune/update-field   [tune-id field value]      update one field on a tune
 ;;   :tune/update-key-mode [tune-id key mode-name]   update key + mode together
 ;;   :tune/delete         [tune-id]                  delete custom tune (no-op on catalog)
+;;   :tune/duplicate      [tune-id]                  clone tune (+ABC) as fresh custom tune
 ;;   :tune/add-to-set     [tune-id]                  add tune to active/only set
 ;;   :abc/render          []                         no-op (render triggered by state watch)
 ;;
@@ -60,6 +61,13 @@
 ;;   :field/edit          [field-key]                enter inline edit mode
 ;;   :field/cancel        []                         exit inline edit without saving
 ;;   :field/keydown       [key]                      Enter to confirm, Escape to cancel
+;;
+;; Mobile tune-details editor (full-screen overlay)
+;;   :tune-editor/open-new     []                    open editor in :new mode (blank draft)
+;;   :tune-editor/open-edit    [tune-id]             open editor in :edit mode (draft cloned)
+;;   :tune-editor/cancel       []                    discard draft + close
+;;   :tune-editor/save         []                    commit draft + close
+;;   :tune-editor/update-draft [field value]         write to :tune-editor draft
 ;;
 ;; Playback
 ;;   :playback/play       []                         toggle play/stop
@@ -87,12 +95,30 @@
 ;;   :set/start-adding    [set-id]                   open inline typeahead for set
 ;;   :set/add-tune-keydown [set-id key]              handle keydown in set's add-tune input
 ;;   :set/delete          [set-id]                   delete set
+;;   :set/duplicate       [set-id]                   clone set with " (copy)" name
+;;   :set-menu/open       [set-id]                   open the set action sheet (mobile)
+;;   :set-menu/close      []                         close the set action sheet
+;;
+;; Mobile set editor (full-screen overlay)
+;;   :set-editor/open-new     []                     open editor for a new set
+;;   :set-editor/open-edit    [set-id]               open editor seeded from a set
+;;   :set-editor/cancel       []                     discard draft, close
+;;   :set-editor/save         []                     commit draft → :sets, close
+;;   :set-editor/update-draft [field value]          edit a draft field (name)
+;;   :set-editor/start-pick   []                     reveal the add-tune picker
+;;   :set-editor/stop-pick    []                     hide the add-tune picker
+;;   :set-editor/add-tune     [tune-id]              add a tune to the draft
+;;   :set-editor/remove-tune  [tune-id]              remove a tune from the draft
+;;   :set-editor/reorder      [from to]              move a draft tune by index
 ;;
 ;; Learned & Session
 ;;   :learned/toggle      [tune-id]                  toggle learned flag
-;;   :session/start       []                          build queue and start session
+;;   :session/start       []                          build queue and start session (also "Practice again")
 ;;   :session/play-current []                         play current session item (internal)
+;;   :session/skip        []                          skip to the next queue item (Wave 1 C)
+;;   :session/pause       []                          toggle pause/resume playback (Wave 1 C)
 ;;   :session/stop        []                          end session
+;;   :session/dismiss-summary []                      clear the session-complete summary ("Done")
 ;;
 ;; Mobile UI
 ;;   :menu/open           [tune-id]                   open tune action menu / mobile action-sheet
@@ -102,9 +128,11 @@
 ;;   :settings/open       []                          show settings panel (main-view)
 ;;   :settings/close      []                          back to tune panel
 ;;   :mobile/back         []                          pop one nav level (detail→list, set/settings→tune)
-;;   :swipe/clear         []                          clear swipe-peek on a tune row
+;;   :delete/request      [tune-id]                   open delete-confirm modal for a tune
 ;;   :delete/cancel       []                          dismiss delete-confirm modal
 ;;   :delete/confirm      [tune-id]                   confirm + delete
+;;   :confirm/open        [{:title :body :destructive-label :on-confirm}] open generic confirm
+;;   :confirm/cancel      []                          dismiss generic confirm
 ;;   :onboarding/dismiss  []                          dismiss first-launch coachmark (persists)
 ;;   :data/clear-confirm  []                          confirm-then-wipe all localStorage
 ;;
@@ -130,7 +158,15 @@
     :tune/update-field    (tune/update-field! args)
     :tune/update-key-mode (tune/update-key-mode! args)
     :tune/delete          (tune/delete! args)
+    :tune/duplicate       (tune/duplicate! args)
     :tune/add-to-set      (tune/add-to-set! args)
+
+    ;; Mobile tune-details editor (full-screen overlay)
+    :tune-editor/open-new     (tune/editor-open-new! args)
+    :tune-editor/open-edit    (tune/editor-open-edit! args)
+    :tune-editor/cancel       (tune/editor-cancel! args)
+    :tune-editor/save         (tune/editor-save! args)
+    :tune-editor/update-draft (tune/editor-update-draft! args)
 
     ;; Editor + inline fields
     :editor/toggle  (editor/toggle! args)
@@ -145,8 +181,9 @@
     (do (swap! state/app-state assoc :onboarded? true)
         (try (.setItem js/localStorage "ceol-onboarded" "1")
              (catch :default _)))
-    :swipe/clear
-    (swap! state/app-state assoc :swipe-peek-tune-id nil)
+
+    :delete/request
+    (swap! state/app-state assoc :delete-confirm-tune-id (first args))
 
     :delete/cancel
     (swap! state/app-state assoc :delete-confirm-tune-id nil)
@@ -155,6 +192,16 @@
     (let [[tune-id] args]
       (swap! state/app-state assoc :delete-confirm-tune-id nil)
       (tune/delete! [tune-id]))
+
+    ;; Generic confirm modal — opts is a map with :title :body
+    ;; :destructive-label :on-confirm (a Replicant-style actions vector).
+    ;; The confirm button's :on-confirm runs *and then* :confirm/cancel
+    ;; clears the slot — wired in the view, not here.
+    :confirm/open
+    (swap! state/app-state assoc :confirm (first args))
+
+    :confirm/cancel
+    (swap! state/app-state assoc :confirm nil)
 
     :mobile/back
     (swap! state/app-state
@@ -216,6 +263,23 @@
     :set/start-adding     (set-h/start-adding! args)
     :set/add-tune-keydown (set-h/add-tune-keydown! args)
     :set/delete           (set-h/delete! args)
+    :set/duplicate        (set-h/duplicate! args)
+
+    ;; Mobile set action sheet (bottom sheet on the set-detail ⋮)
+    :set-menu/open  (swap! state/app-state assoc :context-menu-set-id (first args))
+    :set-menu/close (swap! state/app-state assoc :context-menu-set-id nil)
+
+    ;; Mobile full-screen set editor (draft-based overlay)
+    :set-editor/open-new     (set-h/editor-open-new! args)
+    :set-editor/open-edit    (set-h/editor-open-edit! args)
+    :set-editor/cancel       (set-h/editor-cancel! args)
+    :set-editor/save         (set-h/editor-save! args)
+    :set-editor/update-draft (set-h/editor-update-draft! args)
+    :set-editor/start-pick   (set-h/editor-start-pick! args)
+    :set-editor/stop-pick    (set-h/editor-stop-pick! args)
+    :set-editor/add-tune     (set-h/editor-add-tune! args)
+    :set-editor/remove-tune  (set-h/editor-remove-tune! args)
+    :set-editor/reorder      (set-h/editor-reorder! args)
 
     ;; Learned + Session
     :learned/toggle
@@ -226,9 +290,13 @@
 
     :session/start        (session/session-start!)
     :session/play-current (session/session-play-current!)
-    :session/stop
-    (do (playback/stop!)
-        (swap! state/app-state assoc :session-mode? false :session-pausing? false))
+    :session/skip         (session/session-skip!)
+    :session/pause        (session/session-pause!)
+    :session/stop         (session/session-stop!)
+
+    ;; Item #5 — dismiss the session-complete summary ("Done").
+    :session/dismiss-summary
+    (swap! state/app-state assoc :session-result nil)
 
     ;; Backup
     :backup/export (backup/export!)

@@ -1,0 +1,124 @@
+/* ===========================================================================
+   Mobile bottom action sheet — shared shell for the tune sheet (⋮ on a tune
+   row, replaces the swipe-peek per G8) and the set sheet (⋮ on the set
+   detail). One renderer: views/mobile-bottom-sheet.
+   Design source: design.pen frames qgF2n (tune) + kihYP (set).
+   --------------------------------------------------------------------------- */
+
+.as-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 75; /* below tune-editor (80), above coachmark (60) */
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  animation: fade-in 0.15s;
+}
+
+@media (min-width: 721px) {
+  .as-overlay { display: none !important; }
+}
+
+.as-sheet {
+  width: 100%;
+  background: #1F1F1F;
+  border-radius: 20px 20px 0 0;
+  padding: 12px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slide-up 0.2s;
+  /* leaves room for the home indicator on iPhones with safe-area */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.as-handle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
+}
+.as-handle-bar {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: #444;
+}
+
+.as-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 20px 16px 20px;
+  min-width: 0;
+}
+.as-title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 500;
+  color: #F5F4F0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.as-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #888;
+  text-transform: capitalize;
+}
+
+.as-divider {
+  height: 1px;
+  background: #2A2A2A;
+}
+
+.as-actions {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+}
+
+.as-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: #EEEEEE;
+  text-align: left;
+  cursor: pointer;
+}
+.as-row:active { background: #2A2A2A; }
+.as-row-icon {
+  width: 20px;
+  display: inline-flex;
+  justify-content: center;
+  color: #AAAAAA;
+  font-size: 14px;
+}
+.as-row-danger { color: #D9534F; }
+.as-row-danger .as-row-icon { color: #D9534F; }
+
+.as-cancel-wrap {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px 16px 12px;
+}
+.as-cancel {
+  background: #2A2A2A;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #F5F4F0;
+  cursor: pointer;
+}
+.as-cancel:active { background: #333; }

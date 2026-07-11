@@ -1,0 +1,108 @@
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: var(--dark);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  gap: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar-header { display: flex; flex-direction: column; gap: 4px; }
+.app-title-row { display: flex; align-items: baseline; gap: 8px; }
+.app-name { font-family: var(--font-heading); font-size: 28px; font-weight: 300; color: var(--fg-inverse); letter-spacing: 1px; }
+.app-version { font-family: var(--font-mono); font-size: 10px; color: var(--fg-secondary); letter-spacing: 1px; }
+.app-tagline { font-family: var(--font-mono); font-size: 10px; color: var(--fg-secondary); letter-spacing: 2px; }
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  background: var(--dark-input);
+  border-radius: 6px;
+  padding: 3px;
+}
+.tab {
+  flex: 1;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: var(--fg-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.tab.active {
+  background: var(--dark-hover);
+  color: var(--fg-inverse);
+  font-weight: 500;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.filter-chip {
+  padding: 6px 12px;
+  border-radius: 14px;
+  border: none;
+  background: var(--dark-hover);
+  color: var(--fg-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+}
+.filter-chip.active {
+  background: var(--accent);
+  color: var(--fg-inverse);
+}
+
+/* Filters row with add button */
+.filters-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.filters-row .filters { flex: 1; }
+.add-tune-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px dashed #555;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.add-tune-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Tunes content wrapper */
+.tunes-content { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+
+/* Sets tab */
+.sets-content { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+.add-set-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed #555;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+.add-set-btn:hover { border-color: var(--accent); color: var(--accent); }
