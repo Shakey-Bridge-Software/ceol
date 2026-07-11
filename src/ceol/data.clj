@@ -45,19 +45,20 @@
 
 (defn hydrate-tunes [tunes]
   (let [cache (load-cache)]
-    (mapv (fn [tune]
-            (let [base   (merge tune-defaults tune)
-                  cached (get cache (:id tune))]
-              (if cached
-                (merge base
-                       (when (:session-id cached) {:session-id (:session-id cached)})
-                       (when (:abc cached) {:abc (:abc cached) :abc-status :ready})
-                       (when (:midi-path cached)
-                         (if (.exists (io/file (:midi-path cached)))
-                           {:midi-path (:midi-path cached) :midi-status :ready}
-                           {})))
-                base)))
-          tunes)))
+    (->> tunes
+         vals
+         (mapv (fn [tune]
+                 (let [base (merge tune-defaults tune)
+                       cached (get cache (:id tune))]
+                   (if cached
+                     (merge base
+                            (when (:session-id cached) {:session-id (:session-id cached)})
+                            (when (:abc cached) {:abc (:abc cached) :abc-status :ready})
+                            (when (:midi-path cached)
+                              (if (.exists (io/file (:midi-path cached)))
+                                {:midi-path (:midi-path cached) :midi-status :ready}
+                                {})))
+                     base)))))))
 
 (def ^:private cache-lock (Object.))
 

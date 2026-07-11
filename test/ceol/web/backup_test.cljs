@@ -10,8 +10,6 @@
 
 (defn- base-state []
   {:abc-edits        {1 "GABcd"}
-   :custom-tunes     {1 {:id 1 :name "T" :type :reel :time-sig "4/4"
-                         :key "G" :mode-name "Ionian"}}
    :tunes            {1 {:id 1 :name "T" :type :reel :time-sig "4/4"
                          :key "G" :mode-name "Ionian"}}
    :tune-order       [1]
@@ -22,7 +20,7 @@
   (let [b (backup/build-backup (base-state))]
     (is (= 1 (:ceol/version b)))
     (is (string? (:exported-at b)))
-    (is (= #{:abc-edits :custom-tunes :sets :learned-tune-ids}
+    (is (= #{:abc-edits :tunes :sets :learned-tune-ids}
            (set (keys (:data b)))))
     (is (m/validate backup/Backup b))))
 

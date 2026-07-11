@@ -1,36 +1,31 @@
 (ns ceol.web.state-test
   (:require [clojure.test :refer [deftest testing is]]
-            [ceol.web.state :as state]))
+            [ceol.web.state :as state]
+            [ceol.tunes :as tunes]))
 
-(deftest merge-tunes-test
-  (let [base [{:id 1 :name "Tune A" :type :polka}
-              {:id 2 :name "Tune B" :type :jig}]]
+(deftest catalog-tune-test
+  (testing "an id present in the static catalog is a catalog tune"
+    (is (state/catalog-tune? (first (keys tunes/catalog)))))
 
-    (testing "no custom tunes returns all base tunes in order"
-      (let [result (state/merge-tunes base {})]
-        (is (= [1 2] (:tune-order result)))
-        (is (= "Tune A" (get-in result [:tunes 1 :name])))
-        (is (= "Tune B" (get-in result [:tunes 2 :name])))))
+  (testing "an id outside the catalog is not"
+    (is (not (state/catalog-tune? 999999)))))
 
-    (testing "custom overrides existing tune"
-      (let [custom {1 {:id 1 :name "Tune A Edited" :type :reel}}
-            result (state/merge-tunes base custom)]
-        (is (= "Tune A Edited" (get-in result [:tunes 1 :name])))
-        (is (= :reel (get-in result [:tunes 1 :type])))
-        (is (= 2 (count (:tune-order result))))))
+(deftest prepare-tunes-test
+  (testing "builds :tunes and :tune-order from the given map"
+    (let [tunes {1 {:id 1 :name "Tune A" :type :polka}
+                 2 {:id 2 :name "Tune B" :type :jig}}
+          result (state/prepare-tunes tunes)]
+      (is (= [1 2] (sort (:tune-order result))))
+      (is (= "Tune A" (get-in result [:tunes 1 :name])))
+      (is (= "Tune B" (get-in result [:tunes 2 :name])))))
 
-    (testing "custom adds new tune"
-      (let [custom {100 {:id 100 :name "New Tune" :type :polka}}
-            result (state/merge-tunes base custom)]
-        (is (= 3 (count (:tune-order result))))
-        (is (= "New Tune" (get-in result [:tunes 100 :name])))))
-
-    (testing "custom overrides and adds"
-      (let [custom {1 {:id 1 :name "Edited"} 100 {:id 100 :name "New"}}
-            result (state/merge-tunes base custom)]
-        (is (= 3 (count (:tune-order result))))
-        (is (= "Edited" (get-in result [:tunes 1 :name])))
-        (is (= "New" (get-in result [:tunes 100 :name])))))))
+  (testing "does not preserve entries absent from the given map"
+    ;; prepare-tunes has no base catalog to fall back on — it's the caller's
+    ;; job (e.g. persist/load-tunes!) to merge in whatever base is wanted
+    ;; before calling this.
+    (let [result (state/prepare-tunes {2 {:id 2 :name "Tune B"}})]
+      (is (= [2] (:tune-order result)))
+      (is (nil? (get-in result [:tunes 1]))))))
 
 (defn- test-state [tunes]
   "Build a minimal state map from a seq of tune maps."
@@ -65,17 +60,29 @@
       (is (nil? (state/tune-by-id s 99))))))
 
 (deftest next-tune-id-test
-  (testing "generates ID beyond max"
-    (let [s (test-state [{:id 1} {:id 55} {:id 10}])]
-      (is (= 56 (state/next-tune-id s)))))
-
   (testing "handles empty tunes"
     (let [s {:tunes {} :tune-order []}]
-      (is (= 1000 (state/next-tune-id s))))))
+      (is (= 1000 (state/next-tune-id s)))))
 
-(deftest custom-tune-test
-  (testing "catalog tune is not custom"
-    (is (not (state/custom-tune? 1))))
+  (testing "known ids within the catalog range still seed a high id"
+    ;; Below/at the catalog's own max id — could be an untouched catalog
+    ;; subset, or every added tune having since been deleted. Either way,
+    ;; the next low id isn't safe to assume free (a deleted catalog tune's
+    ;; id is never reused).
+    (let [s (test-state [{:id 1} {:id 55} {:id 10}])]
+      (is (= 1000 (state/next-tune-id s)))))
 
-  (testing "high ID is custom"
-    (is (state/custom-tune? 9999))))
+  (testing "known id above the catalog max allocates one past it"
+    (let [s (test-state [{:id 1} {:id 1000}])]
+      (is (= 1001 (state/next-tune-id s)))))
+
+  (testing "guards against orphaned :abc-edits, :tune-notes, :learned-tune-ids"
+    ;; A deleted tune can leave data behind in these keyspaces even when
+    ;; :tunes itself no longer has it — next-tune-id must still clear them,
+    ;; or a re-used id inherits a stranger's ABC edit, note, or learned flag.
+    (is (= 2001 (state/next-tune-id (assoc (test-state [{:id 1}])
+                                           :abc-edits {2000 "X:1\n"}))))
+    (is (= 2001 (state/next-tune-id (assoc (test-state [{:id 1}])
+                                           :tune-notes {2000 "orphaned note"}))))
+    (is (= 2001 (state/next-tune-id (assoc (test-state [{:id 1}])
+                                           :learned-tune-ids #{2000}))))))

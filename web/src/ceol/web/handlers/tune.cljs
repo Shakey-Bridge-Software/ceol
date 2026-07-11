@@ -1,9 +1,9 @@
 (ns ceol.web.handlers.tune
   "Tune CRUD action handlers: select, add, update fields, delete, and
-   add-to-set. Pure dispatch targets — each function takes the [args] vec
-   from the action and performs the state mutation + persistence side
-   effects. inject-chords-if-needed lives here because it is only used by
-   select! when annotating freshly-loaded ABC."
+  add-to-set. Pure dispatch targets — each function takes the [args] vec
+  from the action and performs the state mutation + persistence side
+  effects. inject-chords-if-needed lives here because it is only used by
+  select! when annotating freshly-loaded ABC."
   (:require [ceol.web.state :as state]
             [ceol.web.chords :as chords]
             [ceol.web.persist :as persist]))
@@ -40,16 +40,14 @@
         new-tune {:id new-id :name "Untitled tune" :type :polka :time-sig "2/4"
                   :key "G" :mode-name "Ionian"}]
     (swap! state/app-state
-           (fn [s]
-             (let [custom (assoc (:custom-tunes s) new-id new-tune)
-                   merged (state/merge-tunes state/base-tunes custom)]
-               (merge s {:custom-tunes custom} merged
-                      {:selected-tune-id new-id
-                       :editing-field :name
-                       :main-view :tune
-                       :editor-open? true
-                       :tab :tunes}))))
-    (persist/save-custom-tunes!)))
+           #(merge %
+                   (state/prepare-tunes (assoc (:tunes %) new-id new-tune))
+                   {:selected-tune-id new-id
+                    :editing-field    :name
+                    :main-view        :tune
+                    :editor-open?     true
+                    :tab              :tunes}))
+    (persist/save-tunes!)))
 
 (defn update-field! [[tune-id field value]]
   (persist/update-tune-field! tune-id field value)
@@ -61,13 +59,21 @@
   (swap! state/app-state assoc :editing-field nil))
 
 (defn delete! [[tune-id]]
-  (when (state/custom-tune? tune-id)
-    (swap! state/app-state
-           (fn [s]
-             (let [custom (dissoc (:custom-tunes s) tune-id)
-                   merged (state/merge-tunes state/base-tunes custom)]
-               (merge s {:custom-tunes custom} merged {:selected-tune-id nil}))))
-    (persist/save-custom-tunes!)))
+  ;; Scrub every per-tune keyspace, not just :tunes. :abc-edits, :tune-notes
+  ;; and :learned-tune-ids key by tune ID independently — leaving them
+  ;; orphaned both leaks the deleted tune's data and lets next-tune-id
+  ;; re-allocate the id with a stranger's note/learned flag attached.
+  (swap! state/app-state
+         #(-> (merge %
+                     (state/prepare-tunes (dissoc (:tunes %) tune-id))
+                     {:selected-tune-id nil})
+              (update :abc-edits dissoc tune-id)
+              (update :tune-notes dissoc tune-id)
+              (update :learned-tune-ids disj tune-id)))
+  (persist/save-tunes!)
+  (persist/schedule-save!)
+  (persist/schedule-save-notes!)
+  (persist/save-learned!))
 
 (defn add-to-set! [[tune-id]]
   (let [s    @state/app-state

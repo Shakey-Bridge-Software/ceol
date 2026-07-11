@@ -1,9 +1,9 @@
 (ns ceol.web.backup
   "Export and import all user data (abc-edits, custom-tunes, sets, learned
-   tune IDs) as a single EDN file. Used for offline backup and sharing
-   between devices. The file is validated against Backup at the import
-   boundary; invalid sections are dropped with a console.warn rather than
-   clobbering existing state."
+  tune IDs) as a single EDN file. Used for offline backup and sharing
+  between devices. The file is validated against Backup at the import
+  boundary; invalid sections are dropped with a console.warn rather than
+  clobbering existing state."
   (:require [ceol.web.state :as state]
             [ceol.web.persist :as persist]))
 
@@ -14,7 +14,7 @@
    [:data
     [:map {:closed true}
      [:abc-edits        {:optional true} persist/AbcEdits]
-     [:custom-tunes     {:optional true} persist/CustomTunes]
+     [:tunes            {:optional true} persist/PersistedTunes]
      [:sets             {:optional true} persist/SetsByID]
      [:learned-tune-ids {:optional true} persist/LearnedTuneIds]
      [:tune-notes       {:optional true} persist/TuneNotes]]]])
@@ -31,9 +31,9 @@
   (when-let [t @status-timer] (js/clearTimeout t))
   (reset! status-timer
           (js/setTimeout
-           (fn []
-             (swap! state/app-state assoc :backup-status nil))
-           3000)))
+            (fn []
+              (swap! state/app-state assoc :backup-status nil))
+            3000)))
 
 (defn- backup-filename []
   (str "ceol-backup-"
@@ -42,11 +42,11 @@
 
 (defn build-backup
   "Construct a backup map from the current app-state. Pure on the supplied
-   state, used by export! and by tests."
+  state, used by export! and by tests."
   [state]
   {:ceol/version 1
    :exported-at  (now-iso)
-   :data         (select-keys state [:abc-edits :custom-tunes
+   :data         (select-keys state [:abc-edits :tunes
                                      :sets :learned-tune-ids
                                      :tune-notes])})
 
@@ -66,10 +66,10 @@
 
 (defn- save-via-picker! [filename text]
   (-> (.showSaveFilePicker
-       js/window
-       #js {:suggestedName filename
-            :types #js [#js {:description "ceol backup (EDN)"
-                             :accept #js {"application/edn" #js [".edn"]}}]})
+        js/window
+        #js {:suggestedName filename
+             :types #js [#js {:description "ceol backup (EDN)"
+                              :accept #js {"application/edn" #js [".edn"]}}]})
       (.then (fn [^js handle]
                (-> (.createWritable handle)
                    (.then (fn [^js writable]
@@ -84,9 +84,9 @@
 
 (defn export!
   "Serialise current state to EDN. Uses showSaveFilePicker where supported
-   so we get a real save/cancel signal; falls back to a plain anchor
-   download elsewhere — which can't observe the system save dialog, so
-   the message is the honest \"Backup ready\"."
+  so we get a real save/cancel signal; falls back to a plain anchor
+  download elsewhere — which can't observe the system save dialog, so
+  the message is the honest \"Backup ready\"."
   []
   (try
     (let [backup (build-backup @state/app-state)
@@ -100,20 +100,17 @@
       (js/console.warn "backup: export failed" e)
       (set-status! :error "Backup failed"))))
 
-(defn- merge-custom-tunes [s incoming]
-  (let [merged (merge (:custom-tunes s) incoming)]
-    (merge s {:custom-tunes merged}
-           (state/merge-tunes state/base-tunes merged))))
-
 (defn apply-to-state
   "Pure: fold a validated backup's :data into a state map. abc-edits and
-   custom-tunes merge with existing state (incoming wins per key); sets
-   and learned-tune-ids replace wholesale because they are collections
-   the user manages as a whole."
-  [s {:keys [abc-edits custom-tunes sets learned-tune-ids tune-notes]}]
+  tune-notes merge with existing state (incoming wins per key); tunes, sets,
+  and learned-tune-ids replace wholesale because they are collections the
+  user manages as a whole — a plain merge could never un-delete a tune (or
+  a set, or a learned flag) the backup no longer has, since merge only adds
+  or overwrites keys present in the incoming map."
+  [s {:keys [abc-edits tunes sets learned-tune-ids tune-notes]}]
   (cond-> s
     abc-edits        (update :abc-edits merge abc-edits)
-    custom-tunes     (merge-custom-tunes custom-tunes)
+    tunes            (merge (state/prepare-tunes tunes))
     sets             (assoc :sets sets)
     learned-tune-ids (assoc :learned-tune-ids learned-tune-ids)
     tune-notes       (update :tune-notes merge tune-notes)))
@@ -123,7 +120,7 @@
   [{:keys [data]}]
   (swap! state/app-state apply-to-state data)
   (when (:abc-edits data) (persist/schedule-save!))
-  (when (:custom-tunes data) (persist/save-custom-tunes!))
+  (when (:tunes data) (persist/save-tunes!))
   (when (:sets data) (persist/save-sets!))
   (when (:learned-tune-ids data) (persist/save-learned!))
   (when (:tune-notes data) (persist/schedule-save-notes!)))
@@ -136,11 +133,20 @@
                                (set-status! :error "Could not read file")))
     (.readAsText reader file)))
 
+(defn- migrate-backup-data
+  "Backups exported before catalog/custom-tunes were unified used
+  :custom-tunes as the key inside :data; alias it to :tunes so old backup
+  files still import instead of failing closed-map validation."
+  [backup]
+  (cond-> backup
+    (contains? (:data backup) :custom-tunes)
+    (update :data #(-> % (assoc :tunes (:custom-tunes %)) (dissoc :custom-tunes)))))
+
 (defn import-text!
   "Parse EDN backup text, validate, and apply. Returns true on success,
-   false if the file was unparseable or schema-invalid."
+  false if the file was unparseable or schema-invalid."
   [text]
-  (if-let [backup (persist/read-validated "backup-import" text Backup)]
+  (if-let [backup (persist/read-validated "backup-import" text Backup migrate-backup-data)]
     (do (apply-backup! backup) true)
     false))
 
@@ -154,11 +160,11 @@
           (fn [e]
             (when-let [file (some-> e .-target .-files (aget 0))]
               (read-file-text
-               file
-               (fn [text]
-                 (if (import-text! text)
-                   (do (js/console.log "backup: import successful")
-                       (set-status! :success "Backup restored"))
-                   (do (js/console.warn "backup: import failed; state unchanged")
-                       (set-status! :error "Restore failed: invalid file"))))))))
+                file
+                (fn [text]
+                  (if (import-text! text)
+                    (do (js/console.log "backup: import successful")
+                        (set-status! :success "Backup restored"))
+                    (do (js/console.warn "backup: import failed; state unchanged")
+                        (set-status! :error "Restore failed: invalid file"))))))))
     (.click input)))

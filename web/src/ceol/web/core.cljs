@@ -301,10 +301,11 @@
   (when (.getItem js/localStorage "ceol-onboarded")
     (swap! state/app-state assoc :onboarded? true))
   (render/setup-render-watch!)
-  (persist/load-custom-tunes!)
+  (persist/load-tunes!)
   (persist/load-sets!)
   (persist/load-learned!)
   (persist/load-abc-data!)
   (persist/load-saved-edits!)
   (persist/load-notes!)
   (r/render render/el (views/app @state/app-state)))
+

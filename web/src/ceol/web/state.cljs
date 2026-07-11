@@ -1,8 +1,8 @@
 (ns ceol.web.state
   "App state atom, query functions, and pure domain logic.
-   The single source of truth for all UI state. Query functions are pure
-   and take the state map as their first argument. Side-effectful mutations
-   live in core.cljs via dispatch-action!."
+  The single source of truth for all UI state. Query functions are pure
+  and take the state map as their first argument. Side-effectful mutations
+  live in core.cljs via dispatch-action!."
   (:require [ceol.tunes :as tunes]
             [clojure.string :as str]))
 
@@ -31,30 +31,15 @@
            [:name :string]
            [:tune-ids [:vector :int]]]]])
 
-(def base-tunes
-  (mapv #(select-keys % [:id :name :type :time-sig :key :mode-name :session-id])
-        tunes/catalog))
-
-(def ^:private base-tune-ids
-  "Set of IDs from the base catalog. Used for O(1) custom-tune? checks."
-  (set (map :id base-tunes)))
-
-(defn merge-tunes
-  "Merge base catalog with custom tunes (custom overrides by ID).
-   Returns a partial state map {:tunes {id→tune} :tune-order [ids]}
-   suitable for merging directly into app-state."
-  [base custom]
-  (let [updated-base (mapv (fn [t]
-                             (if-let [overrides (get custom (:id t))]
-                               (merge t overrides)
-                               t))
-                           base)
-        new-tunes    (->> (vals custom)
-                          (remove #(some (fn [bt] (= (:id bt) (:id %))) base))
-                          vec)
-        all-tunes    (into updated-base new-tunes)]
-    {:tunes      (into {} (map (juxt :id identity)) all-tunes)
-     :tune-order (mapv :id all-tunes)}))
+(defn prepare-tunes
+  "New tunes. Does not preserve base catalog.
+  Returns a partial state map {:tunes {id→tune} :tune-order [ids]}
+  suitable for merging directly into app-state."
+  [new]
+  (let [new-tunes    (->> (vals new)
+                          vec)]
+    {:tunes      (into {} (map (juxt :id identity)) new-tunes)
+     :tune-order (mapv :id new-tunes)}))
 
 ;; ---------------------------------------------------------------------------
 ;; App state shape
@@ -133,60 +118,64 @@
 
 (defonce app-state
   (atom (merge
-         {:custom-tunes    {}
-          :abc-data        {}
-          :abc-edits       {}
-          :selected-tune-id nil
-          :filter          :all
-          :tab             :tunes
-          :editor-open?    false
-          :notes-open?     false
-          :tune-notes      {}
-          ;; Mobile UI
-          :main-view            :tune
-          :mobile-view          :list
-          :controls-sheet-open? false
-          :context-menu-tune-id nil
-          :swipe-peek-tune-id   nil
-          :delete-confirm-tune-id nil
-          :onboarded?           false
-          :guitar?         false
-          :editing-field   nil
-          :playing?        false
-          :playing-section nil
-          :section         nil
-          :loop?           false
-          :tempo-offset    0
-          ;; Sets
-          :sets            {}
-          :active-set-id   nil
-          :set-playing?    false
-          :set-tune-index  0
-          ;; Set creation
-          :creating-set?       false
-          :creating-set-name   nil
-          :creating-set-tunes  []
-          :typeahead-query     ""
-          :typeahead-index     0
-          :adding-to-set       nil
-          :metronome?          false
-          :count-in?           false
-          :current-beat        nil
-          ;; Learned + Session
-          :learned-tune-ids    #{}
-          :session-mode?       false
-          :session-queue       []
-          :session-index       0
-          :session-set-index   0
-          :session-pausing?    false
-          :session-within-set? false
-          :session-played      []}
-         (merge-tunes base-tunes {}))))
+          {:abc-data        {}
+           :abc-edits       {}
+           :selected-tune-id nil
+           :filter          :all
+           :tab             :tunes
+           :editor-open?    false
+           :notes-open?     false
+           :tune-notes      {}
+           ;; Mobile UI
+           :main-view            :tune
+           :mobile-view          :list
+           :controls-sheet-open? false
+           :context-menu-tune-id nil
+           :swipe-peek-tune-id   nil
+           :delete-confirm-tune-id nil
+           :onboarded?           false
+           :guitar?         false
+           :editing-field   nil
+           :playing?        false
+           :playing-section nil
+           :section         nil
+           :loop?           false
+           :tempo-offset    0
+           ;; Sets
+           :sets            {}
+           :active-set-id   nil
+           :set-playing?    false
+           :set-tune-index  0
+           ;; Set creation
+           :creating-set?       false
+           :creating-set-name   nil
+           :creating-set-tunes  []
+           :typeahead-query     ""
+           :typeahead-index     0
+           :adding-to-set       nil
+           :metronome?          false
+           :count-in?           false
+           :current-beat        nil
+           ;; Learned + Session
+           :learned-tune-ids    #{}
+           :session-mode?       false
+           :session-queue       []
+           :session-index       0
+           :session-set-index   0
+           :session-pausing?    false
+           :session-within-set? false
+           :session-played      []})))
 
 ;; --- Tune queries ---
 
 (defn tune-by-id [state id]
   (get (:tunes state) id))
+
+(defn catalog-tune?
+  "Is this tune ID one of the static bundled catalog entries? Catalog
+  tunes are deletable but not editable."
+  [tune-id]
+  (contains? tunes/catalog tune-id))
 
 (defn filtered-tunes [state]
   (let [tunes (:tunes state)
@@ -209,18 +198,30 @@
   (or (get (:abc-edits state) tune-id)
       (get (:abc-data state) tune-id)))
 
-(defn custom-tune?
-  "Is this tune ID a custom (user-added) tune, not from the base catalog?"
-  [tune-id]
-  (not (contains? base-tune-ids tune-id)))
+(def ^:private highest-catalog-tune-id
+  "tunes/catalog is a compile-time constant; compute its max id once."
+  (->> tunes/catalog keys (apply max)))
 
 (defn next-tune-id
-  "Generate the next available tune ID."
+  "Generate a tune ID unused by every map keyed on tune ID.
+  Two invariants combine here: since catalog tunes are deletable, allocating
+  strictly off the current max known id can drop back to (or below) the
+  catalog's own id range once a high-numbered tune is removed — so we always
+  reserve space above the catalog's highest id. And :abc-edits/:tune-notes/
+  :learned-tune-ids key by tune ID independently of :tunes, so a deleted
+  tune's entry can outlive it there (e.g. via a merged backup import) — so
+  we also reserve space above every one of those keyspaces. Reusing an id
+  that still has another map's data attached would silently hand a new tune
+  a stranger's ABC edit, note, or learned flag."
   [state]
-  (let [all-ids (keys (:tunes state))]
-    (if (seq all-ids)
-      (inc (apply max all-ids))
-      1000)))
+  (let [known-ids (concat (keys (:tunes state))
+                         (keys (:abc-edits state))
+                         (keys (:tune-notes state))
+                         (:learned-tune-ids state))
+        highest-known-id (when (seq known-ids) (apply max known-ids))]
+    (if (or (nil? highest-known-id) (<= highest-known-id highest-catalog-tune-id))
+      1000
+      (inc highest-known-id))))
 
 ;; --- Set queries ---
 
@@ -260,7 +261,7 @@
 
 (defn advance-set
   "Given current set state, compute the next state after a tune finishes.
-   Returns {:action :play/:stop/:loop, :tune-id <id>, :index <n>} or nil."
+  Returns {:action :play/:stop/:loop, :tune-id <id>, :index <n>} or nil."
   [sets active-set-id set-tune-index loop?]
   (when-let [s (get sets active-set-id)]
     (let [next-idx (inc set-tune-index)
@@ -289,7 +290,7 @@
 
 (defn build-session-queue
   "Build the session queue from learned tunes and sets.
-   Returns unshuffled vector of {:type :tune/:set ...} items."
+  Returns unshuffled vector of {:type :tune/:set ...} items."
   [learned-ids sets]
   (let [complete-sets  (filter (fn [[_ s]]
                                  (and (seq (:tune-ids s))
@@ -307,7 +308,7 @@
 
 (defn advance-session
   "Given session state, compute next action after a tune finishes.
-   Returns {:action :advance-in-set/:next-item/:done/:reshuffle, ...}"
+  Returns {:action :advance-in-set/:next-item/:done/:reshuffle, ...}"
   [queue session-index session-set-index loop?]
   (when (seq queue)
     (let [current (nth queue session-index nil)]
