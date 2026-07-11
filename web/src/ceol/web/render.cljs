@@ -56,10 +56,19 @@
   (add-watch state/app-state ::render
              (fn [_ _ _old-s s]
                (r/render el (views/app s))
-               ;; Only re-render sheet music when tune, ABC, section, or tempo changed
+               ;; Re-render sheet music when one of the following changed; 
+               ;; selected tune
+               ;; ABC
+               ;; tempo
+               ;; tune type (reel, polka etc)
+               ;; meter (9/8, 6/8 etc)
+               ;; mode (G Major, A Dorian etc)
+               ;; section (A, B, ALL)
                (let [tune-id  (:selected-tune-id s)
                      abc      (state/edited-abc-for-tune s tune-id)
-                     new-key  [tune-id abc (:section s) (:tempo-offset s)]]
+                     new-key  [(:section s)
+                               (:tempo-offset s)
+                               (state/selected-tune @state/app-state)]]
                  (when (not= new-key @prev-render-key)
                    (reset! prev-render-key new-key)
                    ;; Evict stale non-string edits (e.g. from earlier bug)
