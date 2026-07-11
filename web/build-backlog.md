@@ -256,21 +256,17 @@ assumed this handler already existed.
 
 ---
 
-## B5. Reduce web seed 54 → 3 deletable starter tunes — P2 · small · ✓ SHIPPED
+## B5. Reduce web seed 54 → 3 deletable starter tunes — P2 · small · SUPERSEDED
 
-Gap **G3**. The app always seeds **54** catalog tunes, so a zero-tunes state is
-**unreachable** and the designed first-run / "No tunes yet" empty state (`DEMlt`) is
-unreachable too. The onboarding coachmark also only renders over a non-empty list.
+Gap **G3**. The app always seeded **54** catalog tunes, so a zero-tunes state was
+**unreachable** and the designed first-run / "No tunes yet" empty state (`DEMlt`) was
+unreachable too. The onboarding coachmark also only rendered over a non-empty list.
 
-**Decision (2026-05-22):** seed ~**3** tunes (one per common type) as **deletable**
-library entries, plus a demo set. First run = a 3-tune list + coachmark (gestures
-still demoable). `DEMlt` becomes the empty state reached by deleting all 3. No
-catalog-browse, no library/catalog split — library = seeds + user-added.
-
-**Catch:** catalog tunes are currently **undeletable** — the `tune-header` Delete is
-gated on `custom-tune?` (`views.cljs:404`), and catalog IDs are not in
-`:custom-tunes`. The 3 seeds must be deletable, so they need to be seeded *as*
-custom/library tunes (or the delete gate generalised). Small build.
+**Not shipped as speced.** PR #9 ("Allow deletion of catalog tunes") closed the
+same gap a different way: the full catalog stays as the seed, but every tune
+(catalog or user-added) is deletable, so the empty state is reached by deleting
+rather than by starting from a small seed. Adopted that direction instead — see
+the summary at the top of this doc.
 
 ---
 

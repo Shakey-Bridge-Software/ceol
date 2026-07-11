@@ -32,17 +32,17 @@ await dispatch(kwExpr("onboarding", "dismiss"));
 await sleep(150);
 
 const startCount = await setsCount();
-console.log("sets at start:", startCount); // seed = 1 (Polkas, set-starter)
+console.log("sets at start:", startCount); // seeded from default-sets.edn (20 sets); set-17 = "Polkas Set 1"
 
-// Open the starter set's detail, then its action sheet via ⋮ wiring.
-await dispatch(kwExpr("set", "toggle"), vecExpr([JSON.stringify("set-starter")]));
+// Open a real seed set's detail, then its action sheet via ⋮ wiring.
+await dispatch(kwExpr("set", "toggle"), vecExpr([JSON.stringify("set-17")]));
 await sleep(150);
 const moreClicked = await evalJs(
   `(function(){var b=document.querySelector(".set-detail-more");
      if(!b) return false; b.click(); return true;})()`);
 assert(moreClicked === true, "set-detail ⋮ button exists and is clickable");
 await sleep(200);
-assert((await menuSetId()) === "set-starter", "⋮ opens the sheet for the set");
+assert((await menuSetId()) === "set-17", "⋮ opens the sheet for the set");
 const overlay = await evalJs(`document.querySelector(".as-overlay") != null`);
 assert(overlay === true, ".as-overlay set action sheet renders");
 
@@ -61,7 +61,7 @@ await shot(`${OUT}/01-sheet-open.png`);
 assert((await clickRow("Edit set")) === true, "Edit set row is clickable");
 await sleep(200);
 const te = JSON.parse(await evalJs(getInExpr(["set-editor"])));
-assert(te?.mode === "edit" && te?.["set-id"] === "set-starter",
+assert(te?.mode === "edit" && te?.["set-id"] === "set-17",
        "Edit set opens the editor in :edit mode for this set");
 assert((await menuSetId()) === null, "sheet closes when a row is chosen");
 await shot(`${OUT}/02-edit-from-sheet.png`);
@@ -69,7 +69,7 @@ await dispatch(kwExpr("set-editor", "cancel"));
 await sleep(120);
 
 // Duplicate → clones the set with a " (copy)" name, selects it.
-await dispatch(kwExpr("set-menu", "open"), vecExpr([JSON.stringify("set-starter")]));
+await dispatch(kwExpr("set-menu", "open"), vecExpr([JSON.stringify("set-17")]));
 await sleep(150);
 assert((await clickRow("Duplicate")) === true, "Duplicate row is clickable");
 await sleep(200);
@@ -84,12 +84,12 @@ const dup = JSON.parse(await evalJs(`
   })()
 `));
 console.log("duplicate:", dup);
-assert(dup?.name === "Polkas (copy)", `copy name (got ${dup?.name})`);
-assert(JSON.stringify(dup?.["tune-ids"]) === "[1,3]", "copy carries the tune-ids");
+assert(dup?.name === "Polkas Set 1 (copy)", `copy name (got ${dup?.name})`);
+assert(JSON.stringify(dup?.["tune-ids"]) === "[1,2]", "copy carries the tune-ids");
 assert((await menuSetId()) === null, "sheet closes after Duplicate");
 
 // Duplicate again → " (copy 2)" collision bump.
-await dispatch(kwExpr("set-menu", "open"), vecExpr([JSON.stringify("set-starter")]));
+await dispatch(kwExpr("set-menu", "open"), vecExpr([JSON.stringify("set-17")]));
 await sleep(120);
 await clickRow("Duplicate");
 await sleep(200);
@@ -106,7 +106,7 @@ assert(/\(copy 2\)$/.test(dup2?.name), `second copy bumps to '(copy 2)' (got ${d
 
 // Delete → routes through the B2 confirm modal (no immediate delete).
 const beforeDelete = await setsCount();
-await dispatch(kwExpr("set-menu", "open"), vecExpr([JSON.stringify("set-starter")]));
+await dispatch(kwExpr("set-menu", "open"), vecExpr([JSON.stringify("set-17")]));
 await sleep(120);
 assert((await clickRow("Delete")) === true, "Delete row is clickable");
 await sleep(180);
