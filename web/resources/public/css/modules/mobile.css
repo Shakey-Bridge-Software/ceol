@@ -158,6 +158,12 @@
   .sheet-area { padding: 16px; }
   .editing-strip { padding: 8px 16px; font-size: 10px; }
   .editing-strip-help { display: none; }
+  .editing-strip-done {
+    margin-left: auto;
+    background: var(--accent); color: #fff; border: none;
+    padding: 6px 14px; border-radius: 4px;
+    font-family: var(--font-heading); font-size: 12px; cursor: pointer;
+  }
   /* ABC editor — full bleed, no cramped hints */
   .editor-split { height: 200px; }
   .split-divider { padding: 0 16px; }

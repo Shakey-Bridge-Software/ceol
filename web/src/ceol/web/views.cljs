@@ -611,11 +611,16 @@
        (if (:guitar? state) "\uD83C\uDFB8 Guitar" "Guitar")]]]))
 
 (defn editing-strip []
+  ;; .editing-strip-done is CSS-hidden ≥721px (editor.css) since desktop's
+  ;; own tune-header edit-toggle already reads "✓ Done" there. On mobile
+  ;; the header is fully hidden (mobile.css), making this the only way to
+  ;; close the editor — don't drop it without an equivalent replacement.
   [:div.editing-strip
    [:span.editing-strip-icon "✎"]
    [:span.editing-strip-label "EDITING TUNE"]
    [:span.editing-strip-spacer]
-   [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]])
+   [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]
+   [:button.editing-strip-done {:on {:click [[:editor/toggle]]}} "Done"]])
 
 ;; --- Mobile playback: slim bottom bar + "NOW PLAYING" controls sheet ---
 
@@ -1050,7 +1055,7 @@
   ;; Duplicate / Delete. Each row builds its dispatch from the tune-id.
   [{:icon "✎" :label "Edit details"
     :build (fn [id] [[:menu/close] [:tune-editor/open-edit id]])}
-   {:icon "♪" :label "Edit notation"
+   {:icon "♪" :label "Edit notation" :id :edit-notation
     :build (fn [id] [[:menu/close] [:tune/select id] [:editor/open]])}
    {:icon "≡" :label "Add to set"
     :build (fn [id] [[:menu/close] [:tune/select id] [:tune/add-to-set id]])}
@@ -1093,13 +1098,15 @@
 (defn mobile-tune-action-sheet [state]
   (when-let [tune-id (:context-menu-tune-id state)]
     (when-let [tune (state/tune-by-id state tune-id)]
-      (mobile-bottom-sheet
-       {:title    (:name tune)
-        :subtitle (str (get tune-type-labels (:type tune)) " · "
-                       (:time-sig tune) " · "
-                       (key-mode-label (:key tune) (:mode-name tune)))
-        :on-close [[:menu/close]]
-        :rows     (sheet-rows action-sheet-rows tune-id)}))))
+      (let [rows (cond->> action-sheet-rows
+                   (state/catalog-tune? tune-id) (remove #(= (:id %) :edit-notation)))]
+        (mobile-bottom-sheet
+         {:title    (:name tune)
+          :subtitle (str (get tune-type-labels (:type tune)) " · "
+                         (:time-sig tune) " · "
+                         (key-mode-label (:key tune) (:mode-name tune)))
+          :on-close [[:menu/close]]
+          :rows     (sheet-rows rows tune-id)})))))
 
 (def ^:private set-action-sheet-rows
   ;; Order matches design kihYP: Play set / Edit set / Duplicate / Delete.
