@@ -11,15 +11,24 @@
      (when-let [el (js/document.querySelector ".editor-textarea")]
        (.focus el)))))
 
+(defn- editable-tune? [state]
+  (let [tune-id (:selected-tune-id state)]
+    (and tune-id
+         (not (:session-mode? state))
+         (not (state/catalog-tune? tune-id)))))
+
 (defn toggle! [_args]
-  (let [opening? (not (:editor-open? @state/app-state))]
-    (swap! state/app-state assoc :editor-open? opening?)
-    (when opening? (focus-editor-soon!))))
+  (let [state @state/app-state]
+    (when (editable-tune? state)
+      (let [opening? (not (:editor-open? state))]
+        (swap! state/app-state assoc :editor-open? opening?)
+        (when opening? (focus-editor-soon!))))))
 
 (defn open! [_args]
-  (when-not (:editor-open? @state/app-state)
-    (swap! state/app-state assoc :editor-open? true)
-    (focus-editor-soon!)))
+  (let [state @state/app-state]
+    (when (and (editable-tune? state) (not (:editor-open? state)))
+      (swap! state/app-state assoc :editor-open? true)
+      (focus-editor-soon!))))
 
 (defn update! [[tune-id new-val]]
   (when (string? new-val)
