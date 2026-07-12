@@ -615,8 +615,7 @@
    [:span.editing-strip-icon "✎"]
    [:span.editing-strip-label "EDITING TUNE"]
    [:span.editing-strip-spacer]
-   [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]
-   [:button.editing-strip-done {:on {:click [[:editor/toggle]]}} "Done"]])
+   [:span.editing-strip-help "Edits to ABC update sheet live · Done to save"]])
 
 ;; --- Mobile playback: slim bottom bar + "NOW PLAYING" controls sheet ---
 

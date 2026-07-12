@@ -360,8 +360,17 @@
                             (dispatch-action! :tune/select [(:id (nth tunes new-idx))]))))
         nil))))
 
+(defn- on-document-click [_e]
+  ;; Menu-btn/menu-item clicks stopPropagation before reaching here, so any
+  ;; click that fires this listener is outside the open context menu.
+  (when (:context-menu-tune-id @state/app-state)
+    (dispatch-action! :menu/close nil)))
+
 (defonce _keydown-listener
   (.addEventListener js/document "keydown" on-keydown))
+
+(defonce _document-click-listener
+  (.addEventListener js/document "click" on-document-click))
 
 (defn init! []
   (r/set-dispatch! execute!)
