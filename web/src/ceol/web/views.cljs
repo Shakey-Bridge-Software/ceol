@@ -75,12 +75,10 @@
      [:div.cm-divider]
      [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:playback/play]]}}
       [:span.cm-icon "▶"] "Play"]
-     [:div.cm-divider]
-     [:button.cm-item {:on       {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}
-                       :disabled catalog-tune?}
-      [:span.cm-icon "✎"] (if catalog-tune?
-                            "Cannot edit catalog tune"
-                            "Edit")]
+     (when-not catalog-tune?
+       (list [:div.cm-divider]
+             [:button.cm-item {:on {:click [[:menu/close] [:tune/select tune-id] [:editor/open]]}}
+              [:span.cm-icon "✎"] "Edit"]))
      (list [:div.cm-divider]
            [:button.cm-item.cm-item-danger
             {:on {:click [[:menu/close] [:tune/delete tune-id]]}}
@@ -474,12 +472,10 @@
                                    :on {:click [[:section/set :b]]}} "B"]
              [:button.section-btn {:class (when (nil? section) "active")
                                    :on {:click [[:section/set nil]]}} "All"]])
-          [:button.edit-toggle {:class (when editor-open? "active")
-                                :on {:click [[:editor/toggle]]}
-                                :disabled catalog-tune?
-                                :title (when catalog-tune?
-                                             "Cannot edit catalog tunes")}
-           (if editor-open? "✓ Done" "✎ Edit")]
+          (when-not catalog-tune?
+            [:button.edit-toggle {:class (when editor-open? "active")
+                                  :on {:click [[:editor/toggle]]}}
+             (if editor-open? "✓ Done" "✎ Edit")])
           (let [is-learned? (state/learned? state tune-id)]
             [:button.learned-toggle {:class (when is-learned? "active")
                                      :on {:click [[:learned/toggle tune-id]]}}
