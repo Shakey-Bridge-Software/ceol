@@ -12,7 +12,7 @@
 (def tune-type-labels
   {:all "All" :polka "Polka" :jig "Jig" :reel "Reel"
    :hornpipe "Hornpipe" :slip-jig "Slip Jig" :slide "Slide"
-   :mazourka "Mazourka" :other "Other"})
+   :mazourka "Mazourka" :other "Song/Air"})
 
 (def tune-type-order [:all :polka :jig :reel :hornpipe :slip-jig :slide :mazourka :other])
 (def tune-types [:polka :jig :reel :hornpipe :slip-jig :slide :mazourka :other])
