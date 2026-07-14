@@ -66,7 +66,9 @@
                ;; section (A, B, ALL)
                (let [tune-id  (:selected-tune-id s)
                      abc      (state/edited-abc-for-tune s tune-id)
-                     new-key  [(:section s)
+                     new-key  [tune-id
+                               abc
+                               (:section s)
                                (:tempo-offset s)
                                (state/selected-tune @state/app-state)]]
                  (when (not= new-key @prev-render-key)
