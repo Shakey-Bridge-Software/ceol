@@ -9,7 +9,7 @@
             [ceol.web.views :as views]
             [ceol.web.guitar :as guitar]
             [ceol.web.metronome :as metro]
-            [ceol.web.beat-engine :as beat]
+            [ceol.beat-engine :as beat]
             [ceol.web.persist :as persist]
             [ceol.web.backup :as backup]
             [ceol.web.render :as render]

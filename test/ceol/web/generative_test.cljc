@@ -5,7 +5,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [malli.core :as m]
             [malli.generator :as mg]
-            [ceol.web.beat-engine :as beat]
+            [ceol.beat-engine :as beat]
             [ceol.web.chords :as chords]))
 
 ;; Tighter than ceol.tunes/Tune — restricts musical fields to values that

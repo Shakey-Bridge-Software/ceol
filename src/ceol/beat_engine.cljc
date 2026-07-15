@@ -1,4 +1,4 @@
-(ns ceol.web.beat-engine
+(ns ceol.beat-engine
   "Pure beat math shared between metronome, count-in, and guitar scheduling.
    No I/O, no state. beats-for-tune is the single source of truth for BPM
    and bar timing — all timing consumers should derive from it.")
