@@ -224,7 +224,11 @@
 
     ;; Playback
     :playback/play  (playback/play!)
-    :playback/stop  (playback/stop!)
+    ;; A user-initiated stop ends the metronome too (button off), consistent
+    ;; with the play/stop toggle. The stop! fn itself preserves :metronome? so
+    ;; restart-if-playing! (tempo/section change) still re-anchors.
+    :playback/stop  (do (playback/stop!)
+                        (swap! state/app-state assoc :metronome? false))
     :guitar/toggle  (let [new-val (not (:guitar? @state/app-state))]
                       (swap! state/app-state assoc :guitar? new-val)
                       (guitar/set-muted! (not new-val)))
@@ -235,10 +239,16 @@
     (let [new-val (not (:metronome? @state/app-state))]
       (swap! state/app-state assoc :metronome? new-val :current-beat nil)
       (if new-val
-        (let [s @state/app-state
-              tune (state/selected-tune s)
-              params (beat/beats-for-tune tune (:tempo-offset s))]
-          (metro/start-clicking! params))
+        (let [s (deref state/app-state)]
+          (if (and (:playing? s) (:melody-start-at s))
+            ;; Playback active: lock to the melody's beat grid.
+            (metro/start-synced! {:ms-per-beat   (:melody-ms-per-beat s)
+                                  :beats-per-bar (:melody-beats-per-bar s)}
+                                 (:melody-start-at s))
+            ;; Standalone: self-correcting performance.now clock, click immediately.
+            (let [tune   (state/selected-tune s)
+                  params (beat/beats-for-tune tune (:tempo-offset s))]
+              (metro/start-clicking! params))))
         (metro/stop!)))
     :count-in/toggle (do (swap! state/app-state update :count-in? not)
                          (playback/restart-if-playing!))
