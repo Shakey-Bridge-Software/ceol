@@ -35,6 +35,22 @@
                              [] bar-chords)]
       (guitar/play! filled (:type tune) ms-per-bar start-at))))
 
+(defn anchor-metronome!
+  "Persist the melody's beat phase (the shared reference the synced metronome
+   keys off) and, when the metronome flag is on, (re)start it locked to this
+   start-at. Called by every play/restart path right after the melody is
+   scheduled, so the metronome re-anchors across tempo/section changes and
+   loop repeats. start-at is AudioContext seconds of beat 0."
+  [s tune start-at]
+  (let [{:keys [ms-per-beat beats-per-bar]} (beat/beats-for-tune tune (:tempo-offset s))]
+    (swap! state/app-state assoc
+           :melody-start-at      start-at
+           :melody-ms-per-beat   ms-per-beat
+           :melody-beats-per-bar beats-per-bar)
+    (when (:metronome? @state/app-state)
+      (metro/start-synced! {:ms-per-beat ms-per-beat :beats-per-bar beats-per-bar}
+                           start-at))))
+
 (defn stop!
   "Stop playback unconditionally."
   []
@@ -42,7 +58,8 @@
   (guitar/stop!)
   (metro/stop!)
   (swap! state/app-state assoc :playing? false :playing-section nil
-         :set-playing? false :set-tune-index 0 :current-beat nil))
+         :set-playing? false :set-tune-index 0 :current-beat nil
+         :melody-start-at nil :melody-ms-per-beat nil :melody-beats-per-bar nil))
 
 (declare play!)
 
@@ -66,7 +83,12 @@
     (do (abc-bridge/stop!)
         (guitar/stop!)
         (metro/stop!)
-        (swap! state/app-state assoc :playing? false :current-beat nil))
+        ;; Terminal user stop: the metronome ends with playback (button off),
+        ;; rather than sitting lit-but-silent. Re-anchor paths (loop, tempo /
+        ;; section change) go through stop!/restart-if-playing!, which preserve
+        ;; :metronome?, so this only affects a deliberate stop.
+        (swap! state/app-state assoc :playing? false :current-beat nil :metronome? false
+               :melody-start-at nil :melody-ms-per-beat nil :melody-beats-per-bar nil))
     (let [s            @state/app-state
           tune         (state/selected-tune s)
           abc-body     (state/edited-abc-for-tune s (:id tune))
@@ -80,6 +102,10 @@
              :set-advancing?  false)
       (let [on-end (fn []
                      (guitar/stop!)
+                     ;; Stop the synced clock at every tune-end (mirrors guitar/stop!)
+                     ;; so it never free-runs on a dead grid; replay paths (loop,
+                     ;; set-advance) re-anchor it via anchor-metronome!.
+                     (metro/stop!)
                      (let [s @state/app-state]
                        (if (:set-playing? s)
                          (let [result (state/advance-set (:sets s) (:active-set-id s)
@@ -91,21 +117,26 @@
                                         :selected-tune-id (:tune-id result)
                                         :set-advancing?  true)
                                  (js/setTimeout play! 500))
-                             (do (metro/stop!)
-                                 (swap! state/app-state assoc :playing? false :playing-section nil
-                                        :set-playing? false :set-tune-index 0 :current-beat nil))))
-                         (do (swap! state/app-state assoc :playing? false :playing-section nil
-                                    :current-beat nil)
-                             (when (:loop? s)
-                               (play!))))))]
-        ;; Stop standalone metronome if running
-        (when (metro/running?)
-          (metro/stop!)
-          (swap! state/app-state assoc :metronome? false :current-beat nil))
+                             ;; Set finished: terminal, so the metronome ends too.
+                             (swap! state/app-state assoc :playing? false :playing-section nil
+                                    :set-playing? false :set-tune-index 0 :current-beat nil
+                                    :metronome? false :melody-start-at nil
+                                    :melody-ms-per-beat nil :melody-beats-per-bar nil)))
+                         (if (:loop? s)
+                           (do (swap! state/app-state assoc :playing? false :playing-section nil
+                                      :current-beat nil)
+                               (play!))
+                           ;; Single tune finished: terminal, metronome ends too.
+                           (swap! state/app-state assoc :playing? false :playing-section nil
+                                  :current-beat nil :metronome? false :melody-start-at nil
+                                  :melody-ms-per-beat nil :melody-beats-per-bar nil)))))]
         ;; Count-in path: prepare → count-in → start
         ;; No count-in: prepare → start immediately
         ;; start-at is captured AFTER abc-bridge/start! so it reflects the
-        ;; melody's actual scheduling moment, not a few ms before it.
+        ;; melody's actual scheduling moment, not a few ms before it. The
+        ;; metronome (if on) re-anchors to that start-at via anchor-metronome!,
+        ;; so it stays locked to the melody's beat grid — with count-in the
+        ;; start-at reflects the post-count-in downbeat.
         (if (and (:count-in? s) (not set-advancing?))
           (-> (abc-bridge/prepare!)
               (.then (fn [_]
@@ -114,10 +145,12 @@
                                           (abc-bridge/start! {:on-end on-end})
                                           (let [start-at (abc-bridge/now)]
                                             (start-guitar! s tune abc-body (:section s)
-                                                           (:ms-per-bar beat-params) start-at)))))))
+                                                           (:ms-per-bar beat-params) start-at)
+                                            (anchor-metronome! s tune start-at)))))))
           (-> (abc-bridge/prepare!)
               (.then (fn [_]
                        (abc-bridge/start! {:on-end on-end})
                        (let [start-at (abc-bridge/now)]
                          (start-guitar! s tune abc-body (:section s)
-                                        (:ms-per-bar beat-params) start-at))))))))))
+                                        (:ms-per-bar beat-params) start-at)
+                         (anchor-metronome! s tune start-at))))))))))

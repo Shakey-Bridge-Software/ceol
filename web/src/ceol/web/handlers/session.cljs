@@ -109,6 +109,10 @@
                :playing?       false
                :session-mode?  false
                :session-played (conj (:session-played s) (:session-index s))
+               ;; Session over: terminal, so the metronome ends with it and the
+               ;; stale melody grid is cleared.
+               :metronome?     false
+               :melody-start-at nil :melody-ms-per-beat nil :melody-beats-per-bar nil
                ;; Item #5 — stow the completion summary. Elapsed is 0 if the
                ;; start was never stamped.
                :session-result (ss/result (:session-queue s)
@@ -133,33 +137,39 @@
           within-set? (:session-within-set? s)
           on-end      (fn []
                         (guitar/stop!)
+                        ;; Stop the synced clock between tunes so it doesn't
+                        ;; free-run on the finished tune's grid during the gap;
+                        ;; the next tune re-anchors it via anchor-metronome!.
+                        (metro/stop!)
                         (let [s      @state/app-state
                               result (state/advance-session (:session-queue s)
                                                             (:session-index s)
                                                             (:session-set-index s)
                                                             (:loop? s))]
                           (apply-advance! s result false)))]
-      ;; Set playing state and stop metronome if running
+      ;; Set playing state. The metronome (if on) re-anchors to the fresh
+      ;; start-at via anchor-metronome!, staying locked to the melody grid.
       (swap! state/app-state assoc :playing? true :selected-tune-id tune-id)
-      (when (metro/running?)
-        (metro/stop!)
-        (swap! state/app-state assoc :metronome? false :current-beat nil))
-      ;; Within-set: no count-in; new item: count-in
+      ;; Within-set: no count-in; new item: count-in.
+      ;; start-at is captured AFTER start! (matching playback.cljs) so it
+      ;; reflects the melody's real scheduling moment, not a few ms before it.
       (if within-set?
         (-> (abc-bridge/prepare!)
             (.then (fn [_]
+                     (abc-bridge/start! {:on-end on-end})
                      (let [start-at (abc-bridge/now)]
-                       (abc-bridge/start! {:on-end on-end})
                        (playback/start-guitar! s tune abc-body nil
-                                               (:ms-per-bar beat-params) start-at)))))
+                                               (:ms-per-bar beat-params) start-at)
+                       (playback/anchor-metronome! s tune start-at)))))
         (-> (abc-bridge/prepare!)
             (.then (fn [_]
                      (metro/count-in! beat-params
                                       (fn []
+                                        (abc-bridge/start! {:on-end on-end})
                                         (let [start-at (abc-bridge/now)]
-                                          (abc-bridge/start! {:on-end on-end})
                                           (playback/start-guitar! s tune abc-body nil
-                                                                  (:ms-per-bar beat-params) start-at)))))))))))
+                                                                  (:ms-per-bar beat-params) start-at)
+                                          (playback/anchor-metronome! s tune start-at)))))))))))
 
 (defn session-start!
   "Build the session queue, shuffle it, set session state, and auto-play the first item."
@@ -200,6 +210,7 @@
     (cancel-gap-timer!)              ; drop any pending natural-gap timer first
     (abc-bridge/stop!)
     (guitar/stop!)
+    (metro/stop!)                    ; skip is transitional; next tune re-anchors
     (let [s      @state/app-state
           result (state/advance-session (:session-queue s)
                                         (:session-index s)
@@ -236,4 +247,5 @@
          :session-mode?    false
          :session-pausing? false
          :session-paused?  false
+         :metronome?       false   ; terminal: end the metronome with the session
          :session-result   nil))

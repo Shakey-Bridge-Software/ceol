@@ -85,9 +85,14 @@
 ;;   :loop?             bool
 ;;   :guitar?           bool              guitar track enabled (unmuted)
 ;;   :tempo-offset      int               BPM delta from type default, clamped [-40, +40]
-;;   :metronome?        bool              standalone metronome running
+;;   :metronome?        bool              metronome enabled (standalone, or synced to playback)
 ;;   :count-in?         bool              count-in enabled for next play
 ;;   :current-beat      int | nil         current beat index for metronome UI highlight
+;;   :melody-start-at      num | nil      AudioContext seconds of the playing melody's beat 0
+;;   :melody-ms-per-beat   num | nil      playing melody's beat length (ms)
+;;   :melody-beats-per-bar int | nil      playing melody's bar length (beats)
+;;                                        (the three :melody-* keys are the shared beat-grid
+;;                                         reference the synced metronome keys off; nil when stopped)
 ;;
 ;; Set playback
 ;;   :set-playing?      bool              playing through a set (auto-advance between tunes)
@@ -183,6 +188,9 @@
            :metronome?          false
            :count-in?           false
            :current-beat        nil
+           :melody-start-at      nil
+           :melody-ms-per-beat   nil
+           :melody-beats-per-bar nil
            ;; Learned + Session
            :learned-tune-ids    #{}
            :session-mode?       false
