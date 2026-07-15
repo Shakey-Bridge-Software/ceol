@@ -1,6 +1,6 @@
 (ns ceol.web.beat-engine-test
   (:require [clojure.test :refer [deftest testing is]]
-            [ceol.web.beat-engine :as beat]))
+            [ceol.beat-engine :as beat]))
 
 (deftest beats-for-tune-test
   (testing "polka: 120 BPM, 2 beats/bar"

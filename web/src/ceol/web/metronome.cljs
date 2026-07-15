@@ -6,7 +6,7 @@
    Public API: start-clicking!, start-synced!, count-in!, stop!, running?"
   (:require ["tone" :as Tone]
             [ceol.web.abc-bridge :as abc-bridge]
-            [ceol.web.beat-engine :as beat]))
+            [ceol.beat-engine :as beat]))
 
 (defonce metro-state (atom {:synth nil :cancel nil}))
 

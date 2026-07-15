@@ -8,7 +8,7 @@
             [ceol.web.abc-bridge :as abc-bridge]
             [ceol.web.guitar :as guitar]
             [ceol.web.metronome :as metro]
-            [ceol.web.beat-engine :as beat]
+            [ceol.beat-engine :as beat]
             [ceol.web.render :as render]
             [ceol.web.handlers.playback :as playback]
             [ceol.web.handlers.session-summary :as ss]))
