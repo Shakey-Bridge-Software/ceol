@@ -7,6 +7,7 @@
             [ceol.web.handlers.session-summary :as ss]
             [ceol.web.handlers.session-nav :as nav]
             [ceol.abc :as abc]
+            [ceol.beat-engine :as be]
             [clojure.string :as str]))
 
 (def tune-type-labels
@@ -575,7 +576,7 @@
         tempo-str (when tune (abc/tempo-for-type (:type tune) (:time-sig tune)))
         base-bpm (when tempo-str (js/parseInt (second (re-find #"=(\d+)" tempo-str)) 10))
         offset (or (:tempo-offset state) 0)
-        bpm (when base-bpm (max 40 (+ base-bpm offset)))]
+        bpm (when base-bpm (be/clamp-bpm (+ base-bpm offset)))]
     [:div.playback-bar
      [:div.left-controls
       (let [set-context? (and (:active-set-id state) (= :sets (:tab state)))]
@@ -628,7 +629,7 @@
   (let [tempo-str (when tune (abc/tempo-for-type (:type tune) (:time-sig tune)))
         base (when tempo-str (js/parseInt (second (re-find #"=(\d+)" tempo-str)) 10))
         offset (or (:tempo-offset state) 0)]
-    {:base base :bpm (when base (max 40 (+ base offset))) :offset offset}))
+    {:base base :bpm (when base (be/clamp-bpm (+ base offset))) :offset offset}))
 
 (defn mobile-playback-bar [state]
   (let [tune (state/selected-tune state)

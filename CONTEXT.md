@@ -48,6 +48,16 @@ See `docs/agents/domain.md` for how the engineering skills consume this file.
   establish tempo. Optional (`:count-in?`). For a **Loop range**, it plays once at
   loop start, not on every repeat (#44).
 
+- **Beat unit** — the note value that counts as one beat, i.e. the numerator of
+  the ABC `Q:` field (`"1/4"` or `"3/8"`). Modelled as a string so the same
+  literal works in Clojure and ClojureScript. Together with `:bpm` it is the one
+  per-type tempo fact stored in `ceol.beat-engine`; **beats-per-bar = time-sig ÷
+  beat-unit** is derived from it (e.g. a 6/8 jig with a 3/8 beat-unit = 2
+  beats/bar).
+
 - **Beat params** — the derived per-tune timing bundle (`beats-for-tune`):
-  `ms-per-bar`, beats-per-bar, etc., honouring the current tempo offset. The single
-  source of truth for melody, guitar, and metronome scheduling.
+  `ms-per-bar`, beats-per-bar, `ms-per-beat`, effective `:bpm`, honouring the
+  current tempo offset. All derived from the shared `{:bpm :beat-unit}` table (see
+  **Beat unit**), which `ceol.beat-engine` owns as the single source of truth for
+  melody, guitar, and metronome scheduling — the melody Q: field (`ceol.abc`) is
+  formatted downstream from the same table. See `docs/adr/0001-tempo-source-of-truth.md`.
