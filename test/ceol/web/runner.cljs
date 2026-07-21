@@ -6,6 +6,7 @@
             [ceol.web.sets-test]
             [ceol.web.beat-engine-test]
             [ceol.web.tempo-characterization-test]
+            [ceol.web.tempo-invariant-test]
             [ceol.web.session-test]
             [ceol.web.actions-test]
             [ceol.web.backup-test]
@@ -21,6 +22,7 @@
              'ceol.web.sets-test
              'ceol.web.beat-engine-test
              'ceol.web.tempo-characterization-test
+             'ceol.web.tempo-invariant-test
              'ceol.web.session-test
              'ceol.web.actions-test
              'ceol.web.backup-test

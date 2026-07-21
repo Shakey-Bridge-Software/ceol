@@ -2,77 +2,99 @@
   (:require [clojure.test :refer [deftest testing is]]
             [ceol.beat-engine :as beat]))
 
+;; Tunes carry their canonical :time-sig — beats-per-bar is now derived as
+;; time-sig ÷ beat-unit, so the meter follows the signature (a polka in 2/4
+;; is 2 beats/bar, a reel in 4/4 is 4).
 (deftest beats-for-tune-test
   (testing "polka: 120 BPM, 2 beats/bar"
-    (let [r (beat/beats-for-tune {:type :polka} 0)]
+    (let [r (beat/beats-for-tune {:type :polka :time-sig "2/4"} 0)]
       (is (= 120 (:bpm r)))
       (is (= 2 (:beats-per-bar r)))
       (is (= 500.0 (:ms-per-beat r)))
       (is (= 1000.0 (:ms-per-bar r)))))
 
   (testing "jig: 100 BPM, 2 beats/bar"
-    (let [r (beat/beats-for-tune {:type :jig} 0)]
+    (let [r (beat/beats-for-tune {:type :jig :time-sig "6/8"} 0)]
       (is (= 100 (:bpm r)))
       (is (= 2 (:beats-per-bar r)))
       (is (= 600.0 (:ms-per-beat r)))))
 
   (testing "reel: 100 BPM, 4 beats/bar"
-    (let [r (beat/beats-for-tune {:type :reel} 0)]
+    (let [r (beat/beats-for-tune {:type :reel :time-sig "4/4"} 0)]
       (is (= 100 (:bpm r)))
       (is (= 4 (:beats-per-bar r)))
       (is (= 2400.0 (:ms-per-bar r)))))
 
   (testing "slip-jig: 100 BPM, 3 beats/bar"
-    (let [r (beat/beats-for-tune {:type :slip-jig} 0)]
+    (let [r (beat/beats-for-tune {:type :slip-jig :time-sig "9/8"} 0)]
       (is (= 3 (:beats-per-bar r)))))
 
   (testing "hornpipe: 100 BPM, 4 beats/bar"
-    (let [r (beat/beats-for-tune {:type :hornpipe} 0)]
+    (let [r (beat/beats-for-tune {:type :hornpipe :time-sig "4/4"} 0)]
       (is (= 100 (:bpm r)))
       (is (= 4 (:beats-per-bar r))))))
 
 (deftest beats-for-tune-with-offset-test
   (testing "positive offset increases BPM"
-    (let [r (beat/beats-for-tune {:type :polka} 10)]
+    (let [r (beat/beats-for-tune {:type :polka :time-sig "2/4"} 10)]
       (is (= 130 (:bpm r)))
       (is (< (:ms-per-beat r) 500.0))))
 
   (testing "negative offset decreases BPM"
-    (let [r (beat/beats-for-tune {:type :reel} -20)]
+    (let [r (beat/beats-for-tune {:type :reel :time-sig "4/4"} -20)]
       (is (= 80 (:bpm r)))
       (is (= 750.0 (:ms-per-beat r)))))
 
   (testing "clamps to minimum 40 BPM"
-    (let [r (beat/beats-for-tune {:type :jig} -100)]
+    (let [r (beat/beats-for-tune {:type :jig :time-sig "6/8"} -100)]
       (is (= 40 (:bpm r)))
       (is (= 1500.0 (:ms-per-beat r)))))
 
   (testing "nil offset treated as 0"
-    (let [r (beat/beats-for-tune {:type :polka} nil)]
+    (let [r (beat/beats-for-tune {:type :polka :time-sig "2/4"} nil)]
       (is (= 120 (:bpm r))))))
 
-(deftest beats-for-tune-defaults-test
-  (testing "nil tune gives defaults"
+;; Re-pinned by #53: unmapped types (:other, :mazourka, unknown) and nil tune
+;; are now melody-authoritative — 100 BPM (was 120 from the removed
+;; default-params), meter derived from time-sig (defaulting to 4/4). This is
+;; the desync fix: accompaniment now matches the melody's Q: for these tunes.
+(deftest beats-for-tune-fallback-test
+  (testing "nil tune: melody-authoritative 100 BPM, 4/4 default meter"
     (let [r (beat/beats-for-tune nil 0)]
-      (is (= 120 (:bpm r)))
+      (is (= 100 (:bpm r)))
       (is (= 4 (:beats-per-bar r)))))
 
-  (testing "unknown type gives defaults"
+  (testing "unknown type with no time-sig defaults to 4/4 meter"
     (let [r (beat/beats-for-tune {:type :unknown} 0)]
+      (is (= 100 (:bpm r)))
+      (is (= 4 (:beats-per-bar r)))))
+
+  (testing ":other 4/4 now matches the melody (100 BPM, 4 beats/bar)"
+    (let [r (beat/beats-for-tune {:type :other :time-sig "4/4"} 0)]
+      (is (= 100 (:bpm r)))
+      (is (= 4 (:beats-per-bar r)))))
+
+  (testing ":other 2/4 derives 2 beats/bar"
+    (let [r (beat/beats-for-tune {:type :other :time-sig "2/4"} 0)]
+      (is (= 100 (:bpm r)))
+      (is (= 2 (:beats-per-bar r)))))
+
+  (testing ":mazourka 3/4 is a 120-BPM, 3-beat waltz-feel bar"
+    (let [r (beat/beats-for-tune {:type :mazourka :time-sig "3/4"} 0)]
       (is (= 120 (:bpm r)))
-      (is (= 4 (:beats-per-bar r))))))
+      (is (= 3 (:beats-per-bar r))))))
 
 (deftest count-in-duration-test
   (testing "polka count-in: 2 beats at 500ms = 1000ms"
-    (let [r (beat/beats-for-tune {:type :polka} 0)]
+    (let [r (beat/beats-for-tune {:type :polka :time-sig "2/4"} 0)]
       (is (= 1000.0 (:ms-per-bar r)))))
 
   (testing "reel count-in: 4 beats at 600ms = 2400ms"
-    (let [r (beat/beats-for-tune {:type :reel} 0)]
+    (let [r (beat/beats-for-tune {:type :reel :time-sig "4/4"} 0)]
       (is (= 2400.0 (:ms-per-bar r)))))
 
   (testing "count-in with tempo offset"
-    (let [r (beat/beats-for-tune {:type :polka} 20)]
+    (let [r (beat/beats-for-tune {:type :polka :time-sig "2/4"} 20)]
       ;; 140 BPM, 2 beats, ms-per-beat = 60000/140 ≈ 428.57
       (is (< 850.0 (:ms-per-bar r) 860.0)))))
 

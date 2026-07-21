@@ -2,25 +2,19 @@
   "Pure ABC string utilities shared between TUI and web.
    No state, no I/O. Covers header assembly (build-abc-string), tempo
    adjustment (adjust-abc-tempo), line breaking (add-line-breaks), and
-   A/B section splitting (split-abc-body, split-abc-parts)."
-  (:require [clojure.string :as str]))
+   A/B section splitting (split-abc-body, split-abc-parts). Tempo is owned by
+   ceol.beat-engine; tempo-for-type just formats its Q: field."
+  (:require [clojure.string :as str]
+            [ceol.beat-engine :as be]))
 
 (defn tempo-for-type
-  "Return ABC Q: field appropriate for tune type.
+  "Return the ABC Q: field appropriate for a tune type + time-sig, formatted
+   from ceol.beat-engine's shared {:bpm :beat-unit} tempo table. Signature is
+   unchanged so existing callers (TUI, melody build, display) are untouched.
    Tempos are slightly relaxed for learning."
   [tune-type time-sig]
-  (case tune-type
-    :polka    "Q:1/4=120"
-    :jig      "Q:3/8=100"
-    :reel     "Q:1/4=100"
-    :hornpipe "Q:1/4=100"
-    :slip-jig "Q:3/8=100"
-    :slide    "Q:3/8=100"
-    (case time-sig
-      "6/8" "Q:3/8=100"
-      "9/8" "Q:3/8=100"
-      "3/4" "Q:1/4=120"
-      "Q:1/4=100")))
+  (let [{:keys [bpm beat-unit]} (be/tempo-params tune-type time-sig)]
+    (str "Q:" beat-unit "=" bpm)))
 
 (defn build-abc-string
   "Construct a full ABC file from tune metadata and ABC notation body.
@@ -44,13 +38,14 @@
          clean-body "\n")))
 
 (defn adjust-abc-tempo
-  "Adjust the BPM in an ABC string's Q: field by offset. Clamps to min 40."
+  "Adjust the BPM in an ABC string's Q: field by offset. Clamps to min 40 via
+   the shared ceol.beat-engine/clamp-bpm."
   [abc-str offset]
   (if (or (nil? offset) (zero? offset))
     abc-str
     (str/replace abc-str #"(Q:\d+/\d+=)(\d+)"
                  (fn [[_ prefix bpm-str]]
-                   (str prefix (max 40 (+ (#?(:clj parse-long :cljs js/parseInt) bpm-str) offset)))))))
+                   (str prefix (be/clamp-bpm (+ (be/parse-int bpm-str) offset)))))))
 
 (defn add-line-breaks
   "Insert newlines after every bars-per-line simple barlines in an ABC body.
