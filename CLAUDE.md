@@ -128,7 +128,9 @@ Add body to `~/.ceol/local-abc.edn` keyed by tune ID. Copy to `web/resources/pub
 cd web && ./node_modules/.bin/shadow-cljs compile test
 
 # Web tests (pure .cljc via Babashka)
-./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test)"
+# beat-engine-test runs here too: only the JVM catches the parse-frac throw
+# regression (issue #67) — the cljs runner exercises the NaN-silence half.
+./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test)"
 ```
 
 80 tests, 5260 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor / duplicate / set-editor / session-summary.

@@ -84,6 +84,49 @@
       (is (= 120 (:bpm r)))
       (is (= 3 (:beats-per-bar r))))))
 
+;; #67: a schema-valid but non-n/n :time-sig (from imported backup EDN or a
+;; hand-edited localStorage tune — the Tune schema is only [:time-sig :string])
+;; must fail soft: no throw on the JVM, and a POSITIVE beats-per-bar on cljs so
+;; the guitar + metronome schedulers still emit beats (a NaN would silence them).
+(deftest beats-for-tune-malformed-time-sig-test
+  (testing "malformed sigs never throw and fall back to 4 beats/bar (4/4)"
+    (doseq [ts ["C" "C|" "4" "" "abc" "6/0" "6/" "/8"]]
+      (let [r (beat/beats-for-tune {:type :reel :time-sig ts} 0)]
+        (is (= 4 (:beats-per-bar r)) (str "beats-per-bar for " (pr-str ts)))
+        (is (pos? (:beats-per-bar r)) (str "positive bpb (no NaN silence) for " (pr-str ts)))
+        (is (= 100 (:bpm r)) (str "bpm unaffected for " (pr-str ts))))))
+  (testing "valid sigs are unaffected by the guard"
+    (is (= 2 (:beats-per-bar (beat/beats-for-tune {:type :polka :time-sig "2/4"} 0))))
+    (is (= 3 (:beats-per-bar (beat/beats-for-tune {:type :slip-jig :time-sig "9/8"} 0))))))
+
+;; #67 (follow-up): the parse-frac guard covers non-numeric / zero-denominator
+;; sigs, but a schema-valid n/n sig SMALLER than the type's beat-unit (a jig
+;; with :time-sig "1/8") still made beats-per-bar `quot` to 0 — which throws at
+;; `(mod n 0)` in beats-in-window on the JVM and drops every bar accent (NaN) on
+;; cljs. Same corrupt-import surface. beats-per-bar now floors at 1; drive the
+;; real scheduler to prove no throw and >0 beats emitted.
+(deftest beats-per-bar-floor-test
+  (testing "sub-beat-unit sigs floor to 1 bpb instead of 0"
+    (doseq [t [{:type :jig :time-sig "1/8"}
+               {:type :jig :time-sig "1/4"}
+               {:type :reel :time-sig "1/8"}
+               {:type :slide :time-sig "2/8"}]]
+      (let [r (beat/beats-for-tune t 0)]
+        (is (pos? (:beats-per-bar r)) (str "positive bpb for " (pr-str t)))
+        (is (pos? (:ms-per-bar r)) (str "positive ms-per-bar for " (pr-str t))))))
+  (testing "the scheduler emits beats without throwing on a floored sig"
+    (let [r     (beat/beats-for-tune {:type :jig :time-sig "1/8"} 0)
+          beats (beat/beats-in-window 0.0 (:ms-per-beat r) (:beats-per-bar r) 0.0 1.0)]
+      (is (seq beats) "beats-in-window emits at least one beat")
+      (is (every? (comp number? :time) beats)))))
+
+;; #67 (follow-up): parse-frac now trims, so a whitespace-padded valid meter
+;; keeps its real beat count instead of silently degrading to 4/4.
+(deftest whitespace-time-sig-test
+  (doseq [ts ["3/4 " " 3/4" "6/8 "]]
+    (is (= 3 (:beats-per-bar (beat/beats-for-tune {:type :reel :time-sig ts} 0)))
+        (str "trimmed meter parses for " (pr-str ts)))))
+
 (deftest count-in-duration-test
   (testing "polka count-in: 2 beats at 500ms = 1000ms"
     (let [r (beat/beats-for-tune {:type :polka :time-sig "2/4"} 0)]
