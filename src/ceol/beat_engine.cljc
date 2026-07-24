@@ -61,7 +61,7 @@
    throwing (JVM: parse-long on nil) or silencing the scheduler (cljs:
    NaN propagates through ms-per-bar to zero scheduled beats). See issue #67."
   [s]
-  (let [[n d] (str/split (str s) #"/")
+  (let [[n d] (str/split (str/trim (str s)) #"/")
         ni (when (and n (re-matches #"\d+" n)) (parse-int n))
         di (when (and d (re-matches #"\d+" d)) (parse-int d))]
     (if (and ni di (pos? di))
@@ -70,11 +70,15 @@
 
 (defn beats-per-bar
   "Beats per bar = time-sig ÷ beat-unit, e.g. 6/8 ÷ 3/8 = 2, 4/4 ÷ 1/4 = 4.
-   Both args are fraction strings; the quotient is exact for real meters."
+   Both args are fraction strings; the quotient is exact for real meters.
+   Clamped to a floor of 1: a schema-valid time-sig smaller than the beat-unit
+   (e.g. a jig with :time-sig \"1/8\") would otherwise `quot` to 0 and blow up
+   the beats-in-window scheduler at `(mod n 0)` (JVM throw) or drop every bar
+   accent (cljs NaN). Same corrupt-import surface as the parse-frac guard. #67."
   [time-sig beat-unit]
   (let [[tn td] (parse-frac time-sig)
         [bn bd] (parse-frac beat-unit)]
-    (quot (* tn bd) (* td bn))))
+    (max 1 (quot (* tn bd) (* td bn)))))
 
 (defn beats-for-tune
   "Effective BPM and bar timing for a tune with a tempo offset, derived from
