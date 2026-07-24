@@ -130,7 +130,7 @@ The web app also reads this file from `web/resources/public/data/local-abc.edn`.
 cd web && ./node_modules/.bin/shadow-cljs compile test
 
 # Pure logic tests (Babashka, faster)
-./bb -cp "src:web/src:test" -e "..."
+bb -cp "src:web/src:test" -e "..."
 ```
 
 68 tests, 5207 assertions (most are generative) covering chord algorithm, ABC processing, state queries, set logic, beat engine, session logic, actions, backup round-trip, and the mobile tune-editor / duplicate.

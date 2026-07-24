@@ -1,3 +1,21 @@
+# Clojure build/repl
 .cpcache/
 .nrepl-port
 *.class
+
+# OS
+.DS_Store
+
+# Editor / tooling caches
+**/.clj-kondo/.cache/
+**/.clj-kondo/imports/
+.lsp/
+.serena/
+.brepl/
+.claude/
+
+# Build output
+web/target/
+
+# Artifacts
+*.zip
