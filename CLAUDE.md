@@ -133,7 +133,7 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 ./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test)"
 ```
 
-80 tests, 5260 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor / duplicate / set-editor / session-summary.
+95 tests, 7804 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, tempo, session, session-nav, actions, backup, and the mobile tune-editor / set-editor / session-summary.
 
 ### Browser end-to-end verification
 
