@@ -3,6 +3,7 @@
    file picker) is not exercised — only the pure state transitions and
    schema validation."
   (:require [cljs.test :refer [deftest testing is]]
+            [ceol.tunes :as tunes]
             [ceol.web.backup :as backup]
             [ceol.web.state :as state]
             [malli.core :as m]
@@ -56,6 +57,28 @@
       (is (= (:sets s0) (:sets s1)))
       (is (= (:learned-tune-ids s0) (:learned-tune-ids s1)))
       (is (= "x" (get-in s1 [:abc-edits 2]))))))
+
+(deftest migrate-old-custom-tunes-preserves-catalog
+  (testing "pre-unification backup (:custom-tunes delta) rebuilds full tune set"
+    (let [custom {8888 {:id 8888 :name "Custom" :type :polka :time-sig "2/4"
+                        :key "D" :mode-name "Ionian"}}
+          old    {:ceol/version 1 :exported-at "x"
+                  :data {:abc-edits {1 "GABc"}
+                         :custom-tunes custom
+                         :sets {}
+                         :learned-tune-ids #{}}}
+          out    (#'backup/migrate-backup-data old)
+          tunes* (get-in out [:data :tunes])]
+      (is (not (contains? (:data out) :custom-tunes))
+          ":custom-tunes key removed")
+      (is (= 8888 (:id (get tunes* 8888)))
+          "custom tune carried through")
+      (is (every? #(contains? tunes* %) (keys tunes/catalog))
+          "base catalog merged underneath — catalog tunes not wiped")
+      (is (= (+ (count tunes/catalog) 1) (count tunes*))
+          "full set = catalog + net-new custom")
+      (is (m/validate backup/Backup out)
+          "migrated backup passes closed-map validation"))))
 
 (deftest schema-rejects-bad-data
   (is (not (m/validate backup/Backup {:ceol/version 2 :exported-at "x" :data {}})))

@@ -4,7 +4,8 @@
   between devices. The file is validated against Backup at the import
   boundary; invalid sections are dropped with a console.warn rather than
   clobbering existing state."
-  (:require [ceol.web.state :as state]
+  (:require [ceol.tunes :as tunes]
+            [ceol.web.state :as state]
             [ceol.web.persist :as persist]))
 
 (def Backup
@@ -134,13 +135,19 @@
     (.readAsText reader file)))
 
 (defn- migrate-backup-data
-  "Backups exported before catalog/custom-tunes were unified used
-  :custom-tunes as the key inside :data; alias it to :tunes so old backup
-  files still import instead of failing closed-map validation."
+  "Backups exported before catalog/custom-tunes were unified stored only the
+  user's custom tunes under :custom-tunes — a delta over the base catalog,
+  not the full tune set. The current :tunes is the whole tune set and imports
+  wholesale-replace it, so aliasing the bare delta would wipe the catalog
+  (leaving abc-edits/sets/learned pointing at now-missing tunes). Rebuild the
+  full set by merging the catalog underneath the custom tunes, mirroring the
+  legacy load path in persist/load-tunes!."
   [backup]
   (cond-> backup
     (contains? (:data backup) :custom-tunes)
-    (update :data #(-> % (assoc :tunes (:custom-tunes %)) (dissoc :custom-tunes)))))
+    (update :data #(-> %
+                       (assoc :tunes (merge tunes/catalog (:custom-tunes %)))
+                       (dissoc :custom-tunes)))))
 
 (defn import-text!
   "Parse EDN backup text, validate, and apply. Returns true on success,
