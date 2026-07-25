@@ -60,7 +60,11 @@
 
 (deftest migrate-old-custom-tunes-preserves-catalog
   (testing "pre-unification backup (:custom-tunes delta) rebuilds full tune set"
-    (let [custom {8888 {:id 8888 :name "Custom" :type :polka :time-sig "2/4"
+    ;; custom delta = one net-new tune (8888) + one edited catalog tune (id 1,
+    ;; renamed) — the delta could hold both in the old build.
+    (let [custom {1    {:id 1 :name "Renamed" :type :polka :time-sig "2/4"
+                        :key "D" :mode-name "Ionian"}
+                  8888 {:id 8888 :name "Custom" :type :polka :time-sig "2/4"
                         :key "D" :mode-name "Ionian"}}
           old    {:ceol/version 1 :exported-at "x"
                   :data {:abc-edits {1 "GABc"}
@@ -75,10 +79,26 @@
           "custom tune carried through")
       (is (every? #(contains? tunes* %) (keys tunes/catalog))
           "base catalog merged underneath — catalog tunes not wiped")
+      (is (= "Renamed" (:name (get tunes* 1)))
+          "custom delta overrides the base catalog entry on id collision")
       (is (= (+ (count tunes/catalog) 1) (count tunes*))
-          "full set = catalog + net-new custom")
+          "full set = catalog + net-new custom (id-1 collision doesn't double-count)")
       (is (m/validate backup/Backup out)
-          "migrated backup passes closed-map validation"))))
+          "migrated backup passes closed-map validation"))
+    (testing "and survives the full import pipeline into state (bug locus:
+              apply-to-state wholesale-replaces :tunes)"
+      (let [custom {8888 {:id 8888 :name "Custom" :type :polka :time-sig "2/4"
+                          :key "D" :mode-name "Ionian"}}
+            old    {:ceol/version 1 :exported-at "x"
+                    :data {:custom-tunes custom :sets {} :learned-tune-ids #{}}}
+            data   (:data (#'backup/migrate-backup-data old))
+            s1     (backup/apply-to-state (base-state) data)]
+        (is (every? #(contains? (:tunes s1) %) (keys tunes/catalog))
+            "catalog present in state after apply — not wiped by wholesale replace")
+        (is (= 8888 (get-in s1 [:tunes 8888 :id]))
+            "custom tune present in state after apply")
+        (is (= (+ (count tunes/catalog) 1) (count (:tunes s1)))
+            "state holds full catalog + net-new custom")))))
 
 (deftest schema-rejects-bad-data
   (is (not (m/validate backup/Backup {:ceol/version 2 :exported-at "x" :data {}})))
