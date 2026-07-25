@@ -122,7 +122,7 @@ Add body to `~/.ceol/local-abc.edn` keyed by tune ID. Copy to `web/resources/pub
 
 ```bash
 # TUI tests (Babashka)
-./bb -cp "src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.split-test) (run-tests 'ceol.split-test)"
+bb -cp "src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.split-test) (run-tests 'ceol.split-test)"
 
 # Web tests (CLJS via shadow-cljs)
 cd web && ./node_modules/.bin/shadow-cljs compile test
@@ -130,10 +130,10 @@ cd web && ./node_modules/.bin/shadow-cljs compile test
 # Web tests (pure .cljc via Babashka)
 # beat-engine-test runs here too: only the JVM catches the parse-frac throw
 # regression (issue #67) — the cljs runner exercises the NaN-silence half.
-./bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test)"
+bb -cp "src:web/src:test" -e "(require '[clojure.test :refer [run-tests]]) (require 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test) (run-tests 'ceol.web.abc-test 'ceol.web.chords-test 'ceol.web.beat-engine-test)"
 ```
 
-80 tests, 5260 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, session, actions, backup, and the mobile tune-editor / duplicate / set-editor / session-summary.
+95 tests, 7804 assertions (cljs total — most are generative) across chords, ABC, state, sets, beat engine, tempo, session, session-nav, actions, backup, and the mobile tune-editor / set-editor / session-summary.
 
 ### Browser end-to-end verification
 
