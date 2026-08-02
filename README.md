@@ -51,6 +51,18 @@ npm install
 # Open http://localhost:8280
 ```
 
+### Release
+
+```bash
+./release.sh
+```
+
+Builds the production bundle, zips it into `ceol.zip` at the repo root (contents of `web/resources/public/`, with `index.html` at the zip root), then **deploys** it: `scp` the zip to the server and unzip it into `/var/www/html`.
+
+- The deploy target is the SSH config alias in `DEPLOY_HOST` inside `.env` (gitignored), e.g. `export DEPLOY_HOST=ceol-vm`.
+- Just build and drop to the local `ceol.zip`, no deploy: `DEPLOY_SKIP=1 ./release.sh`.
+- Build without zipping or deploying: `./build.sh`.
+
 ## TUI keybindings
 
 | Key | Action |

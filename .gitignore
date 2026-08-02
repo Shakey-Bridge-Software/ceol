@@ -17,5 +17,8 @@
 # Build output
 web/target/
 
+# Local secrets / deployment config
+.env
+
 # Artifacts
 *.zip
