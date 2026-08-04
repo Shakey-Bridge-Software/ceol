@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build the production release, zip it into ceol.zip, then deploy to the server:
+# Build the production release, cache-bust (fingerprint) it, zip it into
+# ceol.zip, then deploy to the server:
 #   scp ceol.zip ->  ~/ on the server, unzip -> /var/www/html
 #
 # Deploy target comes from DEPLOY_HOST in .env (an SSH config alias, e.g. ceol-vm).
 # Set DEPLOY_SKIP=1 to build+zip without deploying.
+#
+# Caching / cache-busting: the build is post-processed by fingerprint.sh so
+# asset URLs (js/main.<hash>.js, css/style.<hash>.css) change on every release.
+# Pair this with the nginx cache headers in deploy/nginx-cache.conf so browsers
+# fetch fresh files automatically (no hard refresh needed).
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 PUBLIC="$ROOT/web/resources/public"
 ZIP="$ROOT/ceol.zip"
@@ -21,13 +27,19 @@ fi
 # 1. Fresh production build (writes to web/resources/public/)
 "$ROOT/build.sh"
 
-# 2. Zip the release contents so index.html sits at the zip root.
+# 2. Cache-bust the build into a staging dir (leaves web/resources/public
+#    untouched for the local dev/watch flow).
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
+"$ROOT/fingerprint.sh" "$PUBLIC" "$STAGE/ceol"
+
+# 3. Zip the staged release so index.html sits at the zip root.
 rm -f "$ZIP"
-(cd "$PUBLIC" && zip -r -q "$ZIP" .)
+(cd "$STAGE/ceol" && zip -r -q "$ZIP" .)
 
 echo "Release complete: $ZIP"
 
-# 3. Deploy to the server.
+# 4. Deploy to the server.
 if [ "${DEPLOY_SKIP:-}" = "1" ]; then
   echo "Deploy skipped (DEPLOY_SKIP=1)."
   exit 0
@@ -49,4 +61,5 @@ ssh "$DEPLOY_HOST" '
   rm -rf /tmp/ceol-release ~/ceol.zip
 '
 echo "Deploy complete: $DEPLOY_HOST:/var/www/html"
+
 
