@@ -151,12 +151,12 @@
                                                           (let [start-at (abc-bridge/now)]
                                                             (start-guitar! s tune abc-body (:section s)
                                                                            (:ms-per-bar beat-params) start-at)
-                                                            (anchor-metronome! s tune start-at))))))))]
+                                                            (anchor-metronome! s tune start-at)))))))]
         (if-let [p (abc-bridge/prepare!)]
           (if (and (:count-in? s) (not set-advancing?))
             (-> p (.then (fn [_] (start-after-count-in))))
             (-> p (.then (fn [_] (start-after-prepare)))))
-          (js/console.warn "start-playback!: prepare! returned nil (no visual)")))))
+          (js/console.warn "start-playback!: prepare! returned nil (no visual)"))))))
 
 (defn play!
   "Toggle play/stop. Branches on the synchronous :playing? flag (not the async
