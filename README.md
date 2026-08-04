@@ -57,11 +57,15 @@ npm install
 ./release.sh
 ```
 
-Builds the production bundle, zips it into `ceol.zip` at the repo root (contents of `web/resources/public/`, with `index.html` at the zip root), then **deploys** it: `scp` the zip to the server and unzip it into `/var/www/html`.
+Builds the production bundle, cache-busts it, zips it into `ceol.zip` at the repo root (contents of the staged build, with fingerprint-hashed `index.html` references at the zip root), then **deploys** it: `scp` the zip to the server and unzip it into `/var/www/html`.
+
+**Caching / cache-busting.** `release.sh` runs the build through `fingerprint.sh`, which renames the JS bundle to `js/main.<hash>.js` and merges all CSS into `css/style.<hash>.css` — asset URLs change on every release, so the browser always fetches fresh code (no hard refresh needed). To make that effective, configure nginx with the location blocks in `deploy/nginx-cache.conf`: serve `index.html` and `/data/*.edn` with `Cache-Control: no-cache` (revalidate), and the hashed `/js/*` + `/css/*` with a long `immutable` cache.
 
 - The deploy target is the SSH config alias in `DEPLOY_HOST` inside `.env` (gitignored), e.g. `export DEPLOY_HOST=ceol-vm`.
 - Just build and drop to the local `ceol.zip`, no deploy: `DEPLOY_SKIP=1 ./release.sh`.
 - Build without zipping or deploying: `./build.sh`.
+- Fingerprint an existing build output into a staging dir (no deploy): `./fingerprint.sh web/resources/public /tmp/release`.
+
 
 ## TUI keybindings
 
