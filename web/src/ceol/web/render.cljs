@@ -36,7 +36,7 @@
                           (let [parts (abc/split-abc-body abc-body)]
                             (if parts (get parts section abc-body) abc-body))
                           abc-body)
-              raw-abc   (abc/build-abc-string tune (abc/add-line-breaks body 4) nil {:midi? false})
+              raw-abc   (abc/build-abc-string tune body nil {:midi? false})
               final-abc (abc/adjust-abc-tempo raw-abc (or (:tempo-offset s) 0))
               p         (js/Promise.
                          (fn [resolve _]
