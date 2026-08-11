@@ -34,7 +34,8 @@
                            (into chords chords))))
           filled     (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
                              [] bar-chords)]
-      (guitar/play! filled (:type tune) ms-per-bar start-at))))
+      (guitar/play! filled (:type tune) ms-per-bar start-at
+                     (abc-bridge/pickup-offset-s ms-per-bar)))))
 
 (defn anchor-metronome!
   "Persist the melody's beat phase (the shared reference the synced metronome
