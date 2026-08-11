@@ -1,7 +1,8 @@
 (ns ceol.abc
   "Pure ABC string utilities shared between TUI and web.
    No state, no I/O. Covers header assembly (build-abc-string), tempo
-   adjustment (adjust-abc-tempo), line breaking (add-line-breaks), and
+   adjustment (adjust-abc-tempo), line breaking (add-line-breaks),
+   pickup offset computation (compute-pickup-offset-s), and
    A/B section splitting (split-abc-body, split-abc-parts). Tempo is owned by
    ceol.beat-engine; tempo-for-type just formats its Q: field."
   (:require [clojure.string :as str]
@@ -46,6 +47,47 @@
     (str/replace abc-str #"(Q:\d+/\d+=)(\d+)"
                  (fn [[_ prefix bpm-str]]
                    (str prefix (be/clamp-bpm (+ (be/parse-int bpm-str) offset)))))))
+
+(defn- split-bar-contents
+  "Split an ABC body string into bar-separated content strings.
+  Skips repeat markers (|: :|) to find note barlines."
+  [body]
+  (let [;; Find all plain | barlines (not |:, :|, ||)
+        plain-bars (loop [i 0 result []]
+                     (if-let [idx (str/index-of body "|" i)]
+                       (let [prev (when (pos? idx) (nth body (dec idx)))
+                             next (when (< (inc idx) (count body)) (nth body (inc idx)))
+                             plain? (and (not= prev \:)
+                                         (not= next \:)
+                                         (not= next \|))
+                             bar-content (subs body i idx)]
+                         (recur (inc idx)
+                                (if plain? (conj result (str/trim bar-content)) result)))
+                       result))]
+    plain-bars))
+
+(defn compute-pickup-offset-s
+  "Pickup (anacrusis) duration in seconds for a section body, or 0.0 if the
+   body starts on a full bar. Parses note durations in the first bar (before
+   the first |) and compares their sum to the second bar's sum. If the first
+   bar is shorter, returns its proportional duration.
+   Works for any section body (A, B, or whole tune)."
+  [abc-body ms-per-bar]
+  (let [;; Note+rest char followed by optional duration: digits, /digit, digits/digit
+        note-re #"([A-Ga-gz])(?:(\d+))?(?:/(\d+))?"
+        sum-durations (fn [s]
+                        (if (empty? s) 0.0
+                            (reduce + 0.0
+                                    (for [[_ _ num-str den-str] (re-seq note-re s)]
+                                      (let [num (if num-str (be/parse-int num-str) 1)
+                                            den (if den-str (be/parse-int den-str) 1)]
+                                        (/ num den))))))
+        bars (split-bar-contents abc-body)
+        fc (sum-durations (first bars))
+        sc (sum-durations (second bars))]
+    (if (and (pos? fc) (pos? sc) (< fc sc))
+      (* (/ fc sc) (/ ms-per-bar 1000.0))
+      0.0)))
 
 (defn add-line-breaks
   "Insert newlines after every bars-per-line simple barlines in an ABC body.

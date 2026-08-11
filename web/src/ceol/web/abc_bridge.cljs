@@ -3,7 +3,8 @@
    Owns the shared AudioContext (get-audio-context) used by both abc.js and
    the guitar/metronome Tone.js nodes. Public API: render-abc!, prepare!,
    start!, play!, stop!, playing?, pickup-offset-s, now."
-  (:require ["abcjs" :as ABCJS]))
+  (:require ["abcjs" :as ABCJS]
+            [ceol.abc :as abc]))
 
 (defonce synth-state (atom {:synth nil :visual nil :generation 0 :audio-ctx nil :duration nil}))
 
@@ -74,17 +75,22 @@
                     (js/console.error "Prepare failed:" e)))))))
 
 (defn pickup-offset-s
-  "Pickup (anacrusis) duration in AudioContext seconds, or 0 if the tune
-   starts on a full bar. Reads the abcjs visual object stored after the
-   last render-abc! call. ms-per-bar comes from beat/beats-for-tune."
-  [ms-per-bar]
-  (if-let [visual (:visual @synth-state)]
-    (let [pickup (.getPickupLength ^js visual)
-          bar-len (.getBarLength ^js visual)]
-      (if (and (pos? pickup) (pos? bar-len))
-        (* (/ pickup bar-len) (/ ms-per-bar 1000.0))
-        0.0))
-    0.0))
+  "Pickup (anacrusis) duration in AudioContext seconds, or 0 if the tune/section
+   starts on a full bar. When abc-body is provided, delegates to the pure parser
+   in ceol.abc (preferred — works for any section body, not just the tune's
+   first bar). Otherwise falls back to the abcjs visual object stored after the
+   last render-abc! call (whole-tune only). ms-per-bar comes from
+   beat/beats-for-tune."
+  [ms-per-bar & [abc-body]]
+  (if abc-body
+    (abc/compute-pickup-offset-s abc-body ms-per-bar)
+    (if-let [visual (:visual @synth-state)]
+      (let [pickup (.getPickupLength ^js visual)
+            bar-len (.getBarLength ^js visual)]
+        (if (and (pos? pickup) (pos? bar-len))
+          (* (/ pickup bar-len) (/ ms-per-bar 1000.0))
+          0.0))
+      0.0)))
 
 (defn now
   "Returns the current AudioContext time in seconds."
