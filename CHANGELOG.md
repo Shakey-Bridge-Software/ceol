@@ -2,6 +2,13 @@
 
 All notable changes to ceol are documented here.
 
+## [0.4.1] - 2026-08-12
+
+### Fixed
+- Sheet music no longer distorts on certain ABC inputs (#73)
+- Play hotkey toggle now uses the synchronous `:playing?` flag, fixing a race where the toggle could be ignored (#72)
+- Count-in no longer creates a duplicate `Tone.Context`, preventing audio glitches on playback start (#77)
+
 ## [0.4.0] - 2026-08-02
 
 This release focuses on the **mobile experience** (still WIP but usable), **sessions**, and **backup/data hardening**.
@@ -27,4 +34,5 @@ This release focuses on the **mobile experience** (still WIP but usable), **sess
 - Catalog tunes correctly uneditable / non-deletable; per-tune data scrubbed on delete; fixed next-tune-id reuse
 - Sheet music refreshes on any change that affects it
 
+[0.4.1]: https://github.com/Shakey-Bridge-Software/ceol/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Shakey-Bridge-Software/ceol/releases/tag/v0.4.0
