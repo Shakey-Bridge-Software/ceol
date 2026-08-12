@@ -388,7 +388,7 @@
      [:div.sidebar-header
       [:div.app-title-row
        [:div.app-name "ceol"]
-       [:div.app-version "v0.4.0"]]
+       [:div.app-version "v0.4.1"]]
       [:div.app-tagline "PRACTICE COMPANION"]]
      [:div.tab-bar
       [:button.tab {:class (when (= :tunes (:tab state)) "active")
@@ -857,7 +857,7 @@
      [:div.settings-card-label "ABOUT"]
      [:div.settings-row
       [:div.settings-row-text "Version"]
-      [:div.settings-row-value "v0.4.0"]]
+      [:div.settings-row-value "v0.4.1"]]
      [:div.settings-row
       [:div.settings-row-text "Source code"]
       [:a.settings-row-link
@@ -957,7 +957,7 @@
       [:div.mobile-list-title-row
        [:div.mobile-list-logo-block
         [:span.mobile-list-logo "ceol"]
-        [:span.mobile-list-version "v0.4.0"]]
+        [:span.mobile-list-version "v0.4.1"]]
        [:button.mobile-list-menu {:on {:click [[:settings/open]]}} "⚙"]]
       [:div.mobile-list-tagline "PRACTICE COMPANION"]]
      [:div.mobile-list-tabs
