@@ -52,7 +52,14 @@
   (if-let [p (:init-promise @guitar-state)]
     p
     ;; Share the same AudioContext as abc.js so Tone.js scheduling is on the same clock.
-    (let [_ (Tone/setContext (Tone/Context. (abc-bridge/get-audio-context)))
+    ;; Guard mirrors ceol.web.metronome/ensure-shared-context! — only create a
+    ;; new Tone.Context when the current one doesn't already wrap the shared
+    ;; AudioContext. Without this, the count-in path (which calls metro/ensure-synth!
+    ;; first) would leave two competing Tone.Context instances alive, and Tone.js 15
+    ;; assertions in Param.js can fail with "param must be an AudioParam".
+    (let [raw (abc-bridge/get-audio-context)
+          _ (when-not (identical? raw (some-> ^js (Tone/getContext) .-rawContext))
+              (Tone/setContext (Tone/Context. raw)))
           gain (-> (Tone/Gain. 0.5) (.toDestination))
           urls (clj->js (reduce (fn [m note]
                                   (assoc m note (str note ".mp3")))
