@@ -38,7 +38,7 @@
           (if (and (< (inc idx) len) (digit? (nth chars (inc idx))))
             (let [denom (- (int (nth chars (inc idx))) (int \0))]
               [(/ 1 denom) (+ idx 2)])
-            [1/2 (inc idx)])
+              [(/ 1 2) (inc idx)])
 
           ;; digit, possibly followed by /digit
           (digit? c)
@@ -138,10 +138,10 @@
                             (let [last-tok (peek tokens)
                                   rest-toks (pop tokens)]
                               (if (= :note (:type last-tok))
-                                (conj rest-toks (update last-tok :beats * 3/2))
+                                (conj rest-toks (update last-tok :beats * (/ 3 2)))
                                 tokens))
                             tokens)]
-              (recur (inc i) tokens' nil 1/2))
+              (recur (inc i) tokens' nil (/ 1 2)))
 
             ;; < (reverse dot): current note gets 0.5x, NEXT note gets 1.5x
             (= c \<)
@@ -149,10 +149,10 @@
                             (let [last-tok (peek tokens)
                                   rest-toks (pop tokens)]
                               (if (= :note (:type last-tok))
-                                (conj rest-toks (update last-tok :beats * 1/2))
+                                (conj rest-toks (update last-tok :beats * (/ 1 2)))
                                 tokens))
                             tokens)]
-              (recur (inc i) tokens' nil 3/2))
+              (recur (inc i) tokens' nil (/ 3 2)))
 
             ;; Numbers that appear between notes (like repeat markers [1 [2)
             (= c \[)

@@ -114,8 +114,45 @@
     (let [body "AB|CD|EF"]
       (is (= body (abc/add-line-breaks body 0))))))
 
+(deftest compute-pickup-offset-s-test
+  (testing "returns 0 for a body with no pickup (full first bar)"
+    (let [body "G3GAB|ABAABd|eddgdd"  ;; 6/8 jig, full 6-eighth bar
+          ms-per-bar 2000]
+      (is (zero? (abc/compute-pickup-offset-s body ms-per-bar)))))
+
+  (testing "returns offset for a body with a triplet pickup"
+    (let [body "(3edf|agg^cdega|beedefga"  ;; 4/4 hornpipe, triplet pickup
+          ms-per-bar 2000]
+      (is (pos? (abc/compute-pickup-offset-s body ms-per-bar)))
+      ;; triplet is 3 eighth-notes out of 8 = 0.375 * 2.0s = 0.75s
+      (is (< (abc/compute-pickup-offset-s body ms-per-bar) 1.0))
+      (is (> (abc/compute-pickup-offset-s body ms-per-bar) 0.5))))
+
+  (testing "returns offset for a body with a 2-beat pickup"
+    (let [body "BA|GABddBde|gagedega"  ;; 4/4 reel, 2-beat pickup out of 8
+          ms-per-bar 2000]
+      (is (pos? (abc/compute-pickup-offset-s body ms-per-bar)))
+      ;; 2/8 = 0.25 * 2.0s = 0.5s
+      (is (< (abc/compute-pickup-offset-s body ms-per-bar) 0.6))
+      (is (> (abc/compute-pickup-offset-s body ms-per-bar) 0.4))))
+
+  (testing "returns 0 for body with only one bar (no comparison possible)"
+    (let [body "GGAB|d2Bd"
+          ms-per-bar 2000]
+      (is (zero? (abc/compute-pickup-offset-s body ms-per-bar)))))
+
+  (testing "returns 0 for body with no bars (no barline)"
+    (let [body "GGAB"
+          ms-per-bar 2000]
+      (is (zero? (abc/compute-pickup-offset-s body ms-per-bar)))))
+
+  (testing "B-part body of Cronin's Hornpipe (tune 56) — triplet pickup"
+    (let [body "(3edf|agg^cdega|beedefga|(3bag(3baggedB|BAAGAcBA|GABddBde|gagedega|bagedBAB|G2GFG2:|"
+          ms-per-bar 2000]
+      (is (pos? (abc/compute-pickup-offset-s body ms-per-bar))
+          "B-part pickup should be detected"))))
+
 (deftest split-abc-body-test
-  (testing "splits on :|||: boundary"
     (let [result (abc/split-abc-body "GGAB|d2Bd:|||:|:ggab|D2BD")]
       (is (some? result))
       (is (clojure.string/includes? (:a result) "GGAB"))
@@ -131,4 +168,4 @@
     (is (nil? (abc/split-abc-body "GGAB|d2Bd"))))
 
   (testing "returns nil for empty string"
-    (is (nil? (abc/split-abc-body "")))))
+    (is (nil? (abc/split-abc-body ""))))

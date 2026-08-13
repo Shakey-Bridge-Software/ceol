@@ -13,7 +13,8 @@
             [ceol.web.tune-editor-test]
             [ceol.web.set-editor-test]
             [ceol.web.session-summary-test]
-            [ceol.web.session-nav-test]))
+            [ceol.web.session-nav-test]
+            [ceol.web.guitar-test]))
 
 (defn main []
   (run-tests 'ceol.web.abc-test
@@ -29,4 +30,5 @@
              'ceol.web.tune-editor-test
              'ceol.web.set-editor-test
              'ceol.web.session-summary-test
-             'ceol.web.session-nav-test))
+             'ceol.web.session-nav-test
+             'ceol.web.guitar-test))

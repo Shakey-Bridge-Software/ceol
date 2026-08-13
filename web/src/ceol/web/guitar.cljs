@@ -162,12 +162,15 @@
    load — that's a fundamental Web Audio cost. Tune by ear."
   0.020)
 
-(defn- build-events
+(defn build-events
   "Flatten the chord-per-bar list into a sorted seq of {:t when-s :note name}.
    when-s is absolute AudioContext seconds (start-at + bar offset + sub-bar),
-   with attack-compensation-s subtracted to align perceived onset."
-  [chords tune-type ms-per-bar start-at]
-  (let [pattern (get strum-patterns tune-type (:reel strum-patterns))
+   with attack-compensation-s subtracted to align perceived onset.
+   pickup-offset-s shifts the entire schedule so the guitar enters on the
+   first full-bar downbeat instead of on the pickup (0 for tunes without one)."
+  [chords tune-type ms-per-bar start-at & [pickup-offset-s]]
+  (let [offset  (or pickup-offset-s 0.0)
+        pattern (get strum-patterns tune-type (:reel strum-patterns))
         bar-s   (/ ms-per-bar 1000.0)]
     (vec
      (mapcat
@@ -175,7 +178,7 @@
         (when-let [voicing (get chord-voicings (or chord-name "G"))]
           (mapcat
            (fn [{:keys [time type]}]
-             (let [t     (- (+ start-at (* bar-idx bar-s) (* time bar-s))
+             (let [t     (- (+ start-at offset (* bar-idx bar-s) (* time bar-s))
                             attack-compensation-s)
                    notes (if (= type :bass) [(:bass voicing)] (:chord voicing))]
                (map (fn [n] {:t t :note n}) notes)))
@@ -198,8 +201,8 @@
    lookahead-s seconds via triggerAttackRelease, so stop! (clearInterval)
    leaves at most lookahead-s of audio in the queue. Each pre-scheduled
    note is sample-accurate on the AudioContext clock."
-  [chords tune-type ms-per-bar start-at]
-  (let [events (build-events chords tune-type ms-per-bar start-at)
+  [chords tune-type ms-per-bar start-at & [pickup-offset-s]]
+  (let [events (build-events chords tune-type ms-per-bar start-at pickup-offset-s)
         dur-s  (/ ms-per-bar 2000.0)
         ctx    (abc-bridge/get-audio-context)
         cursor (atom 0)
@@ -238,18 +241,23 @@
   "Start guitar accompaniment.
    ms-per-bar comes from beat/beats-for-tune so tempo offset is respected.
    start-at is AudioContext.currentTime (seconds) when bar 0 should begin.
+   pickup-offset-s, when non-zero, drops the first chord (pickup bar) and
+   shifts the schedule so the first strum lands on the first full-bar
+   downbeat.
    If start-at has already passed (e.g. samples still loading on first use),
    re-anchors to now + 50 ms so notes don't burst."
-  [chords tune-type ms-per-bar start-at]
-  (stop!)
-  (.start Tone)
-  (-> (init-synth!)
-      (.then (fn [_synth]
-               (when-let [^js gain (:gain @guitar-state)]
-                 (.. gain -gain (rampTo (if (:muted? @guitar-state) 0 0.6) 0.01)))
-               (let [ctx (abc-bridge/get-audio-context)
-                     now (.-currentTime ctx)
-                     t0  (if (> start-at now) start-at (+ now 0.05))]
-                 (schedule-notes! chords tune-type ms-per-bar t0))))
-      (.catch (fn [e]
-                (js/console.warn "Guitar playback failed:" e)))))
+  [chords tune-type ms-per-bar start-at & [pickup-offset-s]]
+  (let [pickup?  (boolean (and pickup-offset-s (pos? pickup-offset-s)))
+        chords'  (if pickup? (subvec chords 1) chords)]
+    (stop!)
+    (.start Tone)
+    (-> (init-synth!)
+        (.then (fn [_synth]
+                 (when-let [^js gain (:gain @guitar-state)]
+                   (.. gain -gain (rampTo (if (:muted? @guitar-state) 0 0.6) 0.01)))
+                 (let [ctx (abc-bridge/get-audio-context)
+                       now (.-currentTime ctx)
+                       t0  (if (> start-at now) start-at (+ now 0.05))]
+                   (schedule-notes! chords' tune-type ms-per-bar t0 pickup-offset-s))))
+        (.catch (fn [e]
+                  (js/console.warn "Guitar playback failed:" e))))))

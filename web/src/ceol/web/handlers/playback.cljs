@@ -20,21 +20,25 @@
   [s tune abc-body section ms-per-bar start-at]
   (when (and tune abc-body (string? abc-body))
     (guitar/set-muted! (not (:guitar? s)))
-    (let [parts      (abc/split-abc-body abc-body)
-          tonic      (:key tune)
-          bar-chords (if section
-                       (let [part-body (if parts (get parts section abc-body) abc-body)
-                             chords    (guitar/extract-bar-chords part-body)]
-                         (into chords chords))
-                       (if parts
-                         (let [a-chords (guitar/extract-bar-chords (:a parts))
-                               b-chords (guitar/extract-bar-chords (:b parts))]
-                           (vec (concat a-chords a-chords b-chords b-chords)))
-                         (let [chords (guitar/extract-bar-chords abc-body)]
-                           (into chords chords))))
-          filled     (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
-                             [] bar-chords)]
-      (guitar/play! filled (:type tune) ms-per-bar start-at))))
+    (let [parts       (abc/split-abc-body abc-body)
+          tonic       (:key tune)
+          offset-body (if section
+                        (if parts (get parts section abc-body) abc-body)
+                        abc-body)
+          bar-chords  (if section
+                        (let [chords (guitar/extract-bar-chords offset-body)]
+                          (into chords chords))
+                        (if parts
+                          (let [a-chords (guitar/extract-bar-chords (:a parts))
+                                b-chords (guitar/extract-bar-chords (:b parts))]
+                            (vec (concat a-chords a-chords b-chords b-chords)))
+                          (let [chords (guitar/extract-bar-chords abc-body)]
+                            (into chords chords))))
+          filled      (reduce (fn [acc c] (conj acc (or c (peek acc) tonic)))
+                              [] bar-chords)]
+      (guitar/play! filled (:type tune) ms-per-bar start-at
+                     (abc-bridge/pickup-offset-s ms-per-bar
+                       offset-body)))))
 
 (defn anchor-metronome!
   "Persist the melody's beat phase (the shared reference the synced metronome
