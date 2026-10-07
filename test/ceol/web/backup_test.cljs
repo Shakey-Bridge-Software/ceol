@@ -58,6 +58,23 @@
       (is (= (:learned-tune-ids s0) (:learned-tune-ids s1)))
       (is (= "x" (get-in s1 [:abc-edits 2]))))))
 
+;; #70: an imported backup is the one way a numeric-but-incoherent :time-sig
+;; actually reaches the app (the Tune schema only says [:time-sig :string], and
+;; the editor only offers valid sigs). Import replaces :tunes wholesale through
+;; prepare-tunes, so the imported sig must arrive already normalised — otherwise
+;; the UI would display a meter the melody never plays.
+(deftest apply-normalises-imported-meter
+  (let [s1 (backup/apply-to-state
+            (base-state)
+            {:tunes {7 {:id 7 :name "Odd" :type :jig :time-sig "1/8"
+                        :key "G" :mode-name "Ionian"}
+                     8 {:id 8 :name "Fine" :type :jig :time-sig "6/8"
+                        :key "G" :mode-name "Ionian"}}})]
+    (testing "an incoherent sig is replaced by one the tune's beat unit can express"
+      (is (= "6/8" (get-in s1 [:tunes 7 :time-sig]))))
+    (testing "a coherent sig is left alone"
+      (is (= "6/8" (get-in s1 [:tunes 8 :time-sig]))))))
+
 (deftest migrate-old-custom-tunes-preserves-catalog
   (testing "pre-unification backup (:custom-tunes delta) rebuilds full tune set"
     ;; custom delta = one net-new tune (8888) + one edited catalog tune (id 1,
