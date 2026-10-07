@@ -169,7 +169,30 @@
       :jig "2/4" "6/8"    ; 4/3 beats
       :jig "1/8" "6/8"    ; 1/3 beat
       :jig "4/4" "6/8"    ; 8/3 beats
-      :jig "6/9" "6/8"))
+      :jig "6/9" "6/8"
+      ;; the fallback is the *type's* meter, not the beat unit's — a reel and
+      ;; a polka share "1/4" but must fall back to different meters
+      :polka    "1/8" "2/4"
+      :polka    "abc" "2/4"
+      :reel     "1/8" "4/4"
+      :hornpipe "1/8" "4/4"
+      :slip-jig "2/4" "9/8"
+      :slide    "2/8" "12/8"))
+
+  (testing "the sig is re-rendered from its parsed pair, never echoed raw"
+    ;; abc.js warns on M:4/4/4 and M:4/4/ (parse-frac takes the first two
+    ;; slash-parts), so echoing the input would hand abc.js a field it rejects.
+    (are [ts expected] (= expected (beat/normalise-time-sig :reel ts))
+      "4/4/4" "4/4"
+      "4/4/"  "4/4"
+      "04/04" "4/4")
+    ;; M:4//4 has an empty part, so parse-frac rejects it outright and the
+    ;; type's canonical meter supplies the value; padding is trimmed before
+    ;; parsing either way.
+    (are [ts expected] (= expected (beat/normalise-time-sig :reel ts))
+      "4//4"  "4/4"
+      "3/4 "  "3/4"
+      " 3/4"  "3/4"))
 
   (testing "nil and padded sigs"
     (is (= "4/4" (beat/normalise-time-sig :reel nil)))

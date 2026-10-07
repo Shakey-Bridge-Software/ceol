@@ -34,9 +34,9 @@
 
 (defn normalise-tune
   "Coerce a tune's :time-sig to the meter the melody and accompaniment will
-  both actually play (ceol.beat-engine/normalise-time-sig), so the sig the UI
-  shows is the sig that sounds. A tune with no :time-sig is left alone: absent
-  stays absent, and both players default it to 4/4 themselves."
+  both actually play ([[ceol.beat-engine/normalise-time-sig]]), so the sig the
+  UI shows is the sig that sounds. A tune with no :time-sig is left alone:
+  absent stays absent, and both players default it to 4/4 themselves."
   [tune]
   (if (some? (:time-sig tune))
     (update tune :time-sig #(be/normalise-time-sig (:type tune) %))
@@ -49,7 +49,7 @@
 
   Every write into :tunes goes through here — persist's load/save, the backup
   fold, and the add/duplicate/delete handlers — so this is also where each
-  tune's :time-sig is normalised (see normalise-tune). ceol.abc and
+  tune's :time-sig is normalised (see [[normalise-tune]]). ceol.abc and
   ceol.beat-engine normalise the same way at the audio boundary; doing it here
   as well is what keeps the displayed sig in step with the played one."
   [new]

@@ -50,14 +50,25 @@ See `docs/agents/domain.md` for how the engineering skills consume this file.
 
 - **Beat unit** — the note value that counts as one beat, i.e. the numerator of
   the ABC `Q:` field (`"1/4"` or `"3/8"`). Modelled as a string so the same
-  literal works in Clojure and ClojureScript. Together with `:bpm` it is the one
-  per-type tempo fact stored in `ceol.beat-engine`; **beats-per-bar = time-sig ÷
-  beat-unit** is derived from it (e.g. a 6/8 jig with a 3/8 beat-unit = 2
-  beats/bar).
+  literal works in Clojure and ClojureScript. Together with `:bpm` and `:meter`
+  it is one of the per-type facts stored in `ceol.beat-engine`;
+  **beats-per-bar = time-sig ÷ beat-unit** is derived from it (e.g. a 6/8 jig
+  with a 3/8 beat-unit = 2 beats/bar).
+
+- **Canonical meter** — a tune type's normal `:time-sig` (`:polka` 2/4, `:jig`
+  6/8, `:reel` 4/4, `:hornpipe` 4/4, `:slip-jig` 9/8, `:slide` 12/8), stored as
+  the `:meter` in `ceol.beat-engine`'s per-type table. A tune's own `:time-sig`
+  is used as-is when it is expressible in the type's **beat unit** — i.e. when
+  time-sig ÷ beat-unit is an exact positive integer — and replaced by the
+  canonical meter otherwise, so the melody (its `M:` field) and the
+  accompaniment cannot disagree on bar length. Keyed by *type*, not beat unit:
+  a polka is 2/4 and a reel 4/4 though both use a `"1/4"` beat unit. Introduced
+  by #70.
 
 - **Beat params** — the derived per-tune timing bundle (`beats-for-tune`):
   `ms-per-bar`, beats-per-bar, `ms-per-beat`, effective `:bpm`, honouring the
-  current tempo offset. All derived from the shared `{:bpm :beat-unit}` table (see
-  **Beat unit**), which `ceol.beat-engine` owns as the single source of truth for
-  melody, guitar, and metronome scheduling — the melody Q: field (`ceol.abc`) is
-  formatted downstream from the same table. See `docs/adr/0001-tempo-source-of-truth.md`.
+  current tempo offset. All derived from the shared `{:bpm :beat-unit :meter}`
+  table (see **Beat unit**), which `ceol.beat-engine` owns as the single source of
+  truth for melody, guitar, and metronome scheduling — the melody Q: field
+  (`ceol.abc`) is formatted downstream from the same table. See
+  `docs/adr/0001-tempo-source-of-truth.md`.

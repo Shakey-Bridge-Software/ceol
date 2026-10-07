@@ -18,11 +18,13 @@
   [:polka :jig :reel :hornpipe :slip-jig :slide :other :mazourka nil])
 
 ;; Catalog sigs, plus the corrupt-import surface from #70/#67: numeric sigs
-;; abc.js parses literally, and non-numeric ones it falls back on.
+;; abc.js parses literally, and non-numeric ones it falls back on. "4/4/4" and
+;; "4/4/" are the parse-frac edge: two usable parts plus trailing junk.
 (def ^:private time-sigs
   ["2/4" "3/4" "4/4" "6/8" "9/8" "12/8"
    "1/8" "1/4" "6/9" "0/4" "4/0"
-   "" "C" "abc" "banana/4" "3/4 " nil])
+   "" "C" "abc" "banana/4" "3/4 " "4/4/4" "4/4/"
+   nil])
 
 (defn- rendered-abc
   "The full ABC string the app hands abc.js for this tune-type + sig."
