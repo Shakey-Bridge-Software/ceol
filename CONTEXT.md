@@ -65,6 +65,12 @@ See `docs/agents/domain.md` for how the engineering skills consume this file.
   a polka is 2/4 and a reel 4/4 though both use a `"1/4"` beat unit. Introduced
   by #70.
 
+  The replacement happens where the Tune is rendered and played — the `M:`
+  field and the beat maths. The stored `:time-sig` is deliberately **not**
+  rewritten: doing so on ingress made the meter picker jump to a meter the user
+  had not asked for. The meter shown can therefore differ from the meter played
+  until #78 settles which fact governs the meter and restricts the picker.
+
 - **Beat params** — the derived per-tune timing bundle (`beats-for-tune`):
   `ms-per-bar`, beats-per-bar, `ms-per-beat`, effective `:bpm`, honouring the
   current tempo offset. All derived from the shared `{:bpm :beat-unit :meter}`

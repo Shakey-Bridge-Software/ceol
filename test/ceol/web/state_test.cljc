@@ -1,6 +1,5 @@
 (ns ceol.web.state-test
   (:require [clojure.test :refer [deftest testing is]]
-            [ceol.abc :as abc]
             [ceol.web.state :as state]
             [ceol.tunes :as tunes]))
 
@@ -27,36 +26,6 @@
     (let [result (state/prepare-tunes {2 {:id 2 :name "Tune B"}})]
       (is (= [2] (:tune-order result)))
       (is (nil? (get-in result [:tunes 1]))))))
-
-;; #70: every path into :tunes goes through prepare-tunes (persist load, editor
-;; save, backup fold, add/delete), so normalising the meter here is what keeps
-;; the :time-sig the UI *displays* equal to the meter that plays —
-;; ceol.abc/build-abc-string and ceol.beat-engine normalise independently, at the
-;; audio boundary, so without this the two surfaces can disagree.
-(deftest prepare-tunes-normalises-meter-test
-  (testing "the displayed :time-sig is the meter the melody will render"
-    (doseq [[tune-type ts] [[:jig "1/8"] [:reel "1/8"] [:jig "abc"]
-                            [:reel "4/0"] [:jig "2/4"] [:slide "2/8"]]]
-      (let [tune     {:id 1 :name "T" :type tune-type :time-sig ts
-                      :key "G" :mode-name "Ionian"}
-            prepared (get-in (state/prepare-tunes {1 tune}) [:tunes 1])
-            abc-str  (abc/build-abc-string prepared "body" nil)
-            rendered (re-find #"(?m)^M:.*$" abc-str)]
-        (is (= (str "M:" (:time-sig prepared)) rendered)
-            (str "displayed " (pr-str ts) " disagrees with rendered "
-                 rendered " for " tune-type)))))
-
-  (testing "a tune with no :time-sig of its own does not gain one"
-    (let [prepared (get-in (state/prepare-tunes {1 {:id 1 :name "T"
-                                                    :type :polka}})
-                           [:tunes 1])]
-      (is (not (contains? prepared :time-sig)))))
-
-  (testing "no shipped catalog tune is ever re-metered"
-    (doseq [[id tune] tunes/catalog]
-      (let [prepared (get-in (state/prepare-tunes {id tune}) [:tunes id])]
-        (is (= (:time-sig tune) (:time-sig prepared))
-            (str "catalog tune " id " (" (:name tune) ") would be re-metered"))))))
 
 (defn- test-state [tunes]
   "Build a minimal state map from a seq of tune maps."
