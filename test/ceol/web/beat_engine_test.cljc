@@ -1,6 +1,7 @@
 (ns ceol.web.beat-engine-test
-  (:require [clojure.test :refer [deftest testing is]]
-            [ceol.beat-engine :as beat]))
+  (:require [clojure.test :refer [deftest testing is are]]
+            [ceol.beat-engine :as beat]
+            [ceol.tunes :as tunes]))
 
 ;; Tunes carry their canonical :time-sig — beats-per-bar is now derived as
 ;; time-sig ÷ beat-unit, so the meter follows the signature (a polka in 2/4
@@ -103,8 +104,10 @@
 ;; sigs, but a schema-valid n/n sig SMALLER than the type's beat-unit (a jig
 ;; with :time-sig "1/8") still made beats-per-bar `quot` to 0 — which throws at
 ;; `(mod n 0)` in beats-in-window on the JVM and drops every bar accent (NaN) on
-;; cljs. Same corrupt-import surface. beats-per-bar now floors at 1; drive the
-;; real scheduler to prove no throw and >0 beats emitted.
+;; cljs. beats-per-bar floors at 1; drive the real scheduler to prove no throw
+;; and >0 beats emitted. Since #70 normalise-time-sig replaces an incoherent sig
+;; before it reaches beats-per-bar, so the floor is now a guard for direct
+;; callers only — the assertions below stand as regression cover for both.
 (deftest beats-per-bar-floor-test
   (testing "sub-beat-unit sigs floor to 1 bpb instead of 0"
     (doseq [t [{:type :jig :time-sig "1/8"}
@@ -126,6 +129,59 @@
   (doseq [ts ["3/4 " " 3/4" "6/8 "]]
     (is (= 3 (:beats-per-bar (beat/beats-for-tune {:type :reel :time-sig ts} 0)))
         (str "trimmed meter parses for " (pr-str ts)))))
+
+;; #70: the melody's M: field and the accompaniment's beat maths must read the
+;; same signature, or the banjo and the guitar/metronome play different bar
+;; lengths. abc.js parses a numeric M: literally, so a sig is only usable when
+;; its bar is a whole number of the type's beats.
+(deftest normalise-time-sig-test
+  (testing "a sig whose bar is a whole number of the type's beats is kept"
+    (are [tune-type ts] (= ts (beat/normalise-time-sig tune-type ts))
+      :reel     "4/4"
+      :reel     "2/4"
+      :reel     "6/8"    ; a quarter-note beat, 3 per bar
+      :reel     "12/8"
+      :hornpipe "4/4"
+      :jig      "6/8"
+      :jig      "9/8"
+      :jig      "12/8"
+      :jig      "3/4"    ; a dotted-quarter beat, 2 per bar
+      :slip-jig "9/8"
+      :slide    "12/8"
+      :polka    "2/4"
+      :polka    "6/8"
+      :other    "2/4"
+      :other    "3/4"
+      :other    "6/8"    ; the fallback beat unit follows the sig for :other
+      :mazourka "3/4"))
+
+  (testing "an incoherent sig falls back to the beat unit's canonical meter"
+    (are [tune-type ts expected] (= expected (beat/normalise-time-sig tune-type ts))
+      ;; a quarter-note beat cannot express these bars
+      :reel "1/8" "4/4"   ; 1/2 beat per bar — abc.js would bar every eighth
+      :reel "6/9" "4/4"   ; 8/3 beats
+      :reel "9/8" "4/4"   ; 9/2 beats
+      :reel "0/4" "4/4"   ; no beats at all
+      :reel "4/0" "4/4"   ; undefined — abc.js reports a null bar length
+      :reel "abc" "4/4"   ; abc.js also falls back to common time here
+      :reel ""    "4/4"
+      ;; a dotted-quarter beat cannot express these bars
+      :jig "2/4" "6/8"    ; 4/3 beats
+      :jig "1/8" "6/8"    ; 1/3 beat
+      :jig "4/4" "6/8"    ; 8/3 beats
+      :jig "6/9" "6/8"))
+
+  (testing "nil and padded sigs"
+    (is (= "4/4" (beat/normalise-time-sig :reel nil)))
+    (is (= "3/4" (beat/normalise-time-sig :reel "3/4 ")))))
+
+;; #70 regression: normalising must never rewrite a tune the catalog already
+;; ships. Every catalog sig must be expressible in its own type's beat unit.
+(deftest catalog-meters-are-already-normalised-test
+  (doseq [[id tune] tunes/catalog]
+    (is (= (:time-sig tune)
+           (beat/normalise-time-sig (:type tune) (:time-sig tune)))
+        (str "catalog tune " id " (" (:name tune) ") would be re-metered"))))
 
 (deftest count-in-duration-test
   (testing "polka count-in: 2 beats at 500ms = 1000ms"

@@ -18,7 +18,10 @@
 
 (defn build-abc-string
   "Construct a full ABC file from tune metadata and ABC notation body.
-   Options: :midi? (default true) — include %%MIDI program 105 directive."
+   Options: :midi? (default true) — include %%MIDI program 105 directive.
+   The M: field is the tune's normalised :time-sig
+   (ceol.beat-engine/normalise-time-sig) so the rendered melody always agrees
+   with the accompaniment's bar maths. See issue #70."
   [tune abc-body abc-key & [{:keys [midi?] :or {midi? true}}]]
   (let [mode-abbrev (case (:mode-name tune)
                       "Ionian"  ""
@@ -27,10 +30,11 @@
                       "")
         k-field    (str (:key tune) mode-abbrev)
         tempo      (tempo-for-type (:type tune) (:time-sig tune))
+        meter      (be/normalise-time-sig (:type tune) (:time-sig tune))
         clean-body (str/replace abc-body "! " "\n")]
     (str "X:1\n"
          "T:" (:name tune) "\n"
-         "M:" (:time-sig tune) "\n"
+         "M:" meter "\n"
          "L:1/8\n"
          tempo "\n"
          "K:" (or abc-key k-field) "\n"

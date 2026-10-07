@@ -55,18 +55,22 @@
   (max 40 bpm))
 
 (defn- parse-frac
-  "Parse a fraction string like \"6/8\" into [numerator denominator] ints.
-   Falls back to 4/4 for a malformed sig (missing, non-numeric, or zero
-   denominator) so a corrupt or imported :time-sig fails soft instead of
-   throwing (JVM: parse-long on nil) or silencing the scheduler (cljs:
-   NaN propagates through ms-per-bar to zero scheduled beats). See issue #67."
+  "Parse a fraction string like \"6/8\" into [numerator denominator] ints, or
+   nil when it is malformed (missing part, non-numeric, or zero denominator)."
   [s]
   (let [[n d] (str/split (str/trim (str s)) #"/")
         ni (when (and n (re-matches #"\d+" n)) (parse-int n))
         di (when (and d (re-matches #"\d+" d)) (parse-int d))]
-    (if (and ni di (pos? di))
-      [ni di]
-      [4 4])))
+    (when (and ni di (pos? di))
+      [ni di])))
+
+(defn- safe-frac
+  "parse-frac, coercing a malformed sig to 4/4 so a corrupt or imported
+   :time-sig fails soft instead of throwing (JVM: parse-long on nil) or
+   silencing the scheduler (cljs: NaN propagates through ms-per-bar to zero
+   scheduled beats). See issue #67."
+  [s]
+  (or (parse-frac s) [4 4]))
 
 (defn beats-per-bar
   "Beats per bar = time-sig ÷ beat-unit, e.g. 6/8 ÷ 3/8 = 2, 4/4 ÷ 1/4 = 4.
@@ -74,22 +78,68 @@
    Clamped to a floor of 1: a schema-valid time-sig smaller than the beat-unit
    (e.g. a jig with :time-sig \"1/8\") would otherwise `quot` to 0 and blow up
    the beats-in-window scheduler at `(mod n 0)` (JVM throw) or drop every bar
-   accent (cljs NaN). Same corrupt-import surface as the parse-frac guard. #67."
+   accent (cljs NaN). Same corrupt-import surface as the parse-frac guard. #67.
+   Callers passing a tune's :time-sig normalise it first (normalise-time-sig),
+   so they never reach the floor; it stays as a guard for direct callers."
+  [time-sig beat-unit]
+  (let [[tn td] (safe-frac time-sig)
+        [bn bd] (safe-frac beat-unit)]
+    (max 1 (quot (* tn bd) (* td bn)))))
+
+;; canonical-meter: the simplest meter whose bar is a whole number of the beat.
+;; The fallback when a tune's :time-sig cannot be expressed in its own beat unit.
+(def ^:private canonical-meter
+  {"1/4" "4/4"
+   "3/8" "6/8"})
+
+(defn- exact-beats-per-bar
+  "time-sig ÷ beat-unit as an exact positive integer, or nil when the division
+   is not exact (9/8 ÷ 1/4 = 4.5 beats), not positive (0/4), or the sig is
+   malformed. The test for a meter this beat unit can actually express."
   [time-sig beat-unit]
   (let [[tn td] (parse-frac time-sig)
         [bn bd] (parse-frac beat-unit)]
-    (max 1 (quot (* tn bd) (* td bn)))))
+    (when (and tn td bn bd (pos? tn) (pos? bn))
+      (let [num (* tn bd)
+            den (* td bn)
+            q   (when (zero? (mod num den)) (quot num den))]
+        (when (and q (pos? q)) q)))))
+
+(defn normalise-time-sig
+  "The :time-sig that BOTH the melody's M: field and the accompaniment's beat
+   maths must use, so the banjo and the guitar/metronome cannot disagree on bar
+   length.
+
+   Returns the tune's own (trimmed) signature when its bar is a whole number of
+   the type's beats — i.e. when time-sig ÷ beat-unit is an exact positive
+   integer — otherwise the canonical meter for the type's beat unit.
+
+   Without this the two surfaces diverge whenever the tune's :time-sig is not
+   expressible in its beat unit, because abc.js parses M: literally while
+   beats-per-bar derives its own quotient: M:1/8 under a quarter-note beat bars
+   every eighth while beats-per-bar floors to one beat (a 2× disagreement), and
+   M:4/0 leaves abc.js reporting a null bar length. Even the old 4/4 fallback
+   for a non-numeric sig disagreed for a jig, since 4/4 ÷ 3/8 is 2.67 beats but
+   abc.js reads a common-time bar. All of these pass the Tune schema
+   ([:time-sig :string]) and the import boundary, so they are reachable from a
+   hand-edited localStorage tune or an imported backup EDN. See issue #70."
+  [tune-type time-sig]
+  (let [beat-unit (:beat-unit (tempo-params tune-type time-sig))]
+    (if (exact-beats-per-bar time-sig beat-unit)
+      (str/trim (str time-sig))
+      (get canonical-meter beat-unit "4/4"))))
 
 (defn beats-for-tune
   "Effective BPM and bar timing for a tune with a tempo offset, derived from
    the shared tempo table. Returns
    {:bpm <n> :beats-per-bar <n> :ms-per-beat <n> :ms-per-bar <n>}.
-   beats-per-bar comes from the tune's :time-sig ÷ the type's beat-unit
-   (defaulting to 4/4 when :time-sig is absent)."
+   beats-per-bar comes from the tune's normalised :time-sig (see
+   normalise-time-sig) ÷ the type's beat-unit."
   [tune tempo-offset]
   (let [{:keys [bpm beat-unit]} (tempo-params (:type tune) (:time-sig tune))
         effective-bpm (clamp-bpm (+ bpm (or tempo-offset 0)))
-        bpb           (beats-per-bar (or (:time-sig tune) "4/4") beat-unit)
+        meter         (normalise-time-sig (:type tune) (:time-sig tune))
+        bpb           (beats-per-bar meter beat-unit)
         ms-per-beat   (/ 60000.0 effective-bpm)]
     {:bpm effective-bpm
      :beats-per-bar bpb
