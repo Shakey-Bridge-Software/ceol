@@ -11,10 +11,13 @@
 
    For every tune type × time-sig × tempo-offset:
      - the melody Q: BPM equals the scheduler's effective BPM, and
-     - the melody meter (Q: beat-unit against the time-sig) equals the
-       scheduler's derived beats-per-bar.
+     - the melody's *emitted* M: field equals the scheduler's derived
+       beats-per-bar.
    Both sides are read here through their real public entry points
-   (ceol.abc for the melody, ceol.beat-engine for the scheduler)."
+   (ceol.abc/build-abc-string for the melody, ceol.beat-engine for the
+   scheduler). This pins the agreement between the two surfaces; the *value*
+   of that agreement — checked against abc.js's own parser — lives in
+   ceol.web.meter-agreement-test."
   (:require [clojure.test :refer [deftest testing is]]
             [clojure.string :as str]
             [ceol.abc :as abc]
@@ -42,22 +45,36 @@
 (defn- beat-unit-of [q]
   (subs q 2 (str/index-of q "=")))
 
+(defn- melody-meter
+  "Beats-per-bar as the *rendered melody* sees them: the M: field ceol.abc
+   actually emits, against the beat unit of the melody's Q:. Reading the
+   emitted field (not the raw :time-sig) is what makes this an oracle for the
+   melody rather than a restatement of the scheduler's own inputs — #70 made
+   the two differ for a sig the type's beat unit cannot express."
+  [tune-type time-sig offset]
+  (let [abc-str (abc/build-abc-string {:name "T" :type tune-type
+                                       :time-sig time-sig
+                                       :key "G" :mode-name "Ionian"}
+                                      "GABc" "G")
+        m       (second (re-find #"(?m)^M:(.*)$" abc-str))]
+    (be/beats-per-bar m (beat-unit-of (melody-q tune-type time-sig offset)))))
+
 (deftest melody-and-scheduler-agree-test
   (testing "melody BPM == scheduler BPM, melody meter == scheduler beats-per-bar"
     (doseq [tune-type types
             time-sig  time-sigs
             offset    offsets]
-      (let [q           (melody-q tune-type time-sig offset)
-            melody-bpm  (bpm-of q)
-            melody-meter (be/beats-per-bar time-sig (beat-unit-of q))
-            sched       (be/beats-for-tune {:type tune-type :time-sig time-sig}
-                                           offset)
-            label       (str tune-type " " time-sig " offset=" offset)]
+      (let [q          (melody-q tune-type time-sig offset)
+            melody-bpm (bpm-of q)
+            melody-bpb (melody-meter tune-type time-sig offset)
+            sched      (be/beats-for-tune {:type tune-type :time-sig time-sig}
+                                          offset)
+            label      (str tune-type " " time-sig " offset=" offset)]
         (is (= melody-bpm (:bpm sched))
             (str "BPM disagreement for " label ": melody " melody-bpm
                  " vs scheduler " (:bpm sched)))
-        (is (= melody-meter (:beats-per-bar sched))
-            (str "meter disagreement for " label ": melody " melody-meter
+        (is (= melody-bpb (:beats-per-bar sched))
+            (str "meter disagreement for " label ": melody " melody-bpb
                  " vs scheduler " (:beats-per-bar sched)))))))
 
 (deftest bpm-never-below-floor-test

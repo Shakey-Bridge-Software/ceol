@@ -1,5 +1,5 @@
 (ns ceol.web.abc-test
-  (:require [clojure.test :refer [deftest testing is]]
+  (:require [clojure.test :refer [deftest testing is are]]
             [ceol.abc :as abc]))
 
 (deftest tempo-for-type-test
@@ -45,6 +45,36 @@
                 :key "G" :mode-name "Ionian"}
           result (abc/build-abc-string tune "body" "Gmix")]
       (is (clojure.string/includes? result "K:Gmix")))))
+
+;; #70: the M: field is the normalised :time-sig, not the tune's raw value —
+;; this is the melody half of the meter agreement with ceol.beat-engine. The
+;; value itself is pinned in beat_engine_test; this pins the wiring.
+(deftest build-abc-string-normalises-meter-test
+  (testing "an incoherent sig is replaced by the beat unit's canonical meter"
+    (are [tune-type ts expected] (clojure.string/includes?
+                                  (abc/build-abc-string
+                                   {:name "T" :type tune-type :time-sig ts
+                                    :key "G" :mode-name "Ionian"}
+                                   "body" nil)
+                                  (str "M:" expected "\n"))
+      :reel "1/8" "4/4"
+      :reel "4/0" "4/4"
+      :jig  "1/8" "6/8"
+      :jig  "2/4" "6/8"))
+
+  (testing "a coherent sig passes through untouched"
+    (are [ts] (clojure.string/includes?
+               (abc/build-abc-string
+                {:name "T" :type :reel :time-sig ts :key "G" :mode-name "Ionian"}
+                "body" nil)
+               (str "M:" ts "\n"))
+      "4/4" "2/4" "12/8"))
+
+  (testing "an absent sig yields a parseable M: rather than an empty one"
+    (let [result (abc/build-abc-string
+                  {:name "T" :type :reel :key "G" :mode-name "Ionian"}
+                  "body" nil)]
+      (is (clojure.string/includes? result "M:4/4")))))
 
 (deftest adjust-abc-tempo-test
   (testing "increases BPM"

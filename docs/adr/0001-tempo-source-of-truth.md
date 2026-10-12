@@ -26,7 +26,7 @@ agreement was accidental and unguarded.
 ## Decision
 
 `ceol.beat-engine` is the single source of truth for tempo. It owns one per-type
-table of `{:bpm :beat-unit}` and everything else derives from it:
+table of `{:bpm :beat-unit :meter}` and everything else derives from it:
 
 - **beats-per-bar = time-sig ÷ beat-unit** (e.g. 6/8 ÷ 3/8 = 2, 4/4 ÷ 1/4 = 4).
   A type's meter follows its actual time signature rather than a second
